@@ -1,20 +1,21 @@
 <section class="wrap">
     <header class="top">
         <h1>Tasks</h1>
-        <!-- <button type="button" (click)="auth.signOut()">Sign Out</button> -->
         <button type="button" (click)="signOut()">Sign Out</button>
+        @if (tasksStore.error()) {
+            <p class="error">{{ tasksStore.error() }}</p>
+        }
     </header>
 
-    <div class="new">
+    <form class="new" (submit)="onSubmit($event)">
         <input
             type="text"
             placeholder="Add a task…"
             [value]="newTitle()"
             (input)="onInput($event)"
-            (keydown.enter)="add()"
         />
-        <button type="button" (click)="add()">Add</button>
-    </div>
+        <button type="submit" [disabled]="!canAdd()">Add</button>
+    </form>
 
     @if (tasksStore.loading()) {
         <p>Loading…</p>

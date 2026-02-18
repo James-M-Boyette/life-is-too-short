@@ -1,4 +1,4 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { TasksStore } from './tasks.store';
@@ -14,15 +14,22 @@ export class TasksPage {
     protected readonly newTitle = signal('');
     protected readonly auth = inject(AuthStore);
     protected readonly tasksStore = inject(TasksStore);
-      private readonly router = inject(Router);
+    private readonly router = inject(Router);
 
     constructor() {}
+
+    protected readonly canAdd = computed(() => this.newTitle().trim().length > 0);
 
     async add() {
         const title = this.newTitle().trim();
         if (!title) return;
         await this.tasksStore.add(title);
         this.newTitle.set('');
+    }
+
+    protected async onSubmit(event: SubmitEvent) {
+        event.preventDefault(); // stops full page refresh
+        await this.add();
     }
 
     protected onInput(event: Event) {
