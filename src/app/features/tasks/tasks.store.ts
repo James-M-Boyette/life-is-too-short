@@ -21,6 +21,21 @@ export class TasksStore {
     readonly tasks = signal<Task[]>([]);
     readonly error = signal<string | null>(null);
 
+    readonly mutating = signal(false);
+
+    private async runMutation<T>(fn: () => Promise<T>): Promise<T> {
+        this.error.set(null);
+        this.mutating.set(true);
+        try {
+            return await fn();
+        } catch (e: any) {
+            this.error.set(e?.message ?? 'Operation failed');
+            throw e;
+        } finally {
+            this.mutating.set(false);
+        }
+    }
+
     constructor(private readonly auth: AuthStore) {
         effect(() => {
             if (this.auth.isAuthed()) void this.refresh();
@@ -50,62 +65,63 @@ export class TasksStore {
         const userId = this.auth.userId();
         if (!userId) throw new Error('Not authenticated');
 
-        // Optimistic task (temporary id)
-        const tempId = crypto.randomUUID();
-        const optimistic: Task = {
-            id: tempId,
-            user_id: userId,
-            title,
-            is_done: false,
-            created_at: new Date().toISOString(),
-        };
+        await this.runMutation(async () => {
+            const tempId = crypto.randomUUID();
 
-        this.tasks.update((prev) => [optimistic, ...prev]);
+            const optimistic: Task = {
+                id: tempId,
+                user_id: userId,
+                title,
+                is_done: false,
+                created_at: new Date().toISOString(),
+            };
 
-        const { data, error } = await supabase
-            .from('tasks')
-            .insert({ user_id: userId, title } satisfies NewTaskInsert)
-            .select('*')
-            .single();
+            this.tasks.update((prev) => [optimistic, ...prev]);
 
-        if (error) {
-            // revert
-            this.tasks.update((prev) => prev.filter((t) => t.id !== tempId));
-            throw error;
-        }
+            const { data, error } = await supabase
+                .from('tasks')
+                .insert({ user_id: userId, title } satisfies NewTaskInsert)
+                .select('*')
+                .single();
 
-        // replace optimistic with real row
-        this.tasks.update((prev) => prev.map((t) => (t.id === tempId ? (data as Task) : t)));
+            if (error) {
+                this.tasks.update((prev) => prev.filter((t) => t.id !== tempId));
+                throw error;
+            }
+
+            this.tasks.update((prev) => prev.map((t) => (t.id === tempId ? (data as Task) : t)));
+        });
     }
 
     async toggleDone(task: Task) {
-        // optimistic toggle
-        const next = { ...task, is_done: !task.is_done };
-        this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? next : t)));
+        await this.runMutation(async () => {
+            const next = { ...task, is_done: !task.is_done };
 
-        const { error } = await supabase
-            .from('tasks')
-            .update({ is_done: next.is_done })
-            .eq('id', task.id);
+            this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? next : t)));
 
-        if (error) {
-            // revert
-            this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? task : t)));
-            throw error;
-        }
+            const { error } = await supabase
+                .from('tasks')
+                .update({ is_done: next.is_done })
+                .eq('id', task.id);
+
+            if (error) {
+                this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+                throw error;
+            }
+        });
     }
 
     async remove(taskId: string) {
-        // optimistic delete
-        const prev = this.tasks();
-        this.tasks.update((list) => list.filter((t) => t.id !== taskId));
+        await this.runMutation(async () => {
+            const prev = this.tasks();
+            this.tasks.update((list) => list.filter((t) => t.id !== taskId));
 
-        const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+            const { error } = await supabase.from('tasks').delete().eq('id', taskId);
 
-        if (error) {
-            // revert
-            this.tasks.set(prev);
-            throw error;
-        }
+            if (error) {
+                this.tasks.set(prev);
+                throw error;
+            }
+        });
     }
 }

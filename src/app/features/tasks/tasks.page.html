@@ -14,7 +14,7 @@
             [value]="newTitle()"
             (input)="onInput($event)"
         />
-        <button type="submit" [disabled]="!canAdd()">Add</button>
+        <button type="submit" [disabled]="!canAdd() || tasksStore.mutating()">Add</button>
     </form>
 
     @if (tasksStore.loading()) {
@@ -28,11 +28,19 @@
                             type="checkbox"
                             [checked]="t.is_done"
                             (change)="tasksStore.toggleDone(t)"
+                            [disabled]="tasksStore.mutating()"
                         />
+
                         <span [class.done]="t.is_done">{{ t.title }}</span>
                     </label>
 
-                    <button type="button" (click)="tasksStore.remove(t.id)">Delete</button>
+                    <button
+                        type="button"
+                        (click)="tasksStore.remove(t.id)"
+                        [disabled]="tasksStore.mutating()"
+                    >
+                        Delete
+                    </button>
                 </li>
             }
         </ul>
