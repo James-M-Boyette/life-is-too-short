@@ -33,10 +33,10 @@ jobs:
                   cache: 'pnpm'
 
             - name: Install dependencies
-              run: pnpm install --frozen-lockfile
+              run: pnpm install
 
             - name: Build
-              run: pnpm ng build --configuration production --base-href /life-is-too-short/
+              run: pnpm exec ng build --configuration production --base-href /life-is-too-short/
 
             - name: Upload Pages artifact
               uses: actions/upload-pages-artifact@v3
