@@ -1,0 +1,39 @@
+<section class="wrap">
+    <header class="top">
+        <h1>Tasks</h1>
+        <!-- <button type="button" (click)="auth.signOut()">Sign Out</button> -->
+        <button type="button" (click)="signOut()">Sign Out</button>
+    </header>
+
+    <div class="new">
+        <input
+            type="text"
+            placeholder="Add a task…"
+            [value]="newTitle()"
+            (input)="onInput($event)"
+            (keydown.enter)="add()"
+        />
+        <button type="button" (click)="add()">Add</button>
+    </div>
+
+    @if (tasksStore.loading()) {
+        <p>Loading…</p>
+    } @else {
+        <ul class="list">
+            @for (t of tasksStore.tasks(); track t.id) {
+                <li class="row">
+                    <label class="left">
+                        <input
+                            type="checkbox"
+                            [checked]="t.is_done"
+                            (change)="tasksStore.toggleDone(t)"
+                        />
+                        <span [class.done]="t.is_done">{{ t.title }}</span>
+                    </label>
+
+                    <button type="button" (click)="tasksStore.remove(t.id)">Delete</button>
+                </li>
+            }
+        </ul>
+    }
+</section>
