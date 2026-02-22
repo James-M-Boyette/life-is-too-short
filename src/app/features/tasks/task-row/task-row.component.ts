@@ -1,0 +1,50 @@
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import type { Task } from '../tasks.store';
+
+@Component({
+    standalone: true,
+    imports: [CommonModule],
+    selector: 'app-task-row',
+    templateUrl: './task-row.component.html',
+    styleUrls: ['./task-row.component.scss'],
+})
+export class TaskRowComponent {
+    @Input({ required: true }) task!: Task;
+    @Input() disabled = false;
+
+    @Output() toggleDone = new EventEmitter<Task>();
+    @Output() remove = new EventEmitter<string>();
+    @Output() rename = new EventEmitter<{ task: Task; title: string }>();
+
+    protected readonly editing = signal(false);
+    protected readonly draftTitle = signal('');
+
+    protected startEdit() {
+        if (this.disabled) return;
+        this.draftTitle.set(this.task.title);
+        this.editing.set(true);
+    }
+
+    protected cancelEdit() {
+        this.editing.set(false);
+    }
+
+    protected commitEdit() {
+        const title = this.draftTitle().trim();
+        this.editing.set(false);
+
+        if (!title || title === this.task.title) return;
+        this.rename.emit({ task: this.task, title });
+    }
+
+    protected onDraftInput(event: Event) {
+        const input = event.target as HTMLInputElement;
+        this.draftTitle.set(input.value);
+    }
+
+    protected onSubmit(event: SubmitEvent) {
+        event.preventDefault();
+        this.commitEdit();
+    }
+}

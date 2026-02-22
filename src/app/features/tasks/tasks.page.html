@@ -2,17 +2,27 @@
     <header class="top">
         <h1>Tasks</h1>
         <button type="button" (click)="signOut()">Sign Out</button>
+        <!--!!! Development Notices !!! -->
         @if (tasksStore.error()) {
             <p class="error">{{ tasksStore.error() }}</p>
         }
+        <small class="status">
+            @if (tasksStore.realtimeConnected()) {
+                Realtime: on
+            } @else {
+                Realtime: off
+            }
+        </small>
     </header>
 
     <form class="new" (submit)="onSubmit($event)">
         <input
             type="text"
+            name="title"
             placeholder="Add a task…"
             [value]="newTitle()"
             (input)="onInput($event)"
+            [disabled]="tasksStore.mutating()"
         />
         <button type="submit" [disabled]="!canAdd() || tasksStore.mutating()">Add</button>
     </form>
@@ -22,7 +32,7 @@
     } @else {
         <ul class="list">
             @for (t of tasksStore.tasks(); track t.id) {
-                <li class="row">
+                <!-- <li class="row">
                     <label class="left">
                         <input
                             type="checkbox"
@@ -41,7 +51,14 @@
                     >
                         Delete
                     </button>
-                </li>
+                </li> -->
+                <app-task-row
+                    [task]="t"
+                    [disabled]="tasksStore.mutating()"
+                    (toggleDone)="tasksStore.toggleDone($event)"
+                    (remove)="tasksStore.remove($event)"
+                    (rename)="tasksStore.updateTitle($event.task, $event.title)"
+                />
             }
         </ul>
     }

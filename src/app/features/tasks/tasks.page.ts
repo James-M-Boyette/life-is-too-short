@@ -3,12 +3,16 @@ import { CommonModule } from '@angular/common';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { TasksStore } from './tasks.store';
 import { Router } from '@angular/router';
+import { TaskRowComponent } from '@/features/tasks/task-row/task-row.component';
 
 @Component({
     standalone: true,
-    imports: [CommonModule],
+    imports: [
+        CommonModule,
+        TaskRowComponent
+    ],
     templateUrl: './tasks.page.html',
-    styleUrl: './tasks.page.scss',
+    styleUrls: ['./tasks.page.scss'],
 })
 export class TasksPage {
     protected readonly newTitle = signal('');
@@ -23,8 +27,13 @@ export class TasksPage {
     async add() {
         const title = this.newTitle().trim();
         if (!title) return;
-        await this.tasksStore.add(title);
-        this.newTitle.set('');
+
+        try {
+            await this.tasksStore.add(title);
+            this.newTitle.set('');
+        } catch (e: any) {
+            this.tasksStore.error.set(e?.message ?? 'Failed to add task');
+        }
     }
 
     protected async onSubmit(event: SubmitEvent) {
