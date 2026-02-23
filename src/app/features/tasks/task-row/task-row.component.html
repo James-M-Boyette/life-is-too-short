@@ -1,46 +1,117 @@
 <li class="row">
-    <div class="left">
-        <input
-            class="check"
-            type="checkbox"
-            [checked]="task.is_done"
-            (change)="toggleDone.emit(task)"
-            [disabled]="disabled"
-            aria-label="Mark task done"
-        />
-
-        @if (!editing()) {
-            <button
-                type="button"
-                class="title-btn"
-                [class.done]="task.is_done"
-                (click)="startEdit()"
+    <section class="task-primary-section">
+        <div class="left-column">
+            <p-checkbox
+                class="completed-check"
+                [binary]="true"
+                [value]="isCompleted()"
+                (input)="onToggleCompleted($event)"
+                (change)="toggleDone.emit(task)"
                 [disabled]="disabled"
-            >
-                {{ task.title }}
-            </button>
-        } @else {
-            <form class="edit" (submit)="onSubmit($event)">
-                <input
-                    type="text"
-                    [value]="draftTitle()"
-                    (input)="onDraftInput($event)"
-                    [disabled]="disabled"
-                    autofocus
-                />
-                <button type="submit" [disabled]="disabled">Save</button>
-                <button type="button" (click)="cancelEdit()" [disabled]="disabled">Cancel</button>
-            </form>
-        }
-    </div>
+                aria-label="Mark task done"
+            />
+            <!-- <input
+                class="completed-check"
+                type="checkbox"
+                [checked]="task.is_done"
+                (change)="toggleDone.emit(task)"
+                [disabled]="disabled"
+                aria-label="Mark task done"
+            /> -->
 
-    <button
-        type="button"
-        class="delete-task-btn"
-        (click)="remove.emit(task.id)"
-        [disabled]="disabled"
-        >Delete
-    </button>
+            @if (!editing()) {
+                <button
+                    pButton
+                    type="button"
+                    class="title-btn"
+                    [class.done]="task.is_done"
+                    (click)="startEdit()"
+                    [disabled]="disabled"
+                >
+                    {{ task.title }}
+                </button>
+            } @else {
+                <form class="edit" (submit)="onSubmit($event)">
+                    <input
+                        type="text"
+                        [value]="draftTitle()"
+                        (input)="onDraftInput($event)"
+                        [disabled]="disabled"
+                        autofocus
+                    />
+                    <button type="submit" [disabled]="disabled">Save</button>
+                    <button type="button" (click)="cancelEdit()" [disabled]="disabled">
+                        Cancel
+                    </button>
+                </form>
+            }
+        </div>
+
+        <button
+            pButton
+            type="button"
+            class="delete-task-btn"
+            (click)="remove.emit(task.id)"
+            [disabled]="disabled"
+        >
+            <i class="pi pi-trash" pButtonIcon></i>
+            <span pButtonLabel>Delete</span>
+        </button>
+    </section>
+
+    <section class="task-secondary-section">
+        <div class="meta">
+            <button
+                pButton
+                type="button"
+                class="notes-toggle-btn"
+                (click)="toggleNotesOpen()"
+                [disabled]="disabled"
+                >
+                @if (notesOpen()) {
+                    <i class="pi pi-eye-slash" pButtonIcon></i>
+                    <span pButtonLabel>Hide notes</span>
+                } @else {
+                    <i class="pi pi-eye" pButtonIcon></i>
+                    <span pButtonLabel>View Notes</span>
+                }
+            </button>
+
+            <!-- <span class="hint">
+                @if (task.notes) {
+                    Has notes
+                }
+            </span> -->
+        </div>
+
+        @if (notesOpen()) {
+            <div class="notes">
+                @if (!editingNotes()) {
+                    <div class="notes-view">
+                        <p class="notes-text">{{ task.notes ?? 'No notes yet.' }}</p>
+                        <button type="button" (click)="startNotesEdit()" [disabled]="disabled">
+                            Edit notes
+                        </button>
+                    </div>
+                } @else {
+                    <form class="edit-notes-form" (submit)="onNotesSubmit($event)">
+                        <textarea
+                            rows="3"
+                            [value]="draftNotes()"
+                            (input)="onNotesInput($event)"
+                            [disabled]="disabled"
+                        ></textarea>
+                        <div class="notes-actions">
+                            <button type="submit" [disabled]="disabled">Save</button>
+                            <button type="button" (click)="cancelNotesEdit()" [disabled]="disabled">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                }
+            </div>
+        }
+    </section>
 
     <!-- <div class="meta">
         <button

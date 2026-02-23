@@ -26,6 +26,12 @@ type NewTaskInsert = {
     title: string;
 };
 
+type AddTaskInput = {
+    title: string;
+    notes: string | null;
+    projectId: string | null; // not used yet
+};
+
 @Injectable({ providedIn: 'root' })
 export class TasksStore {
     readonly loading = signal(false);
@@ -157,9 +163,9 @@ export class TasksStore {
         }
     }
 
-    async add(title: string) {
+    async add(input: AddTaskInput) {
         const userId = this.auth.userId();
-        if (!userId) throw new Error('Not authenticated');
+        if (!userId) throw new Error(`✋⛔ User not authenticated`);
 
         await this.runMutation(async () => {
             const tempId = crypto.randomUUID();
@@ -167,10 +173,10 @@ export class TasksStore {
             const optimistic: Task = {
                 id: tempId,
                 user_id: userId,
-                title,
+                title: input.title,
                 is_done: false,
 
-                notes: null,
+                notes: input.notes,
                 due_at: null,
 
                 status: 'todo',
@@ -183,7 +189,12 @@ export class TasksStore {
 
             const { data, error } = await supabase
                 .from('tasks')
-                .insert({ user_id: userId, title } satisfies NewTaskInsert)
+                // .insert({ user_id: userId, title } satisfies NewTaskInsert)
+                .insert({
+                    user_id: userId,
+                    title: input.title,
+                    notes: input.notes,
+                })
                 .select('*')
                 .single();
 

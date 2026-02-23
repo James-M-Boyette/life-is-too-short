@@ -1,104 +1,124 @@
 :host ::ng-deep {
     li.row {
         display: flex;
-        justify-content: space-between;
+        flex-direction: column;
         align-items: center;
         border: 1px solid #eee;
         border-radius: 1rem;
         padding: 0.75rem;
 
-        div.left {
+        section.task-primary-section {
             display: flex;
-            gap: 0.6rem;
+            justify-content: space-between;
+            gap: 1rem;
+            width: 100%;
             align-items: center;
-            min-width: 0;
 
-            input.check.done,
-            button.title-btn.done {
-                // conditional class for input + button when `is_done` is true
-                text-decoration: line-through;
-                opacity: 0.65;
-            }
-
-            button.title-btn {
-                appearance: none;
-                background: transparent;
-                border: none;
-                padding: 0;
-                margin: 0;
-                text-align: left;
-                cursor: text;
-
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 480px;
-
-                &:disabled {
-                    cursor: not-allowed;
-                    opacity: 0.7;
-                }
-            }
-
-            form.edit {
+            div.left-column {
                 display: flex;
-                gap: 0.5rem;
+                gap: 0.6rem;
                 align-items: center;
+                min-width: 0;
 
-                input {
-                    padding: 0.4rem 0.6rem;
-                    border-radius: 10px;
-                    border: 1px solid #ccc;
+                input.completed-check.done,
+                button.title-btn.done {
+                    // conditional class for input + button when `is_done` is true
+                    text-decoration: line-through;
+                    opacity: 0.65;
                 }
-            }
-        }
 
-        div.meta {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-left: 1.9rem; // visually aligns under title (checkbox width + gap)
-            margin-top: 0.25rem;
+                input.completed-check {
+                    border-radius: 100%;
+                }
 
-            button.link {
-                background: transparent;
-                border: none;
-                padding: 0;
-                cursor: pointer;
-                text-decoration: underline;
-            }
-
-            span.hint {
-                opacity: 0.65;
-                font-size: 0.9rem;
-            }
-        }
-
-        div.notes {
-            margin-left: 1.9rem;
-            margin-top: 0.5rem;
-            display: grid;
-            gap: 0.5rem;
-
-            div.notes-view {
-                p.notes-text {
+                button.title-btn {
+                    appearance: none;
+                    background: transparent !important;
+                    color: var(--p-primary-color) !important;
+                    border: none;
+                    padding: 0;
                     margin: 0;
-                    white-space: pre-wrap;
-                }
-            }
+                    text-align: left;
+                    cursor: text;
 
-            form.edit-notes-form {
-                textarea {
-                    width: 100%;
-                    padding: 0.5rem;
-                    border-radius: 10px;
-                    border: 1px solid #ccc;
-                    resize: vertical;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 480px;
+
+                    &:disabled {
+                        cursor: not-allowed;
+                        opacity: 0.7;
+                    }
                 }
 
-                .notes-actions {
+                form.edit {
                     display: flex;
                     gap: 0.5rem;
+                    align-items: center;
+
+                    input {
+                        padding: 0.4rem 0.6rem;
+                        border-radius: 10px;
+                        border: 1px solid #ccc;
+                    }
+                }
+            }
+
+            button.delete-task-btn {
+            }
+        }
+
+        section.task-secondary-section {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            flex-direction: column;
+
+            div.meta {
+                display: flex;
+                align-items: center;
+
+                button.notes-toggle-btn {
+                    // background: transparent;
+                    // border: none;
+                    // padding: 0;
+                    cursor: pointer;
+                    // text-decoration: underline;
+                }
+
+                // span.hint {
+                //     opacity: 0.65;
+                //     font-size: 0.9rem;
+                // }
+            }
+
+            div.notes {
+                margin-left: 1.9rem;
+                margin-top: 0.5rem;
+                display: grid;
+                gap: 0.5rem;
+
+                div.notes-view {
+                    p.notes-text {
+                        margin: 0;
+                        white-space: pre-wrap;
+                    }
+                }
+
+                form.edit-notes-form {
+                    textarea {
+                        width: 100%;
+                        padding: 0.5rem;
+                        border-radius: 10px;
+                        border: 1px solid #ccc;
+                        resize: vertical;
+                    }
+
+                    .notes-actions {
+                        display: flex;
+                        gap: 0.5rem;
+                    }
                 }
             }
         }

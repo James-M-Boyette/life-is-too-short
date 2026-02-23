@@ -21,6 +21,7 @@
                 placeholder="Enter notes for this task ..."
                 [value]="notesDraft()"
                 (input)="onNotesInput($event)"
+                [disabled]="disabled"
             ></textarea>
             <!--
                 <p-editor formControlName="text" [invalid]="isInvalid('text')" [style]="{ height: '320px' }" />
@@ -41,7 +42,6 @@
 
         <p-select
             class="assign-to-project-dropdown"
-            formControlName="project"
             [options]="groupedProjects()"
             placeholder="Select a Project"
             [group]="true"

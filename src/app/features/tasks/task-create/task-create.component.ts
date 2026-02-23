@@ -7,11 +7,17 @@ import { TextareaModule } from 'primeng/textarea';
 // import { EditorModule } from 'primeng/editor'; // Needs `pnpm install quill`
 import { SelectModule } from 'primeng/select';
 import { ButtonModule } from 'primeng/button';
-import { ReactiveFormsModule, FormGroup, FormControl } from '@angular/forms';
+// import { ReactiveFormsModule, FormGroup, FormControl } from '@angular/forms';
 
 type ProjectOption = {
     label: string;
     items: Array<{ label: string; value: string }>;
+};
+
+export type CreateTaskPayload = {
+    title: string;
+    notes: string | null;
+    projectId: string | null; // placeholder for later
 };
 
 @Component({
@@ -23,7 +29,7 @@ type ProjectOption = {
         TextareaModule,
         SelectModule,
         ButtonModule,
-        ReactiveFormsModule,
+        // ReactiveFormsModule,
     ],
     selector: 'app-task-create',
     templateUrl: './task-create.component.html',
@@ -34,7 +40,7 @@ export class TaskCreateComponent {
 
     // Keep this as string for now so it plugs into TasksStore.add(title).
     // Later we'll upgrade this to emit { title, notes, projectId }.
-    @Output() create = new EventEmitter<string>();
+    @Output() create = new EventEmitter<CreateTaskPayload>();
 
     // --- UI state (signals) ---
     protected readonly titleDraft = signal('');
@@ -69,8 +75,12 @@ export class TaskCreateComponent {
         const title = this.titleDraft().trim();
         if (!title || this.disabled) return;
 
-        // Today: create only needs title.
-        this.create.emit(title);
+        const notes = this.notesDraft().trim();
+        this.create.emit({
+            title,
+            notes: notes.length ? notes : null,
+            projectId: this.selectedProject(),
+        });
 
         // Clear the form
         this.titleDraft.set('');

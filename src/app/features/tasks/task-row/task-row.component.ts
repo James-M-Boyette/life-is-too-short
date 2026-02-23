@@ -1,10 +1,17 @@
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import type { Task } from '../tasks.store';
+
+import { CheckboxModule } from 'primeng/checkbox';
+import { ButtonModule } from 'primeng/button';
+import type { Task } from '@/features/tasks/tasks.store';
 
 @Component({
     standalone: true,
-    imports: [CommonModule],
+    imports: [
+        CommonModule,
+        CheckboxModule,
+        ButtonModule,
+    ],
     selector: 'app-task-row',
     templateUrl: './task-row.component.html',
     styleUrls: ['./task-row.component.scss'],
@@ -17,6 +24,7 @@ export class TaskRowComponent {
     @Output() remove = new EventEmitter<string>();
     @Output() rename = new EventEmitter<{ task: Task; title: string }>();
 
+    protected readonly isCompleted = signal(false);
     protected readonly editing = signal(false);
     protected readonly draftTitle = signal('');
 
@@ -36,6 +44,11 @@ export class TaskRowComponent {
 
         if (!title || title === this.task.title) return;
         this.rename.emit({ task: this.task, title });
+    }
+
+     protected onToggleCompleted(event: Event) {
+        const el = event.target as HTMLInputElement;
+        this.isCompleted.set(el.checked);
     }
 
     protected onDraftInput(event: Event) {

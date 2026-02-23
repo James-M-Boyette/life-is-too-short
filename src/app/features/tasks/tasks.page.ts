@@ -3,12 +3,16 @@ import { CommonModule } from '@angular/common';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { TasksStore } from './tasks.store';
 import { Router } from '@angular/router';
-import { TaskCreateComponent } from '@/features/tasks/task-create/task-create.component';
+import { TaskCreateComponent, CreateTaskPayload } from '@/features/tasks/task-create/task-create.component';
 import { TaskRowComponent } from '@/features/tasks/task-row/task-row.component';
 
 @Component({
     standalone: true,
-    imports: [CommonModule, TaskCreateComponent, TaskRowComponent],
+    imports: [
+        CommonModule,
+        TaskCreateComponent,
+        TaskRowComponent
+    ],
     templateUrl: './tasks.page.html',
     styleUrls: ['./tasks.page.scss'],
 })
@@ -35,9 +39,9 @@ export class TasksPage {
     //     }
     // }
 
-    protected async createTask(title: string) {
+    protected async createTask(payload: CreateTaskPayload) {
         try {
-            await this.tasksStore.add(title);
+            await this.tasksStore.add(payload);
         } catch (e: any) {
             console.log(`🚨 Error creating the task: ${e.message}`);
             // this.tasksStore.error.set(e?.message ?? 'Failed to add task');
