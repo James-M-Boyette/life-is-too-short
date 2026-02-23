@@ -1,0 +1,93 @@
+<p-card class="create-task-card-wrapper">
+    <!-- <ng-template #header>
+    </ng-template>
+    <ng-template #title> I'M A TITLE </ng-template>
+    <ng-template #subtitle> I'M A SUBTITLE </ng-template> -->
+    <ng-template #content>
+        <form id="create-task-form" class="create-new-task-form" (submit)="onSubmit($event)">
+            <input
+                type="text"
+                name="task-title"
+                placeholder="Add a task …"
+                [value]="titleDraft()"
+                (input)="onTitleInput($event)"
+                [disabled]="disabled"
+            />
+            <textarea
+                rows="8"
+                cols="30"
+                pTextarea
+                [autoResize]="false"
+                placeholder="Enter notes for this task ..."
+                [value]="notesDraft()"
+                (input)="onNotesInput($event)"
+            ></textarea>
+            <!--
+                <p-editor formControlName="text" [invalid]="isInvalid('text')" [style]="{ height: '320px' }" />
+                @if (isInvalid('text')) {
+                    <p-message severity="error" size="small" variant="simple">Content is required.</p-message>
+                }
+            -->
+
+        </form>
+        <div class="meta-container">
+
+        </div>
+    </ng-template>
+
+    <ng-template #footer>
+        <!-- "Projects" dropdown
+        -->
+
+        <p-select
+            class="assign-to-project-dropdown"
+            formControlName="project"
+            [options]="groupedProjects()"
+            placeholder="Select a Project"
+            [group]="true"
+            [disabled]="true"
+            >
+            <ng-template let-group #group>
+                <div class="project-option">
+                    <!-- <img src="tbd.png" [class]="project-icon" /> -->
+                    <span>{{ group.label }}</span>
+                </div>
+            </ng-template>
+        </p-select>
+
+        <div class="action-buttons-container">
+            <button pButton type="button" [disabled]="!canSubmit()" (click)="onCancelCreateTask()">
+                <i class="pi pi-times" pButtonIcon></i>
+                <span pButtonLabel>Cancel</span>
+            </button>
+            <button pButton type="submit" form="create-task-form" [disabled]="!canSubmit()">
+                <i class="pi pi-plus" pButtonIcon></i>
+                <span pButtonLabel>Add Task</span>
+            </button>
+        </div>
+    </ng-template>
+</p-card>
+
+<!-- <form class="create-new-task-form" (submit)="onSubmit($event)">
+    <input
+        type="text"
+        name="task-title"
+        placeholder="Add a task …"
+        [value]="draft()"
+        (input)="onInput($event)"
+        [disabled]="disabled"
+    />
+    <button type="submit" [disabled]="!canSubmit()">Add</button>
+</form> -->
+
+<!-- <form class="new" (submit)="onSubmit($event)">
+    <input
+        type="text"
+        name="task-title"
+        placeholder="Add a task…"
+        [value]="newTitle()"
+        (input)="onInput($event)"
+        [disabled]="tasksStore.mutating()"
+    />
+    <button type="submit" [disabled]="!canAdd() || tasksStore.mutating()">Add</button>
+</form> -->

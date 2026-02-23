@@ -12,7 +12,7 @@
         @if (!editing()) {
             <button
                 type="button"
-                class="titleBtn"
+                class="title-btn"
                 [class.done]="task.is_done"
                 (click)="startEdit()"
                 [disabled]="disabled"
@@ -34,5 +34,62 @@
         }
     </div>
 
-    <button type="button" (click)="remove.emit(task.id)" [disabled]="disabled">Delete</button>
+    <button
+        type="button"
+        class="delete-task-btn"
+        (click)="remove.emit(task.id)"
+        [disabled]="disabled"
+        >Delete
+    </button>
+
+    <!-- <div class="meta">
+        <button
+            type="button"
+            class="link"
+            (click)="toggleNotesOpen()"
+            [disabled]="disabled"
+            >
+            @if (notesOpen()) {
+                Hide notes
+            } @else {
+                Notes
+            }
+        </button>
+
+        <span class="hint">
+            @if (task.notes) {
+                Has notes
+            }
+        </span>
+    </div>
+
+    @if (notesOpen()) {
+        <div class="notes">
+            @if (!editingNotes()) {
+                <div class="notes-view">
+                    <p class="notes-text">
+                        {{ task.notes ?? 'No notes yet.' }}
+                    </p>
+                    <button type="button" (click)="startNotesEdit()" [disabled]="disabled">
+                        Edit notes
+                    </button>
+                </div>
+            } @else {
+                <form class="edit-notes-form" (submit)="onNotesSubmit($event)" >
+                    <textarea
+                        rows="3"
+                        [value]="draftNotes()"
+                        (input)="onNotesInput($event)"
+                        [disabled]="disabled"
+                    ></textarea>
+                    <div class="notes-actions">
+                        <button type="submit" [disabled]="disabled">Save</button>
+                        <button type="button" (click)="cancelNotesEdit()" [disabled]="disabled">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            }
+        </div>
+    } -->
 </li>

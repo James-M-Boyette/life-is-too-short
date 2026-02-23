@@ -1,0 +1,49 @@
+:host ::ng-deep {
+    p-card.create-task-card-wrapper {
+        .p-card-body {
+            .p-card-content {
+                form.create-new-task-form {
+                    display: flex;
+                    flex-direction: column;
+                    gap: .5rem;
+
+                    input {
+                        flex: 1;
+                        padding: 0.65rem 0.75rem;
+                        border: none;
+                        // border-radius: 12px;
+                        // border: 1px solid #ccc;
+                        border-bottom: 1px solid #ccc;
+                        font-weight: 600;
+                        font-size: 1.25rem;
+                        color: #202020;
+                    }
+
+                    textarea {
+                        border: none;
+                        font-size: 1rem;
+                    }
+
+                    button {
+                        padding: 0.65rem 0.9rem;
+                        border-radius: 12px;
+                        border: 1px solid #ccc;
+                        background: white;
+                        cursor: pointer;
+                    }
+                }
+            }
+
+            .p-card-footer {
+                display: flex;
+                justify-content: space-between;
+
+                .action-buttons-container {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 1rem;
+                }
+            }
+        }
+    }
+}

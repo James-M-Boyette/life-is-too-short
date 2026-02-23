@@ -228,6 +228,40 @@ export class TasksStore {
         });
     }
 
+    async updateNotes(task: Task, notes: string | null) {
+        const nextNotes = (notes ?? '').trim();
+        const normalized = nextNotes.length ? nextNotes : null;
+
+        if (normalized === task.notes) return;
+
+        await this.runMutation(async () => {
+            const next: Task = {
+                ...task,
+                notes: normalized,
+                updated_at: new Date().toISOString(), // optimistic
+            };
+
+            // optimistic
+            this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? next : t)));
+
+            const { data, error } = await supabase
+                .from('tasks')
+                .update({ notes: normalized })
+                .eq('id', task.id)
+                .select('*')
+                .single();
+
+            if (error) {
+                // revert
+                this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+                throw error;
+            }
+
+            // reconcile
+            this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? (data as Task) : t)));
+        });
+    }
+
     async toggleDone(task: Task) {
         await this.runMutation(async () => {
             const isDone = !task.is_done;

@@ -47,4 +47,42 @@ export class TaskRowComponent {
         event.preventDefault();
         this.commitEdit();
     }
+
+    @Output() editNotes = new EventEmitter<{ task: Task; notes: string | null }>();
+
+    protected readonly notesOpen = signal(false);
+    protected readonly editingNotes = signal(false);
+    protected readonly draftNotes = signal('');
+
+    protected toggleNotesOpen() {
+        this.notesOpen.update((v) => !v);
+        if (!this.notesOpen()) this.editingNotes.set(false);
+    }
+
+    protected startNotesEdit() {
+        if (this.disabled) return;
+        this.draftNotes.set(this.task.notes ?? '');
+        this.editingNotes.set(true);
+        this.notesOpen.set(true);
+    }
+
+    protected cancelNotesEdit() {
+        this.editingNotes.set(false);
+    }
+
+    protected commitNotesEdit() {
+        const value = this.draftNotes();
+        this.editingNotes.set(false);
+        this.editNotes.emit({ task: this.task, notes: value });
+    }
+
+    protected onNotesInput(event: Event) {
+        const el = event.target as HTMLTextAreaElement;
+        this.draftNotes.set(el.value);
+    }
+
+    protected onNotesSubmit(event: SubmitEvent) {
+        event.preventDefault();
+        this.commitNotesEdit();
+    }
 }

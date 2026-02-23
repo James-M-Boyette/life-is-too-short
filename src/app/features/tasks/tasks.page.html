@@ -1,4 +1,6 @@
 <section class="wrap">
+    <!-- App Header -->
+    <!-- TODO: MOVE THIS to a seperate component and inject into parent -->
     <header class="top">
         <h1>Tasks</h1>
         <button type="button" (click)="signOut()">Sign Out</button>
@@ -15,7 +17,7 @@
         </small>
     </header>
 
-    <form class="new" (submit)="onSubmit($event)">
+    <!-- <form class="new" (submit)="onSubmit($event)">
         <input
             type="text"
             name="title"
@@ -25,7 +27,11 @@
             [disabled]="tasksStore.mutating()"
         />
         <button type="submit" [disabled]="!canAdd() || tasksStore.mutating()">Add</button>
-    </form>
+    </form> -->
+    <app-task-create
+        [disabled]="tasksStore.mutating()"
+        (create)="createTask($event)"
+    />
 
     @if (tasksStore.loading()) {
         <p>Loading…</p>
@@ -58,6 +64,7 @@
                     (toggleDone)="tasksStore.toggleDone($event)"
                     (remove)="tasksStore.remove($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
+                    (editNotes)="tasksStore.updateNotes($event.task, $event.notes)"
                 />
             }
         </ul>
