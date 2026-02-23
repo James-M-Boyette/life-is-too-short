@@ -1,61 +1,24 @@
-.wrap {
-    max-width: 720px;
-    margin: 2rem auto;
-    padding: 1rem;
-    display: grid;
-    gap: 1rem;
+:host ::ng-deep {
+    section.wrap {
+        max-width: 720px;
+        margin: 2rem auto;
+        padding: 1rem;
+        display: grid;
+        gap: 1rem;
+
+        header.top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        ul.list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: 0.5rem;
+        }
+    }
 }
 
-.top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.new {
-    display: flex;
-    gap: 0.75rem;
-}
-
-.new input {
-    flex: 1;
-    padding: 0.65rem 0.75rem;
-    border-radius: 12px;
-    border: 1px solid #ccc;
-}
-
-button {
-    padding: 0.65rem 0.9rem;
-    border-radius: 12px;
-    border: 1px solid #ccc;
-    background: white;
-    cursor: pointer;
-}
-
-.list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    gap: 0.5rem;
-}
-
-.row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border: 1px solid #eee;
-    border-radius: 14px;
-    padding: 0.75rem;
-}
-
-.left {
-    display: flex;
-    gap: 0.6rem;
-    align-items: center;
-}
-
-.done {
-    text-decoration: line-through;
-    opacity: 0.65;
-}
