@@ -1,6 +1,14 @@
 <section class="wrap">
     <!-- App Header -->
     <!-- TODO: MOVE THIS to a seperate component and inject into parent -->
+    <app-tasks-header
+        title="Tasks"
+        [realtimeOn]="tasksStore.realtimeConnected()"
+        [errorText]="tasksStore.error()"
+        [disabled]="tasksStore.mutating()"
+        (signOut)="signOut()"
+    />
+
     <header class="top">
         <h1>Tasks</h1>
         <button type="button" (click)="signOut()">Sign Out</button>

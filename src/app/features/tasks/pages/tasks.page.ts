@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { TasksStore } from '@/features/tasks/state/tasks.store';
 import { Router } from '@angular/router';
+import { TasksHeaderComponent } from '@/features/tasks/components/tasks-header/tasks-header.component';
 import { TaskCreateComponent, CreateTaskPayload } from '@/features/tasks/components/task-create/task-create.component';
 import { TaskRowComponent } from '@/features/tasks/components/task-row/task-row.component';
 
@@ -10,6 +11,7 @@ import { TaskRowComponent } from '@/features/tasks/components/task-row/task-row.
     standalone: true,
     imports: [
         CommonModule,
+        TasksHeaderComponent,
         TaskCreateComponent,
         TaskRowComponent
     ],
