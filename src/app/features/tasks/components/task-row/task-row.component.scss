@@ -27,8 +27,79 @@
                     opacity: 0.65;
                 }
 
-                input.completed-check {
-                    border-radius: 100%;
+                // input.completed-check {
+                //     border-radius: 100%;
+                // }
+                .complete-toggle {
+                    width: 1.35rem;
+                    height: 1.35rem;
+                    border-radius: 999px;
+                    border: 2px solid rgba(0, 0, 0, 0.25);
+                    background: transparent;
+                    padding: 0;
+                    display: grid;
+                    place-items: center;
+                    cursor: pointer;
+                    flex: 0 0 auto;
+                    position: relative;
+
+                    // nice focus ring
+                    &:focus-visible {
+                        outline: 3px solid rgba(0, 98, 128, 0.35); // matches your primary vibe
+                        outline-offset: 2px;
+                    }
+
+                    // The checkmark (hidden by default)
+                    &::after {
+                        content: '';
+                        width: 0.35rem;
+                        height: 0.7rem;
+                        border-right: 2px solid rgba(0, 0, 0, 0.55);
+                        border-bottom: 2px solid rgba(0, 0, 0, 0.55);
+                        transform: rotate(45deg);
+                        opacity: 0; // hidden initially
+                        transition: opacity 120ms ease;
+                    }
+
+                    // Hover preview: "ghost" check
+                    &:hover::after {
+                        opacity: 0.35;
+                    }
+
+                    // Completed state
+                    &.done {
+                        border-color: var(--p-primary-color);
+                        background: rgba(0, 98, 128, 0.08);
+
+                        &::after {
+                            opacity: 1;
+                            border-right-color: var(--p-primary-color);
+                            border-bottom-color: var(--p-primary-color);
+                        }
+
+                        // Optional: don’t show ghost-on-hover because it’s already checked
+                        &:hover::after {
+                            opacity: 1;
+                        }
+                    }
+
+                    &:disabled {
+                        opacity: 0.55;
+                        cursor: not-allowed;
+                    }
+                }
+
+                .sr-only {
+                    position: absolute;
+                    width: 1px;
+                    height: 1px;
+                    padding: 0;
+                    margin: -1px;
+                    overflow: hidden;
+                    clip: rect(0, 0, 0, 0);
+                    white-space: nowrap;
+                    border: 0;
+                    color: transparent;
                 }
 
                 button.title-btn {

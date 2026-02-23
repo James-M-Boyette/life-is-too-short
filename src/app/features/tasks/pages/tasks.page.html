@@ -1,10 +1,18 @@
 <section class="wrap">
     <!-- App Header -->
     <!-- TODO: MOVE THIS to a seperate component and inject into parent -->
-    <header class="top">
+    <app-tasks-header
+        title="Tasks"
+        [realtimeOn]="tasksStore.realtimeConnected()"
+        [errorText]="tasksStore.error()"
+        [disabled]="tasksStore.mutating()"
+        (signOut)="signOut()"
+    />
+
+    <!-- <header class="top">
         <h1>Tasks</h1>
         <button type="button" (click)="signOut()">Sign Out</button>
-        <!--!!! Development Notices !!! -->
+
         @if (tasksStore.error()) {
             <p class="error">{{ tasksStore.error() }}</p>
         }
@@ -15,7 +23,7 @@
                 Realtime: off
             }
         </small>
-    </header>
+    </header> -->
 
     <!-- <form class="new" (submit)="onSubmit($event)">
         <input

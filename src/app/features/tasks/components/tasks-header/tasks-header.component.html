@@ -1,0 +1,22 @@
+<header class="top">
+    <h1>{{ title }}</h1>
+
+    <div class="right">
+        <small class="status">
+            @if (realtimeOn) {
+                Realtime: on
+            } @else {
+                Realtime: off
+            }
+        </small>
+
+        <!-- <button pButton type="button" (click)="onSignOutClick()" [disabled]="disabled">
+            <i class="pi pi-sign-out" pButtonIcon></i>
+            <span pButtonLabel>Sign Out</span>
+        </button> -->
+    </div>
+</header>
+
+@if (errorText) {
+    <p class="error">{{ errorText }}</p>
+}

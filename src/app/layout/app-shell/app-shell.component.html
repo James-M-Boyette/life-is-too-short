@@ -1,0 +1,29 @@
+<div class="app-shell">
+    <header class="app-header">
+        <div class="left">
+            <div class="brand">
+                <span class="app-name">Life is too short</span>
+            </div>
+
+            <nav class="nav">
+                <a routerLink="/tasks" routerLinkActive="active" class="nav-link">Tasks</a>
+                <!-- Later: Calendar, Today, Projects, etc. -->
+            </nav>
+        </div>
+
+        <div class="right">
+            @if (userEmail()) {
+                <span class="user-email">{{ userEmail() }}</span>
+            }
+
+            <button pButton type="button" (click)="signOut()">
+                <i class="pi pi-sign-out" pButtonIcon></i>
+                <span pButtonLabel>Sign Out</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="app-main">
+        <router-outlet />
+    </main>
+</div>

@@ -5,7 +5,10 @@ import { Router } from '@angular/router';
 import { AuthStore } from '@/shared/supabase/auth.store';
 
 @Component({
-    imports: [CommonModule, ReactiveFormsModule],
+    imports: [
+        CommonModule,
+        ReactiveFormsModule
+    ],
     templateUrl: './login.page.html',
     styleUrls: ['./login.page.scss'],
 })
