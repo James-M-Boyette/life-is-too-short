@@ -9,7 +9,8 @@
         "@schematics/angular:component": {
             "standalone": true,
             "style": "scss",
-            "changeDetection": "OnPush"
+            "changeDetection": "OnPush",
+            "type": "component"
         }
     },
     "newProjectRoot": "projects",
