@@ -1,15 +1,6 @@
 <li class="row">
     <section class="task-primary-section">
         <div class="left-column">
-            <p-checkbox
-                class="completed-check"
-                [binary]="true"
-                [value]="isCompleted()"
-                (input)="onToggleCompleted($event)"
-                (change)="toggleDone.emit(task)"
-                [disabled]="disabled"
-                aria-label="Mark task done"
-            />
             <!-- <input
                 class="completed-check"
                 type="checkbox"
@@ -18,6 +9,29 @@
                 [disabled]="disabled"
                 aria-label="Mark task done"
             /> -->
+            <!-- <p-checkbox
+                class="completed-check"
+                [binary]="true"
+                [value]="isCompleted()"
+                (input)="onToggleCompleted($event)"
+                (change)="toggleDone.emit(task)"
+                [disabled]="disabled"
+                aria-label="Mark task done"
+            /> -->
+            <!-- inside task-primary-section > left-column -->
+            <button
+                type="button"
+                class="complete-toggle"
+                [class.done]="task.is_done"
+                (click)="toggleDone.emit(task)"
+                [disabled]="disabled"
+                [attr.aria-label]="task.is_done ? 'Mark task not done' : 'Mark task done'"
+                [attr.aria-pressed]="task.is_done"
+                >
+                <span class="sr-only">
+                    {{ task.is_done ? 'Completed' : 'Not completed' }}
+                </span>
+            </button>
 
             @if (!editing()) {
                 <button

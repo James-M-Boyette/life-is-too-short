@@ -1,10 +1,10 @@
 import { Component, signal, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthStore } from '@/shared/supabase/auth.store';
-import { TasksStore } from './tasks.store';
+import { TasksStore } from '@/features/tasks/state/tasks.store';
 import { Router } from '@angular/router';
-import { TaskCreateComponent, CreateTaskPayload } from '@/features/tasks/task-create/task-create.component';
-import { TaskRowComponent } from '@/features/tasks/task-row/task-row.component';
+import { TaskCreateComponent, CreateTaskPayload } from '@/features/tasks/components/task-create/task-create.component';
+import { TaskRowComponent } from '@/features/tasks/components/task-row/task-row.component';
 
 @Component({
     standalone: true,
