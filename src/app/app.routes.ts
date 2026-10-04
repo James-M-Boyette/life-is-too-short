@@ -14,20 +14,34 @@ import { AuthCallbackPage } from '@/features/auth/pages/auth-callback.page';
 export const routes: Routes = [
     {
         path: 'login',
-        loadComponent: () => import('@/features/auth/pages/login.page').then((m) => m.LoginPage),
+        loadComponent: () =>
+            import('@/features/auth/pages/login.page')
+            .then((m) => m.LoginPage),
     },
 
     {
         path: '',
         loadComponent: () =>
-            import('@/layout/app-shell/app-shell.component').then((m) => m.AppShellComponent),
+            import('@/layout/app-shell/app-shell.component')
+            .then((m) => m.AppShellComponent),
         children: [
             {
                 path: 'tasks',
                 loadComponent: () =>
-                    import('@/features/tasks/pages/tasks.page').then((m) => m.TasksPage),
+                    import('@/features/tasks/pages/tasks.page')
+                        .then((m) => m.TasksPage),
             },
-            { path: '', pathMatch: 'full', redirectTo: 'tasks' },
+            {
+                path: 'tasks/project/:projectId',
+                loadComponent: () =>
+                    import('@/features/tasks/pages/tasks.page')
+                        .then((m) => m.TasksPage),
+            },
+            {
+                path: '',
+                pathMatch: 'full',
+                redirectTo: 'tasks',
+            },
         ],
     },
 
