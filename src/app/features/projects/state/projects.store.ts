@@ -8,11 +8,18 @@ import { buildProjectTree } from '@/features/projects/utils/project-tree.util';
 @Injectable({ providedIn: 'root' })
 export class ProjectsStore {
     readonly projects = signal<Project[]>([]); // What Projects are currently available?
-    readonly projectTree = computed(() => // A hierarchical representation of the Projects, built from the flat list of Projects.
-        buildProjectTree(this.projects()
-    ));
+    readonly projectTree = computed(() =>
+        // A hierarchical representation of the Projects, built from the flat list of Projects.
+        buildProjectTree(this.projects()),
+    );
     readonly loading = signal(false); // Are we fetching them?
     readonly error = signal<string | null>(null); // Did fetching them fail?
+
+    readonly projectsById = computed(() => {
+        const projects = this.projects();
+
+        return new Map(projects.map((project) => [project.id, project]));
+    });
 
     constructor(private readonly auth: AuthStore) {
         effect(() => {
@@ -50,5 +57,13 @@ export class ProjectsStore {
         } finally {
             this.loading.set(false);
         }
+    }
+
+    getProject(projectId: string | null): Project | null {
+        if (!projectId) {
+            return null;
+        }
+
+        return this.projectsById().get(projectId) ?? null;
     }
 }

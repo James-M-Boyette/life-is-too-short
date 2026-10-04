@@ -1,22 +1,21 @@
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal, input, } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { ButtonModule } from 'primeng/button';
 import type { Task } from '@/features/tasks/models/tasks.model';
+import { Project } from '@/features/projects/models/project.model';
 
 @Component({
     standalone: true,
-    imports: [
-        CommonModule,
-        ButtonModule,
-    ],
+    imports: [CommonModule, ButtonModule],
     selector: 'app-task-row',
     templateUrl: './task-row.component.html',
     styleUrls: ['./task-row.component.scss'],
 })
 export class TaskRowComponent {
-    @Input({ required: true }) task!: Task;
-    @Input() disabled = false;
+    // @Input({ required: true }) task!: Task;
+    // @Input() disabled = false;
+    disabled = input<boolean>(false);
 
     @Output() toggleDone = new EventEmitter<Task>();
     @Output() remove = new EventEmitter<string>();
@@ -24,10 +23,12 @@ export class TaskRowComponent {
 
     protected readonly editing = signal(false);
     protected readonly draftTitle = signal('');
+    readonly task = input.required<Task>();
+    readonly project = input<Project | null>(null);
 
     protected startEdit() {
-        if (this.disabled) return;
-        this.draftTitle.set(this.task.title);
+        if (this.disabled()) return;
+        this.draftTitle.set(this.task().title);
         this.editing.set(true);
     }
 
@@ -39,8 +40,8 @@ export class TaskRowComponent {
         const title = this.draftTitle().trim();
         this.editing.set(false);
 
-        if (!title || title === this.task.title) return;
-        this.rename.emit({ task: this.task, title });
+        if (!title || title === this.task().title) return;
+        this.rename.emit({ task: this.task(), title });
     }
 
     protected onDraftInput(event: Event) {
@@ -65,8 +66,8 @@ export class TaskRowComponent {
     }
 
     protected startNotesEdit() {
-        if (this.disabled) return;
-        this.draftNotes.set(this.task.notes ?? '');
+        if (this.disabled()) return;
+        this.draftNotes.set(this.task().notes ?? '');
         this.editingNotes.set(true);
         this.notesOpen.set(true);
     }
@@ -78,7 +79,7 @@ export class TaskRowComponent {
     protected commitNotesEdit() {
         const value = this.draftNotes();
         this.editingNotes.set(false);
-        this.editNotes.emit({ task: this.task, notes: value });
+        this.editNotes.emit({ task: this.task(), notes: value });
     }
 
     protected onNotesInput(event: Event) {

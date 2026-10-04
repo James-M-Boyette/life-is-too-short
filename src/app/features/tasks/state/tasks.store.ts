@@ -1,7 +1,7 @@
 /** ToDo:
     [] Split repository/data-access concerns from application state
 */
-import { Injectable, effect, signal } from '@angular/core';
+import { Injectable, effect, signal, } from '@angular/core';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/shared/supabase/supabase.client';
 import { AuthStore } from '@/shared/supabase/auth.store';
@@ -24,6 +24,7 @@ type AddTaskInput = {
 export class TasksStore {
     readonly tasks = signal<Task[]>([]); // What Tasks are currently available?
     readonly loading = signal(false); // Are we fetching them?
+    readonly creating = signal(false); // Are we in the process of creating a new task (showing the form)?
     readonly mutating = signal(false); // Are we performing a mutation (add, update, delete) on the server?
     readonly error = signal<string | null>(null); // Did fetching or mutating fail?
 
@@ -37,9 +38,7 @@ export class TasksStore {
         try {
             return await fn();
         } catch (e: unknown) {
-            this.error.set(
-                e instanceof Error ? e.message : 'Failed to load tasks',
-            );
+            this.error.set(e instanceof Error ? e.message : 'Failed to load tasks');
             throw e;
         } finally {
             this.mutating.set(false);
@@ -152,34 +151,78 @@ export class TasksStore {
 
     async addTask(input: AddTaskInput) {
         const userId = this.auth.userId();
+
         if (!userId) throw new Error(`✋⛔ User not authenticated`);
 
-        await this.runMutation(async () => {
-            const tempId = crypto.randomUUID();
+        this.error.set(null);
+        this.creating.set(true);
 
-            // The "optimistic" object should represent what we *believe* the successful server result will mean (not merely what the server looked like before the request was made).
-            const optimistic: Task = {
-                id: tempId,
-                user_id: userId,
-                project_id: input.projectId,
+        const tempId = crypto.randomUUID();
 
-                title: input.title,
-                is_done: false,
+        // await this.runMutation(async () => {
+        //     const tempId = crypto.randomUUID();
 
-                notes: input.notes,
-                due_at: null,
+        //     // The "optimistic" object should represent what we *believe* the successful server result will mean (not merely what the server looked like before the request was made).
+        //     const optimistic: Task = {
+        //         id: tempId,
+        //         user_id: userId,
+        //         project_id: input.projectId,
 
-                status: 'todo',
+        //         title: input.title,
+        //         is_done: false,
 
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            };
+        //         notes: input.notes,
+        //         due_at: null,
 
-            this.tasks.update((prev) => [optimistic, ...prev]);
+        //         status: 'todo',
 
+        //         created_at: new Date().toISOString(),
+        //         updated_at: new Date().toISOString(),
+        //     };
+
+        //     this.tasks.update((prev) => [optimistic, ...prev]);
+
+        //     const { data, error } = await supabase
+        //         .from('tasks')
+        //         // .insert({ user_id: userId, title, project_id } satisfies NewTaskInsert)
+        //         .insert({
+        //             user_id: userId,
+        //             title: input.title,
+        //             notes: input.notes,
+        //             project_id: input.projectId,
+        //         })
+        //         .select('*')
+        //         .single();
+
+        //     if (error) {
+        //         this.tasks.update((prev) => prev.filter((t) => t.id !== tempId));
+        //         throw error;
+        //     }
+
+        //     this.tasks.update((prev) => prev.map((t) => (t.id === tempId ? (data as Task) : t)));
+        // });
+        const optimistic: Task = {
+            id: tempId,
+            user_id: userId,
+            project_id: input.projectId,
+
+            title: input.title,
+            is_done: false,
+
+            notes: input.notes,
+            due_at: null,
+
+            status: 'todo',
+
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+
+        this.tasks.update((prev) => [optimistic, ...prev]);
+
+        try {
             const { data, error } = await supabase
                 .from('tasks')
-                // .insert({ user_id: userId, title, project_id } satisfies NewTaskInsert)
                 .insert({
                     user_id: userId,
                     title: input.title,
@@ -190,12 +233,21 @@ export class TasksStore {
                 .single();
 
             if (error) {
-                this.tasks.update((prev) => prev.filter((t) => t.id !== tempId));
                 throw error;
             }
 
-            this.tasks.update((prev) => prev.map((t) => (t.id === tempId ? (data as Task) : t)));
-        });
+            this.tasks.update((prev) =>
+                prev.map((task) => (task.id === tempId ? (data as Task) : task)),
+            );
+        } catch (e: unknown) {
+            this.tasks.update((prev) => prev.filter((task) => task.id !== tempId));
+
+            this.error.set(e instanceof Error ? e.message : 'Failed to create task');
+
+            throw e;
+        } finally {
+            this.creating.set(false);
+        }
     }
 
     async updateTitle(task: Task, title: string) {

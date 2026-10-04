@@ -31,13 +31,13 @@
 
         <ng-template #footer>
             <!-- "Projects" dropdown -->
+            <!-- (onNodeSelect)="onProjectSelect($event)" -->
             <p-treeselect
                 class="assign-to-project-dropdown"
                 [options]="projectOptions()"
                 placeholder="Select a Project"
-                formControlName="projectId"
+                formControlName="project"
                 [showClear]="true"
-                (onNodeSelect)="onProjectSelect($event)"
             />
 
             <!-- 'Cancel' + ' Add Task' Action Buttons -->
@@ -55,7 +55,7 @@
                 <button
                     pButton
                     type="submit"
-                    [disabled]="disabled() || form.invalid"
+                    [disabled]="form.invalid"
                     >
 
                     <i class="pi pi-plus" pButtonIcon></i>

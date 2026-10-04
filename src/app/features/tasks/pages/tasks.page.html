@@ -9,9 +9,11 @@
         (signOut)="signOut()"
     />
 
-        <!-- [projects]="projectsStore.projects()" -->
+        <!--
+            [disabled]="tasksStore.mutating()"
+            [projects]="projectsStore.projects()"
+        -->
     <app-task-create
-        [disabled]="tasksStore.mutating()"
         [projects]="projectsStore.projectTree()"
         (create)="createTask($event)"
     />

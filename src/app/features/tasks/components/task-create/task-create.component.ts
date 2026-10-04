@@ -46,7 +46,7 @@ export type CreateTaskPayload = {
     styleUrls: ['./task-create.component.scss'],
 })
 export class TaskCreateComponent {
-    readonly disabled = input<boolean>(false);
+    // readonly disabled = input<boolean>(false);
     readonly projects = input<ProjectNode[]>([]);
 
     private readonly fb = inject(NonNullableFormBuilder);
@@ -61,11 +61,18 @@ export class TaskCreateComponent {
         this.toTreeNodes(this.projects()),
     );
 
-    constructor() {
-        this.form.controls.project.valueChanges.subscribe((value) => {
-            console.log('🌲 projectId changed:', value);
-        });
-    }
+    // constructor() {
+        // Diagnostic Logging:
+        // this.form.controls.project.valueChanges.subscribe((value) => {
+        //     console.log('🌲 project changed:', value);
+
+        //     if (value) {
+        //         console.log('🌲 selected project key:', value.key);
+        //     } else {
+        //         console.log('🌲 project was cleared/reset');
+        //     }
+        // });
+    // }
 
     private toTreeNodes(nodes: ProjectNode[]): TreeNode[] {
         return nodes.map((node) => {
@@ -85,17 +92,18 @@ export class TaskCreateComponent {
     readonly create = output<CreateTaskPayload>();
 
     protected onSubmit() {
-        console.log('🔎 form value:', this.form.getRawValue());
-        console.log('🔎 form valid:', this.form.valid);
-        console.log('🔎 form errors:', this.form.errors);
-        console.log('🔎 title:', this.form.controls.title);
-        console.log('🔎 project:', this.form.controls.project);
+        // Diagnostic Logging:
+        // console.log('🔎 form value:', this.form.getRawValue());
+        // console.log('🔎 form valid:', this.form.valid);
+        // console.log('🔎 form errors:', this.form.errors);
+        // console.log('🔎 title:', this.form.controls.title);
+        // console.log('🔎 project:', this.form.controls.project);
 
-        if (this.form.invalid || this.disabled()) return;
+        if ( this.form.invalid ) return;
 
         const { title, notes, project } = this.form.getRawValue();
 
-        console.log('🔎 project form value:', project);
+        // console.log('🔎 project form value:', project);
 
         this.create.emit({
             title: title.trim(),
@@ -107,13 +115,14 @@ export class TaskCreateComponent {
     }
 
     protected onCancelCreateTask() {
-        console.log(`❌ Canceling and Clearing the new Task form`);
-        console.log('🚨🚨🚨 NEW CODE IS RUNNING 🚨🚨🚨');
+        // console.log(`❌ Canceling and Clearing the new Task form`);
+        // console.log('🚨🚨🚨 NEW CODE IS RUNNING 🚨🚨🚨');
         this.form.reset();
     }
 
-    protected onProjectSelect(event: unknown) {
-        console.log('🌲 TreeSelect event:', event);
-        console.log('🌲 projectId control value:', this.form.controls.project.value);
-    }
+    // Diagnostic Logging:
+    // protected onProjectSelect(event: unknown) {
+    //     console.log('🌲 TreeSelect event:', event);
+    //     console.log('🌲 project control value:', this.form.controls.project.value);
+    // }
 }
