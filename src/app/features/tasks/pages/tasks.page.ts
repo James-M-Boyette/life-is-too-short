@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { TasksHeaderComponent } from '@/features/tasks/components/tasks-header/tasks-header.component';
 import { TaskCreateComponent, CreateTaskPayload } from '@/features/tasks/components/task-create/task-create.component';
 import { TaskRowComponent } from '@/features/tasks/components/task-row/task-row.component';
+import { ProjectsStore } from '@/features/projects/state/projects.store';
 
 @Component({
     standalone: true,
@@ -21,44 +22,25 @@ import { TaskRowComponent } from '@/features/tasks/components/task-row/task-row.
 export class TasksPage {
     protected readonly auth = inject(AuthStore);
     protected readonly tasksStore = inject(TasksStore);
-    private readonly router = inject(Router);
+    protected readonly projectsStore = inject(ProjectsStore);
+    readonly error = signal<string | null>(null); // Did creating a Task fail?
 
+    private readonly router = inject(Router);
     // protected readonly newTitle = signal('');
 
     constructor() {}
 
-    // protected readonly canAdd = computed(() => this.newTitle().trim().length > 0);
-
-    // async add() {
-    //     const title = this.newTitle().trim();
-    //     if (!title) return;
-
-    //     try {
-    //         await this.tasksStore.add(title);
-    //         this.newTitle.set('');
-    //     } catch (e: any) {
-    //         this.tasksStore.error.set(e?.message ?? 'Failed to add task');
-    //     }
-    // }
-
     protected async createTask(payload: CreateTaskPayload) {
         try {
-            await this.tasksStore.add(payload);
-        } catch (e: any) {
-            console.log(`🚨 Error creating the task: ${e.message}`);
-            // this.tasksStore.error.set(e?.message ?? 'Failed to add task');
+            await this.tasksStore.addTask(payload);
+        } catch (e: unknown) {
+            this.error.set(
+                e instanceof Error ? e.message : 'Failed to load tasks',
+            );
+            console.log(`🚨 Error creating the task: ${e instanceof Error ? e.message : 'Unknown error'}`);
+            throw e;
         }
     }
-
-    // protected async onSubmit(event: SubmitEvent) {
-    //     event.preventDefault(); // stops full page refresh
-    //     await this.add();
-    // }
-
-    // protected onInput(event: Event) {
-    //     const input = event.target as HTMLInputElement;
-    //     this.newTitle.set(input.value);
-    // }
 
     protected async signOut() {
         await this.auth.signOut();

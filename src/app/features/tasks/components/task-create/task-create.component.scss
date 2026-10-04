@@ -1,11 +1,11 @@
 :host ::ng-deep {
-    p-card.create-task-card-wrapper {
-        .p-card-body {
-            .p-card-content {
-                form.create-new-task-form {
+    form.create-new-task-form {
+        p-card.create-task-card-wrapper {
+            .p-card-body {
+                .p-card-content {
                     display: flex;
                     flex-direction: column;
-                    gap: .5rem;
+                    gap: 0.5rem;
 
                     input {
                         flex: 1;
@@ -32,16 +32,16 @@
                         cursor: pointer;
                     }
                 }
-            }
 
-            .p-card-footer {
-                display: flex;
-                justify-content: space-between;
-
-                .action-buttons-container {
+                .p-card-footer {
                     display: flex;
-                    justify-content: flex-end;
-                    gap: 1rem;
+                    justify-content: space-between;
+
+                    .action-buttons-container {
+                        display: flex;
+                        justify-content: flex-end;
+                        gap: 1rem;
+                    }
                 }
             }
         }

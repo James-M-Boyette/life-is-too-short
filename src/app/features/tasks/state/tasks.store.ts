@@ -1,31 +1,19 @@
+/** ToDo:
+    [] Split repository/data-access concerns from application state
+*/
 import { Injectable, effect, signal } from '@angular/core';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/shared/supabase/supabase.client';
 import { AuthStore } from '@/shared/supabase/auth.store';
+import type { TaskStatus, Task } from '@/features/tasks/models/tasks.model';
 
-export type TaskStatus = 'todo' | 'in_progress' | 'waiting' | 'deferred' | 'cancelled' | 'done';
-
-export type Task = {
-    id: string;
-    user_id: string;
-    title: string;
-
-    is_done: boolean;
-
-    notes: string | null;
-    due_at: string | null;
-
-    status: TaskStatus;
-
-    created_at: string;
-    updated_at: string;
-};
-
+// Type for inserting a new task
 type NewTaskInsert = {
     user_id: string;
     title: string;
 };
 
+// ?
 type AddTaskInput = {
     title: string;
     notes: string | null;
@@ -34,10 +22,10 @@ type AddTaskInput = {
 
 @Injectable({ providedIn: 'root' })
 export class TasksStore {
-    readonly loading = signal(false);
-    readonly mutating = signal(false);
-    readonly tasks = signal<Task[]>([]);
-    readonly error = signal<string | null>(null);
+    readonly tasks = signal<Task[]>([]); // What Tasks are currently available?
+    readonly loading = signal(false); // Are we fetching them?
+    readonly mutating = signal(false); // Are we performing a mutation (add, update, delete) on the server?
+    readonly error = signal<string | null>(null); // Did fetching or mutating fail?
 
     readonly realtimeConnected = signal(false);
 
@@ -48,8 +36,10 @@ export class TasksStore {
         this.mutating.set(true);
         try {
             return await fn();
-        } catch (e: any) {
-            this.error.set(e?.message ?? 'Operation failed');
+        } catch (e: unknown) {
+            this.error.set(
+                e instanceof Error ? e.message : 'Failed to load tasks',
+            );
             throw e;
         } finally {
             this.mutating.set(false);
@@ -57,10 +47,6 @@ export class TasksStore {
     }
 
     constructor(private readonly auth: AuthStore) {
-        // effect(() => {
-        //     if (this.auth.isAuthed()) void this.refresh();
-        //     else this.tasks.set([]);
-        // });
         // Baseline refresh + realtime subscription lifecycle
         effect((onCleanup) => {
             const userId = this.auth.userId();
@@ -68,6 +54,7 @@ export class TasksStore {
             // Always tear down prior subscription when user changes/logs out
             this.teardownRealtime();
 
+            // If no user, clear tasks and mark realtime as disconnected
             if (!userId) {
                 this.tasks.set([]);
                 this.realtimeConnected.set(false);
@@ -75,7 +62,7 @@ export class TasksStore {
             }
 
             // Load current state once
-            void this.refresh();
+            void this.refreshTasks();
 
             // Start realtime subscription scoped to this user
             this.channel = supabase
@@ -105,7 +92,7 @@ export class TasksStore {
         }
     }
 
-    // payload typing is annoyingly loose in supabase-js; we’ll keep it safe:
+    // Payload typing is annoyingly loose in supabase-js; we’re keeping it safe for now ...
     private onTasksChange(payload: any) {
         const eventType: string = payload.eventType;
 
@@ -145,7 +132,7 @@ export class TasksStore {
         return [...list].sort((a, b) => b.created_at.localeCompare(a.created_at));
     }
 
-    async refresh() {
+    async refreshTasks() {
         this.loading.set(true);
         this.error.set(null);
         try {
@@ -155,7 +142,7 @@ export class TasksStore {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            this.tasks.set((data ?? []) as Task[]);
+            this.tasks.set((data ?? []) as Task[]); // Set tasks from DB (or empty array if null)
         } catch (e: any) {
             this.error.set(e?.message ?? 'Failed to load tasks');
         } finally {
@@ -163,16 +150,19 @@ export class TasksStore {
         }
     }
 
-    async add(input: AddTaskInput) {
+    async addTask(input: AddTaskInput) {
         const userId = this.auth.userId();
         if (!userId) throw new Error(`✋⛔ User not authenticated`);
 
         await this.runMutation(async () => {
             const tempId = crypto.randomUUID();
 
+            // The "optimistic" object should represent what we *believe* the successful server result will mean (not merely what the server looked like before the request was made).
             const optimistic: Task = {
                 id: tempId,
                 user_id: userId,
+                project_id: input.projectId,
+
                 title: input.title,
                 is_done: false,
 
@@ -189,11 +179,12 @@ export class TasksStore {
 
             const { data, error } = await supabase
                 .from('tasks')
-                // .insert({ user_id: userId, title } satisfies NewTaskInsert)
+                // .insert({ user_id: userId, title, project_id } satisfies NewTaskInsert)
                 .insert({
                     user_id: userId,
                     title: input.title,
                     notes: input.notes,
+                    project_id: input.projectId,
                 })
                 .select('*')
                 .single();

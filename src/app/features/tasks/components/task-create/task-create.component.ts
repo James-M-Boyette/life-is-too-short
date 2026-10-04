@@ -1,18 +1,27 @@
-import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
+import { Component, EventEmitter, inject, computed, signal, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 // import { EditorModule } from 'primeng/editor'; // Needs `pnpm install quill`
-import { SelectModule } from 'primeng/select';
 import { ButtonModule } from 'primeng/button';
-// import { ReactiveFormsModule, FormGroup, FormControl } from '@angular/forms';
+import { TreeSelectModule } from 'primeng/treeselect';
+import type { ProjectNode } from '@/features/projects/models/project.model';
+import { TreeNode } from 'primeng/api';
+import {
+    ReactiveFormsModule,
+    FormGroup,
+    FormControl,
+    Validators,
+    NonNullableFormBuilder,
+} from '@angular/forms';
+import { noWhitespaceValidator } from '@/shared/validators/no-whitespace-validator';
 
-type ProjectOption = {
-    label: string;
-    items: Array<{ label: string; value: string }>;
-};
+// type ProjectOption = {
+//     label: string;
+//     items: Array<{ label: string; value: string }>;
+// };
 
 export type CreateTaskPayload = {
     title: string;
@@ -27,71 +36,84 @@ export type CreateTaskPayload = {
         CardModule,
         InputTextModule,
         TextareaModule,
-        SelectModule,
+        // SelectModule,
+        TreeSelectModule,
         ButtonModule,
-        // ReactiveFormsModule,
+        ReactiveFormsModule,
     ],
     selector: 'app-task-create',
     templateUrl: './task-create.component.html',
     styleUrls: ['./task-create.component.scss'],
 })
 export class TaskCreateComponent {
-    @Input() disabled = false;
+    readonly disabled = input<boolean>(false);
+    readonly projects = input<ProjectNode[]>([]);
+
+    private readonly fb = inject(NonNullableFormBuilder);
+
+    protected readonly form = this.fb.group({
+        title: ['', [Validators.required, noWhitespaceValidator]],
+        notes: [''],
+        project: this.fb.control<TreeNode | null>(null),
+    });
+
+    protected readonly projectOptions = computed<TreeNode[]>(() =>
+        this.toTreeNodes(this.projects()),
+    );
+
+    constructor() {
+        this.form.controls.project.valueChanges.subscribe((value) => {
+            console.log('🌲 projectId changed:', value);
+        });
+    }
+
+    private toTreeNodes(nodes: ProjectNode[]): TreeNode[] {
+        return nodes.map((node) => {
+            const hasChildren = node.children.length > 0;
+
+            return {
+                key: node.project.id,
+                label: node.project.name,
+                leaf: !hasChildren,
+                children: hasChildren ? this.toTreeNodes(node.children) : undefined,
+            };
+        });
+    }
 
     // Keep this as string for now so it plugs into TasksStore.add(title).
     // Later we'll upgrade this to emit { title, notes, projectId }.
-    @Output() create = new EventEmitter<CreateTaskPayload>();
+    readonly create = output<CreateTaskPayload>();
 
-    // --- UI state (signals) ---
-    protected readonly titleDraft = signal('');
-    protected readonly notesDraft = signal('');
+    protected onSubmit() {
+        console.log('🔎 form value:', this.form.getRawValue());
+        console.log('🔎 form valid:', this.form.valid);
+        console.log('🔎 form errors:', this.form.errors);
+        console.log('🔎 title:', this.form.controls.title);
+        console.log('🔎 project:', this.form.controls.project);
 
-    // project is placeholder for now
-    protected readonly selectedProject = signal<string | null>(null);
-    protected readonly groupedProjects = signal<ProjectOption[]>([]);
+        if (this.form.invalid || this.disabled()) return;
 
-    protected readonly canSubmit = computed(
-        () => this.titleDraft().trim().length > 0 && !this.disabled,
-    );
+        const { title, notes, project } = this.form.getRawValue();
 
-    protected onTitleInput(event: Event) {
-        const el = event.target as HTMLInputElement;
-        this.titleDraft.set(el.value);
-    }
+        console.log('🔎 project form value:', project);
 
-    protected onNotesInput(event: Event) {
-        const el = event.target as HTMLTextAreaElement;
-        this.notesDraft.set(el.value);
-    }
-
-    // We’re not wiring project behavior yet, but this is ready when you want it.
-    protected onProjectChange(value: string | null) {
-        this.selectedProject.set(value);
-    }
-
-    protected onSubmit(event: SubmitEvent) {
-        event.preventDefault();
-
-        const title = this.titleDraft().trim();
-        if (!title || this.disabled) return;
-
-        const notes = this.notesDraft().trim();
         this.create.emit({
-            title,
-            notes: notes.length ? notes : null,
-            projectId: this.selectedProject(),
+            title: title.trim(),
+            notes: notes.trim() || null,
+            projectId: project?.key ?? null,
         });
 
-        // Clear the form
-        this.titleDraft.set('');
-        this.notesDraft.set('');
-        this.selectedProject.set(null);
+        this.form.reset();
     }
 
     protected onCancelCreateTask() {
         console.log(`❌ Canceling and Clearing the new Task form`);
-        this.titleDraft.set('');
-        this.notesDraft.set('');
-        this.selectedProject.set(null);
+        console.log('🚨🚨🚨 NEW CODE IS RUNNING 🚨🚨🚨');
+        this.form.reset();
+    }
+
+    protected onProjectSelect(event: unknown) {
+        console.log('🌲 TreeSelect event:', event);
+        console.log('🌲 projectId control value:', this.form.controls.project.value);
     }
 }
