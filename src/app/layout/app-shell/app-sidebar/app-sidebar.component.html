@@ -8,29 +8,26 @@
             Add Task
         </button>
 
-        <button type="button">
-            Inbox
-        </button>
+        <button type="button">Inbox</button>
 
-        <button type="button">
-            Today
-        </button>
+        <button type="button">Today</button>
 
-        <button type="button">
-            Upcoming
-        </button>
+        <button type="button">Upcoming</button>
     </section>
 
     <section class="project-navigation">
         <h2>Projects</h2>
 
         @for (node of projects(); track node.project.id) {
-            <button
-                type="button"
-                (click)="projectSelect.emit(node.project.id)"
-            >
+            <!-- (click)="projectSelect.emit(node.project.id)" -->
+
+            <a
+                [routerLink]="['/tasks/project', node.project.id]"
+                routerLinkActive="active">
                 {{ node.project.name }}
-            </button>
+
+            </a>
+
         }
     </section>
 </nav>
