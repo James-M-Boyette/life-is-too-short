@@ -1,9 +1,20 @@
-import { Component, EventEmitter, Input, Output, signal, input, } from '@angular/core';
+import {
+    Component,
+    EventEmitter,
+    Input,
+    Output,
+    signal,
+    input,
+    output,
+    computed,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { ButtonModule } from 'primeng/button';
 import type { Task } from '@/features/tasks/models/tasks.model';
-import { Project } from '@/features/projects/models/project.model';
+import { Project, ProjectNode } from '@/features/projects/models/project.model';
+import { toProjectTreeNodes, findTreeNodeByKey } from '@/features/projects/utils/project-tree-node.util';
+import { TreeNode } from 'primeng/api';
 
 @Component({
     standalone: true,
@@ -23,8 +34,33 @@ export class TaskRowComponent {
 
     protected readonly editing = signal(false);
     protected readonly draftTitle = signal('');
-    readonly task = input.required<Task>();
-    readonly project = input<Project | null>(null);
+    readonly task = input.required<Task>(); // The current task
+    readonly project = input<Project | null>(null); // The project that the current task belongs to (if any)
+    readonly projects = input<ProjectNode[]>([]); // The list of all *possible* projects (for the project dropdown)
+
+    protected readonly projectOptions = computed(() => toProjectTreeNodes(this.projects()));
+
+    protected readonly selectedProjectNode = computed(() => {
+        const projectId = this.task().project_id;
+
+        if (!projectId) {
+            return null;
+        }
+
+        return findTreeNodeByKey(this.projectOptions(), projectId);
+    });
+
+    readonly projectChange = output<{
+        task: Task;
+        projectId: string | null;
+    }>();
+
+    // protected onProjectChange(project: TreeNode | null) {
+    //     this.projectChange.emit({
+    //         task: this.task(),
+    //         projectId: project?.key ?? null,
+    //     });
+    // }
 
     protected startEdit() {
         if (this.disabled()) return;
