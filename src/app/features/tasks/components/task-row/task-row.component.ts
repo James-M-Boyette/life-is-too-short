@@ -14,11 +14,18 @@ import { ButtonModule } from 'primeng/button';
 import type { Task } from '@/features/tasks/models/tasks.model';
 import { Project, ProjectNode } from '@/features/projects/models/project.model';
 import { toProjectTreeNodes, findTreeNodeByKey } from '@/features/projects/utils/project-tree-node.util';
-import { TreeNode } from 'primeng/api';
+import { FormsModule } from '@angular/forms';
+import { TreeSelectModule } from 'primeng/treeselect';
+import type { TreeNode } from 'primeng/api';
 
 @Component({
     standalone: true,
-    imports: [CommonModule, ButtonModule],
+    imports: [
+        CommonModule,
+        ButtonModule,
+        FormsModule,
+        TreeSelectModule
+    ],
     selector: 'app-task-row',
     templateUrl: './task-row.component.html',
     styleUrls: ['./task-row.component.scss'],
@@ -55,12 +62,12 @@ export class TaskRowComponent {
         projectId: string | null;
     }>();
 
-    // protected onProjectChange(project: TreeNode | null) {
-    //     this.projectChange.emit({
-    //         task: this.task(),
-    //         projectId: project?.key ?? null,
-    //     });
-    // }
+    protected onProjectChange(project: TreeNode | null) {
+        this.projectChange.emit({
+            task: this.task(),
+            projectId: project?.key ?? null,
+        });
+    }
 
     protected startEdit() {
         if (this.disabled()) return;

@@ -26,7 +26,6 @@ export class TasksPage {
     readonly error = signal<string | null>(null); // Did creating a Task fail?
 
     private readonly router = inject(Router);
-    // protected readonly newTitle = signal('');
 
     constructor() {}
 

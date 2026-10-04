@@ -149,6 +149,8 @@
             div.meta {
                 display: flex;
                 align-items: center;
+                justify-content: space-between;
+                gap: 1rem;
 
                 button.notes-toggle-btn {
                     // background: transparent;

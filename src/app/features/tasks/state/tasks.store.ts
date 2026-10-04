@@ -1,7 +1,7 @@
 /** ToDo:
     [] Split repository/data-access concerns from application state
 */
-import { Injectable, effect, signal, } from '@angular/core';
+import { Injectable, effect, signal } from '@angular/core';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/shared/supabase/supabase.client';
 import { AuthStore } from '@/shared/supabase/auth.store';
@@ -159,48 +159,6 @@ export class TasksStore {
 
         const tempId = crypto.randomUUID();
 
-        // await this.runMutation(async () => {
-        //     const tempId = crypto.randomUUID();
-
-        //     // The "optimistic" object should represent what we *believe* the successful server result will mean (not merely what the server looked like before the request was made).
-        //     const optimistic: Task = {
-        //         id: tempId,
-        //         user_id: userId,
-        //         project_id: input.projectId,
-
-        //         title: input.title,
-        //         is_done: false,
-
-        //         notes: input.notes,
-        //         due_at: null,
-
-        //         status: 'todo',
-
-        //         created_at: new Date().toISOString(),
-        //         updated_at: new Date().toISOString(),
-        //     };
-
-        //     this.tasks.update((prev) => [optimistic, ...prev]);
-
-        //     const { data, error } = await supabase
-        //         .from('tasks')
-        //         // .insert({ user_id: userId, title, project_id } satisfies NewTaskInsert)
-        //         .insert({
-        //             user_id: userId,
-        //             title: input.title,
-        //             notes: input.notes,
-        //             project_id: input.projectId,
-        //         })
-        //         .select('*')
-        //         .single();
-
-        //     if (error) {
-        //         this.tasks.update((prev) => prev.filter((t) => t.id !== tempId));
-        //         throw error;
-        //     }
-
-        //     this.tasks.update((prev) => prev.map((t) => (t.id === tempId ? (data as Task) : t)));
-        // });
         const optimistic: Task = {
             id: tempId,
             user_id: userId,
@@ -312,6 +270,42 @@ export class TasksStore {
             }
 
             // reconcile
+            this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? (data as Task) : t)));
+        });
+    }
+
+    async updateProject(task: Task, projectId: string | null) {
+        if (projectId === task.project_id) {
+            return;
+        }
+
+        await this.runMutation(async () => {
+            const next: Task = {
+                ...task,
+                project_id: projectId,
+                updated_at: new Date().toISOString(),
+            };
+
+            // Optimistic update
+            this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? next : t)));
+
+            const { data, error } = await supabase
+                .from('tasks')
+                .update({
+                    project_id: projectId,
+                })
+                .eq('id', task.id)
+                .select('*')
+                .single();
+
+            if (error) {
+                // Roll back
+                this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+
+                throw error;
+            }
+
+            // Reconcile with DB
             this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? (data as Task) : t)));
         });
     }

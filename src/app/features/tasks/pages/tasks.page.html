@@ -9,23 +9,25 @@
         (signOut)="signOut()"
     />
 
-        <!--
+    <!--
             [disabled]="tasksStore.mutating()"
             [projects]="projectsStore.projects()"
         -->
-    <app-task-create
-        [projects]="projectsStore.projectTree()"
-        (create)="createTask($event)"
-    />
+    <app-task-create [projects]="projectsStore.projectTree()" (create)="createTask($event)" />
 
     @if (tasksStore.loading()) {
         <p>Loading…</p>
     } @else {
         <ul class="list">
-            @for (t of tasksStore.tasks(); track t.id) {
+            @for (task of tasksStore.tasks(); track task.id) {
                 <app-task-row
-                    [task]="t"
+                    [task]="task"
+                    [project]="projectsStore.getProject(task.project_id)"
+                    [projects]="projectsStore.projectTree()"
                     [disabled]="tasksStore.mutating()"
+
+                    (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
+
                     (toggleDone)="tasksStore.toggleDone($event)"
                     (remove)="tasksStore.remove($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
