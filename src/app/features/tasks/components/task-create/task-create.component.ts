@@ -17,6 +17,7 @@ import {
     NonNullableFormBuilder,
 } from '@angular/forms';
 import { noWhitespaceValidator } from '@/shared/validators/no-whitespace-validator';
+import { toProjectTreeNodes } from '@/features/projects/utils/project-tree-node.util';
 
 // type ProjectOption = {
 //     label: string;
@@ -46,7 +47,7 @@ export type CreateTaskPayload = {
     styleUrls: ['./task-create.component.scss'],
 })
 export class TaskCreateComponent {
-    readonly disabled = input<boolean>(false);
+    // readonly disabled = input<boolean>(false);
     readonly projects = input<ProjectNode[]>([]);
 
     private readonly fb = inject(NonNullableFormBuilder);
@@ -58,44 +59,52 @@ export class TaskCreateComponent {
     });
 
     protected readonly projectOptions = computed<TreeNode[]>(() =>
-        this.toTreeNodes(this.projects()),
+        toProjectTreeNodes(this.projects())
     );
 
-    constructor() {
-        this.form.controls.project.valueChanges.subscribe((value) => {
-            console.log('🌲 projectId changed:', value);
-        });
-    }
+    // constructor() {
+        // Diagnostic Logging:
+        // this.form.controls.project.valueChanges.subscribe((value) => {
+        //     console.log('🌲 project changed:', value);
 
-    private toTreeNodes(nodes: ProjectNode[]): TreeNode[] {
-        return nodes.map((node) => {
-            const hasChildren = node.children.length > 0;
+        //     if (value) {
+        //         console.log('🌲 selected project key:', value.key);
+        //     } else {
+        //         console.log('🌲 project was cleared/reset');
+        //     }
+        // });
+    // }
 
-            return {
-                key: node.project.id,
-                label: node.project.name,
-                leaf: !hasChildren,
-                children: hasChildren ? this.toTreeNodes(node.children) : undefined,
-            };
-        });
-    }
+    // private toTreeNodes(nodes: ProjectNode[]): TreeNode[] {
+    //     return nodes.map((node) => {
+    //         const hasChildren = node.children.length > 0;
+
+    //         return {
+    //             key: node.project.id,
+    //             label: node.project.name,
+    //             leaf: !hasChildren,
+    //             children: hasChildren ? this.toTreeNodes(node.children) : undefined,
+    //         };
+    //     });
+    // }
 
     // Keep this as string for now so it plugs into TasksStore.add(title).
     // Later we'll upgrade this to emit { title, notes, projectId }.
     readonly create = output<CreateTaskPayload>();
 
     protected onSubmit() {
-        console.log('🔎 form value:', this.form.getRawValue());
-        console.log('🔎 form valid:', this.form.valid);
-        console.log('🔎 form errors:', this.form.errors);
-        console.log('🔎 title:', this.form.controls.title);
-        console.log('🔎 project:', this.form.controls.project);
+        // Diagnostic Logging:
+        // console.log('🔎 form value:', this.form.getRawValue());
+        // console.log('🔎 form valid:', this.form.valid);
+        // console.log('🔎 form errors:', this.form.errors);
+        // console.log('🔎 title:', this.form.controls.title);
+        // console.log('🔎 project:', this.form.controls.project);
 
-        if (this.form.invalid || this.disabled()) return;
+        if ( this.form.invalid ) return;
 
         const { title, notes, project } = this.form.getRawValue();
 
-        console.log('🔎 project form value:', project);
+        // console.log('🔎 project form value:', project);
 
         this.create.emit({
             title: title.trim(),
@@ -107,13 +116,14 @@ export class TaskCreateComponent {
     }
 
     protected onCancelCreateTask() {
-        console.log(`❌ Canceling and Clearing the new Task form`);
-        console.log('🚨🚨🚨 NEW CODE IS RUNNING 🚨🚨🚨');
+        // console.log(`❌ Canceling and Clearing the new Task form`);
+        // console.log('🚨🚨🚨 NEW CODE IS RUNNING 🚨🚨🚨');
         this.form.reset();
     }
 
-    protected onProjectSelect(event: unknown) {
-        console.log('🌲 TreeSelect event:', event);
-        console.log('🌲 projectId control value:', this.form.controls.project.value);
-    }
+    // Diagnostic Logging:
+    // protected onProjectSelect(event: unknown) {
+    //     console.log('🌲 TreeSelect event:', event);
+    //     console.log('🌲 project control value:', this.form.controls.project.value);
+    // }
 }

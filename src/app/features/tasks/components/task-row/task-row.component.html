@@ -22,14 +22,14 @@
             <button
                 type="button"
                 class="complete-toggle"
-                [class.done]="task.is_done"
-                (click)="toggleDone.emit(task)"
-                [disabled]="disabled"
-                [attr.aria-label]="task.is_done ? 'Mark task not done' : 'Mark task done'"
-                [attr.aria-pressed]="task.is_done"
+                [class.done]="task().is_done"
+                (click)="toggleDone.emit(task())"
+                [disabled]="disabled()"
+                [attr.aria-label]="task().is_done ? 'Mark task not done' : 'Mark task done'"
+                [attr.aria-pressed]="task().is_done"
                 >
                 <span class="sr-only">
-                    {{ task.is_done ? 'Completed' : 'Not completed' }}
+                    {{ task().is_done ? 'Completed' : 'Not completed' }}
                 </span>
             </button>
 
@@ -38,11 +38,11 @@
                     pButton
                     type="button"
                     class="title-btn"
-                    [class.done]="task.is_done"
+                    [class.done]="task().is_done"
                     (click)="startEdit()"
-                    [disabled]="disabled"
+                    [disabled]="disabled()"
                 >
-                    {{ task.title }}
+                    {{ task().title }}
                 </button>
             } @else {
                 <form class="edit" (submit)="onSubmit($event)">
@@ -50,11 +50,11 @@
                         type="text"
                         [value]="draftTitle()"
                         (input)="onDraftInput($event)"
-                        [disabled]="disabled"
+                        [disabled]="disabled()"
                         autofocus
                     />
-                    <button type="submit" [disabled]="disabled">Save</button>
-                    <button type="button" (click)="cancelEdit()" [disabled]="disabled">
+                    <button type="submit" [disabled]="disabled()">Save</button>
+                    <button type="button" (click)="cancelEdit()" [disabled]="disabled()">
                         Cancel
                     </button>
                 </form>
@@ -65,8 +65,8 @@
             pButton
             type="button"
             class="delete-task-btn"
-            (click)="remove.emit(task.id)"
-            [disabled]="disabled"
+            (click)="remove.emit(task().id)"
+            [disabled]="disabled()"
         >
             <i class="pi pi-trash" pButtonIcon></i>
             <span pButtonLabel>Delete</span>
@@ -80,7 +80,7 @@
                 type="button"
                 class="notes-toggle-btn"
                 (click)="toggleNotesOpen()"
-                [disabled]="disabled"
+                [disabled]="disabled()"
                 >
                 @if (notesOpen()) {
                     <i class="pi pi-eye-slash" pButtonIcon></i>
@@ -102,8 +102,8 @@
             <div class="notes">
                 @if (!editingNotes()) {
                     <div class="notes-view">
-                        <p class="notes-text">{{ task.notes ?? 'No notes yet.' }}</p>
-                        <button type="button" (click)="startNotesEdit()" [disabled]="disabled">
+                        <p class="notes-text">{{ task().notes ?? 'No notes yet.' }}</p>
+                        <button type="button" (click)="startNotesEdit()" [disabled]="disabled()">
                             Edit notes
                         </button>
                     </div>
@@ -113,11 +113,11 @@
                             rows="3"
                             [value]="draftNotes()"
                             (input)="onNotesInput($event)"
-                            [disabled]="disabled"
+                            [disabled]="disabled()"
                         ></textarea>
                         <div class="notes-actions">
-                            <button type="submit" [disabled]="disabled">Save</button>
-                            <button type="button" (click)="cancelNotesEdit()" [disabled]="disabled">
+                            <button type="submit" [disabled]="disabled()">Save</button>
+                            <button type="button" (click)="cancelNotesEdit()" [disabled]="disabled()">
                                 Cancel
                             </button>
                         </div>
