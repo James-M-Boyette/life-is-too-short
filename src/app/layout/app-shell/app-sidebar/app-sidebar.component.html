@@ -1,1 +1,36 @@
-<p>app-sidebar works!</p>
+<!-- TODO:
+    []
+-->
+<nav class="sidebar-navigation">
+    <section class="focus-navigation">
+        <button type="button">
+            <i class="pi pi-plus"></i>
+            Add Task
+        </button>
+
+        <button type="button">
+            Inbox
+        </button>
+
+        <button type="button">
+            Today
+        </button>
+
+        <button type="button">
+            Upcoming
+        </button>
+    </section>
+
+    <section class="project-navigation">
+        <h2>Projects</h2>
+
+        @for (node of projects(); track node.project.id) {
+            <button
+                type="button"
+                (click)="projectSelect.emit(node.project.id)"
+            >
+                {{ node.project.name }}
+            </button>
+        }
+    </section>
+</nav>
