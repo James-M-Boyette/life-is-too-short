@@ -18,7 +18,7 @@ export class ProjectsStore {
     readonly projectsById = computed(() => {
         const projects = this.projects();
 
-        return new Map(projects.map((project) => [project.id, project]));
+        return new Map(projects.map((project) => [project.id, project])); // .find() scans the array every time; Map builds a lookup once (when the projects change) and allows individual lookups in O(1) time.
     });
 
     constructor(private readonly auth: AuthStore) {
