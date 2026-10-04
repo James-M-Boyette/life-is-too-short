@@ -75,19 +75,6 @@ export class TaskCreateComponent {
         // });
     // }
 
-    // private toTreeNodes(nodes: ProjectNode[]): TreeNode[] {
-    //     return nodes.map((node) => {
-    //         const hasChildren = node.children.length > 0;
-
-    //         return {
-    //             key: node.project.id,
-    //             label: node.project.name,
-    //             leaf: !hasChildren,
-    //             children: hasChildren ? this.toTreeNodes(node.children) : undefined,
-    //         };
-    //     });
-    // }
-
     // Keep this as string for now so it plugs into TasksStore.add(title).
     // Later we'll upgrade this to emit { title, notes, projectId }.
     readonly create = output<CreateTaskPayload>();

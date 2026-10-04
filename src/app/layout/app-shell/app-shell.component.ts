@@ -4,6 +4,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 
 import { ButtonModule } from 'primeng/button';
 import { AuthStore } from '@/shared/supabase/auth.store';
+import { AppSidebarComponent } from './app-sidebar/app-sidebar.component';
 
 @Component({
     standalone: true,
@@ -13,7 +14,8 @@ import { AuthStore } from '@/shared/supabase/auth.store';
         RouterOutlet,
         RouterLink,
         RouterLinkActive,
-        ButtonModule
+        ButtonModule,
+        AppSidebarComponent,
     ],
     templateUrl: './app-shell.component.html',
     styleUrls: ['./app-shell.component.scss'],
