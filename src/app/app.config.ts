@@ -5,15 +5,20 @@ import Material from '@primeuix/themes/material';
 import Lara from '@primeuix/themes/lara';
 import Nora from '@primeuix/themes/nora';
 import MyPreset from 'src/assets/primeng-style-preset';
-
-import { provideRouter } from '@angular/router';
+import {
+    provideRouter,
+    withComponentInputBinding,
+} from '@angular/router';
 
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
     providers: [
         provideBrowserGlobalErrorListeners(),
-        provideRouter(routes),
+        provideRouter(
+            routes,
+            withComponentInputBinding(),
+        ),
         providePrimeNG({
             theme: {
                 preset: MyPreset,

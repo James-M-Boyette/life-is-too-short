@@ -1,7 +1,7 @@
-import { Component, input, output, inject } from '@angular/core';
+import { Component, input, } from '@angular/core';
 
 import type { ProjectNode } from '@/features/projects/models/project.model';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 @Component({
     selector: 'app-sidebar',
     standalone: true,
@@ -12,5 +12,5 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 export class AppSidebarComponent {
     readonly projects = input<ProjectNode[]>([]);
 
-    // readonly projectSelect = output<string | null>();
+
 }
