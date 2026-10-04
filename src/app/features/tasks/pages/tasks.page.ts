@@ -1,4 +1,4 @@
-import { Component, signal, inject, computed } from '@angular/core';
+import { Component, signal, inject, computed, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { TasksStore } from '@/features/tasks/state/tasks.store';
@@ -25,6 +25,7 @@ export class TasksPage {
     protected readonly projectsStore = inject(ProjectsStore);
     readonly error = signal<string | null>(null); // Did creating a Task fail?
 
+    readonly projectId = input<string | undefined>();
     private readonly router = inject(Router);
 
     constructor() {}
