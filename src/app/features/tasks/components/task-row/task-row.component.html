@@ -1,24 +1,12 @@
+<!-- Todo:
+    [] Allow a user to change a task's project once it's been created (or unassign it entirely from any project)
+    [] Currently, if a task title (see *TASK TITLE*) is too long, the first part is clipped; decide how to handle this better
+    [] 'View Notes' button is too big. Maybe have 'eye' icon only?
+    [] 'Delete' button is too big. Maybe have 'trash' icon only? + add confirmation dialog (and eventually have a toggle that's project-speicifc for safe vs unsafe CRUD? Or use an 'undo' pattern instead of a confiramtion dialog)
+-->
 <li class="row">
     <section class="task-primary-section">
         <div class="left-column">
-            <!-- <input
-                class="completed-check"
-                type="checkbox"
-                [checked]="task.is_done"
-                (change)="toggleDone.emit(task)"
-                [disabled]="disabled"
-                aria-label="Mark task done"
-            /> -->
-            <!-- <p-checkbox
-                class="completed-check"
-                [binary]="true"
-                [value]="isCompleted()"
-                (input)="onToggleCompleted($event)"
-                (change)="toggleDone.emit(task)"
-                [disabled]="disabled"
-                aria-label="Mark task done"
-            /> -->
-            <!-- inside task-primary-section > left-column -->
             <button
                 type="button"
                 class="complete-toggle"
@@ -27,7 +15,7 @@
                 [disabled]="disabled()"
                 [attr.aria-label]="task().is_done ? 'Mark task not done' : 'Mark task done'"
                 [attr.aria-pressed]="task().is_done"
-                >
+            >
                 <span class="sr-only">
                     {{ task().is_done ? 'Completed' : 'Not completed' }}
                 </span>
@@ -42,6 +30,7 @@
                     (click)="startEdit()"
                     [disabled]="disabled()"
                 >
+                    <!-- *TASK TITLE* -->
                     {{ task().title }}
                 </button>
             } @else {
@@ -75,13 +64,20 @@
 
     <section class="task-secondary-section">
         <div class="meta">
+            <p-treeselect
+                [options]="projectOptions()"
+                [ngModel]="selectedProjectNode()"
+                (ngModelChange)="onProjectChange($event)"
+                placeholder="No Project"
+                [showClear]="true"
+            />
             <button
                 pButton
                 type="button"
                 class="notes-toggle-btn"
                 (click)="toggleNotesOpen()"
                 [disabled]="disabled()"
-                >
+            >
                 @if (notesOpen()) {
                     <i class="pi pi-eye-slash" pButtonIcon></i>
                     <span pButtonLabel>Hide notes</span>
@@ -117,7 +113,11 @@
                         ></textarea>
                         <div class="notes-actions">
                             <button type="submit" [disabled]="disabled()">Save</button>
-                            <button type="button" (click)="cancelNotesEdit()" [disabled]="disabled()">
+                            <button
+                                type="button"
+                                (click)="cancelNotesEdit()"
+                                [disabled]="disabled()"
+                            >
                                 Cancel
                             </button>
                         </div>
