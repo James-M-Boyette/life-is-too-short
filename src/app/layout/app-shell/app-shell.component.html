@@ -46,7 +46,9 @@
     <div class="app-body">
         <!-- App Sidebar -->
         <aside class="app-sidebar">
-            <app-sidebar />
+            <app-sidebar
+                [projects]="projectsStore.projectTree()"
+            />
         </aside>
 
         <!-- App Main Content -->

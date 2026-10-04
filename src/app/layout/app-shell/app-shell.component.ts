@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { TopBarComponent } from '@/layout/app-shell/top-bar/top-bar.component';
 import { AppSidebarComponent } from '@/layout/app-shell/app-sidebar/app-sidebar.component';
+import { ProjectsStore } from '@/features/projects/state/projects.store';
 
 @Component({
     standalone: true,
@@ -27,6 +28,8 @@ export class AppShellComponent {
     private readonly router = inject(Router);
 
     protected readonly userEmail = computed(() => this.auth.user()?.email ?? null);
+
+    protected readonly projectsStore = inject(ProjectsStore);
 
     constructor() {
         // Keep shell protected even if someone deep-links into /tasks
