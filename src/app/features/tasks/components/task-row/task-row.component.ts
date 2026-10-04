@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { ButtonModule } from 'primeng/button';
-import type { Task } from '@/features/tasks/state/tasks.store';
+import type { Task } from '@/features/tasks/models/tasks.model';
 
 @Component({
     standalone: true,
