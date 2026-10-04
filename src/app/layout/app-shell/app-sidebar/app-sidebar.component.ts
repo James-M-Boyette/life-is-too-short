@@ -1,4 +1,4 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 
 import type { ProjectNode } from '@/features/projects/models/project.model';
 
