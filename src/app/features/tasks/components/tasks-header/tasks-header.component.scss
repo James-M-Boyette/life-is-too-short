@@ -1,9 +1,37 @@
 :host {
     display: block;
 
+    header.top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-4);
+
+        h1 {
+            margin: 0;
+
+            color: var(--text-primary);
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        div.right {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+
+            small.status {
+                color: var(--text-muted);
+                font-size: 0.8rem;
+            }
+        }
+    }
+
     p.error {
-        margin: 0.25rem 0 0;
-        opacity: 0.9;
+        margin: var(--space-2) 0 0;
+
+        // Temporary until we introduce semantic status colors.
+        color: var(--text-secondary);
     }
 }
-
