@@ -23,18 +23,18 @@
 
             @if (!editing()) {
                 <button
-                    pButton
                     type="button"
                     class="title-btn"
                     [class.done]="task().is_done"
                     (click)="startEdit()"
                     [disabled]="disabled()"
+                    aria-label="Edit task title"
                 >
                     <!-- *TASK TITLE* -->
                     {{ task().title }}
                 </button>
             } @else {
-                <form class="edit" (submit)="onSubmit($event)">
+                <!-- <form class="edit" (submit)="onSubmit($event)">
                     <input
                         type="text"
                         [value]="draftTitle()"
@@ -46,6 +46,50 @@
                     <button type="button" (click)="cancelEdit()" [disabled]="disabled()">
                         Cancel
                     </button>
+                </form> -->
+                <form
+                    class="edit-title-form"
+                    (submit)="onSubmit($event)"
+                    >
+                    <input
+                        type="text"
+                        [value]="draftTitle()"
+                        (input)="onDraftInput($event)"
+                        [disabled]="disabled()"
+                        aria-label="Task title"
+                        autofocus
+                    />
+
+                    <div class="edit-title-actions">
+                        <button
+                            type="submit"
+                            class="task-action-btn"
+                            pTooltip="Save title"
+                            tooltipPosition="bottom"
+                            aria-label="Save task title"
+                            [disabled]="disabled()"
+                        >
+                            <i
+                                class="pi pi-check"
+                                aria-hidden="true"
+                            ></i>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="task-action-btn"
+                            pTooltip="Cancel editing"
+                            tooltipPosition="bottom"
+                            aria-label="Cancel editing task title"
+                            (click)="cancelEdit()"
+                            [disabled]="disabled()"
+                        >
+                            <i
+                                class="pi pi-times"
+                                aria-hidden="true"
+                            ></i>
+                        </button>
+                    </div>
                 </form>
             }
         </div>
@@ -53,12 +97,17 @@
         <button
             pButton
             type="button"
-            class="delete-task-btn"
+            class="task-action-btn delete-task-btn"
+            pTooltip="Delete task"
+            tooltipPosition="bottom"
+            aria-label="Delete task"
             (click)="remove.emit(task().id)"
             [disabled]="disabled()"
-        >
-            <i class="pi pi-trash" pButtonIcon></i>
-            <span pButtonLabel>Delete</span>
+            >
+            <i
+                class="pi pi-trash"
+                aria-hidden="true"
+            ></i>
         </button>
     </section>
 
@@ -71,27 +120,23 @@
                 placeholder="No Project"
                 [showClear]="true"
             />
-            <button
+
+            <!-- <button
                 pButton
                 type="button"
-                class="notes-toggle-btn"
+                class="task-action-btn notes-toggle-btn"
+                [pTooltip]="notesOpen() ? 'Hide notes' : 'View notes'"
+                tooltipPosition="bottom"
+                [attr.aria-label]="notesOpen() ? 'Hide task notes' : 'View task notes'"
+                [attr.aria-expanded]="notesOpen()"
                 (click)="toggleNotesOpen()"
                 [disabled]="disabled()"
             >
-                @if (notesOpen()) {
-                    <i class="pi pi-eye-slash" pButtonIcon></i>
-                    <span pButtonLabel>Hide notes</span>
-                } @else {
-                    <i class="pi pi-eye" pButtonIcon></i>
-                    <span pButtonLabel>View Notes</span>
-                }
-            </button>
-
-            <!-- <span class="hint">
-                @if (task.notes) {
-                    Has notes
-                }
-            </span> -->
+                <i
+                    [class]="notesOpen() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                    aria-hidden="true"
+                ></i>
+            </button> -->
         </div>
 
         @if (notesOpen()) {
@@ -126,55 +171,4 @@
             </div>
         }
     </section>
-
-    <!-- <div class="meta">
-        <button
-            type="button"
-            class="link"
-            (click)="toggleNotesOpen()"
-            [disabled]="disabled"
-            >
-            @if (notesOpen()) {
-                Hide notes
-            } @else {
-                Notes
-            }
-        </button>
-
-        <span class="hint">
-            @if (task.notes) {
-                Has notes
-            }
-        </span>
-    </div>
-
-    @if (notesOpen()) {
-        <div class="notes">
-            @if (!editingNotes()) {
-                <div class="notes-view">
-                    <p class="notes-text">
-                        {{ task.notes ?? 'No notes yet.' }}
-                    </p>
-                    <button type="button" (click)="startNotesEdit()" [disabled]="disabled">
-                        Edit notes
-                    </button>
-                </div>
-            } @else {
-                <form class="edit-notes-form" (submit)="onNotesSubmit($event)" >
-                    <textarea
-                        rows="3"
-                        [value]="draftNotes()"
-                        (input)="onNotesInput($event)"
-                        [disabled]="disabled"
-                    ></textarea>
-                    <div class="notes-actions">
-                        <button type="submit" [disabled]="disabled">Save</button>
-                        <button type="button" (click)="cancelNotesEdit()" [disabled]="disabled">
-                            Cancel
-                        </button>
-                    </div>
-                </form>
-            }
-        </div>
-    } -->
 </li>

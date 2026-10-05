@@ -1,4 +1,4 @@
-:host ::ng-deep {
+:host {
     li.row {
         display: flex;
         flex-direction: column;
@@ -16,20 +16,40 @@
 
             div.left-column {
                 display: flex;
-                gap: 0.6rem;
                 align-items: center;
-                min-width: 0;
+                gap: var(--space-2);
 
-                input.completed-check.done,
-                button.title-btn.done {
+                min-width: 0;
+                flex: 1;
+
+                button.title-btn {
+                    min-width: 0;
+                    flex: 1;
+
+                    padding: 0;
+
+                    overflow: hidden;
+
+                    color: var(--text-primary);
+                    font: inherit;
+                    font-weight: 500;
+                    text-align: left;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+
+                    background: transparent;
+                    border: 0;
+
+                    cursor: text;
+
                     // conditional class for input + button when `is_done` is true
-                    text-decoration: line-through;
-                    opacity: 0.65;
+                    &.done {
+                        color: var(--text-muted);
+                        text-decoration: line-through;
+                    }
                 }
 
-                // input.completed-check {
-                //     border-radius: 100%;
-                // }
+
                 .complete-toggle {
                     width: 1.35rem;
                     height: 1.35rem;
@@ -102,36 +122,25 @@
                     color: transparent;
                 }
 
-                button.title-btn {
-                    appearance: none;
-                    background: transparent !important;
-                    color: var(--p-primary-color) !important;
-                    border: none;
-                    padding: 0;
-                    margin: 0;
-                    text-align: left;
-                    cursor: text;
-
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    max-width: 480px;
-
-                    &:disabled {
-                        cursor: not-allowed;
-                        opacity: 0.7;
-                    }
-                }
-
-                form.edit {
+                form.edit-title-form {
                     display: flex;
-                    gap: 0.5rem;
                     align-items: center;
+                    gap: var(--space-2);
+
+                    min-width: 0;
+                    flex: 1;
 
                     input {
-                        padding: 0.4rem 0.6rem;
-                        border-radius: 10px;
-                        border: 1px solid #ccc;
+                        min-width: 0;
+                        flex: 1;
+                    }
+
+                    div.edit-title-actions {
+                        display: flex;
+                        align-items: center;
+                        gap: var(--space-1);
+
+                        flex: 0 0 auto;
                     }
                 }
             }
@@ -151,19 +160,6 @@
                 align-items: center;
                 justify-content: space-between;
                 gap: 1rem;
-
-                button.notes-toggle-btn {
-                    // background: transparent;
-                    // border: none;
-                    // padding: 0;
-                    cursor: pointer;
-                    // text-decoration: underline;
-                }
-
-                // span.hint {
-                //     opacity: 0.65;
-                //     font-size: 0.9rem;
-                // }
             }
 
             div.notes {
@@ -197,11 +193,3 @@
         }
     }
 }
-
-// (from tasks.page.scss)
-
-// .left {
-//     display: flex;
-//     gap: 0.6rem;
-//     align-items: center;
-// }

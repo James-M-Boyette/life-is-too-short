@@ -4,64 +4,51 @@
     [formGroup]="form"
     (ngSubmit)="onSubmit()"
     >
-    <p-card class="create-task-card-wrapper">
-        <!-- <ng-template #header>
-        </ng-template>
+    <div class="task-content">
+        <input
+            type="text"
+            name="task-title"
+            placeholder="Add a task …"
+            formControlName="title"
+        />
 
-        <ng-template #title> I'M A TITLE </ng-template>
-        <ng-template #subtitle> I'M A SUBTITLE </ng-template> -->
+        <textarea
+            rows="8"
+            cols="30"
+            pTextarea
+            [autoResize]="false"
+            placeholder="Enter notes for this task ..."
+            formControlName="notes"
+        ></textarea>
+    </div>
 
-        <ng-template #content>
-                <input
-                    type="text"
-                    name="task-title"
-                    placeholder="Add a task …"
-                    formControlName="title"
-                />
-                <textarea
-                    rows="8"
-                    cols="30"
-                    pTextarea
-                    [autoResize]="false"
-                    placeholder="Enter notes for this task ..."
-                    formControlName="notes"
-                ></textarea>
-            <div class="meta-container"></div>
-        </ng-template>
+    <footer class="task-actions">
+        <p-treeselect
+            class="assign-to-project-dropdown"
+            [options]="projectOptions()"
+            placeholder="Select a Project"
+            formControlName="project"
+            [showClear]="true"
+        />
 
-        <ng-template #footer>
-            <!-- "Projects" dropdown -->
-            <!-- (onNodeSelect)="onProjectSelect($event)" -->
-            <p-treeselect
-                class="assign-to-project-dropdown"
-                [options]="projectOptions()"
-                placeholder="Select a Project"
-                formControlName="project"
-                [showClear]="true"
-            />
+        <div class="action-buttons-container">
+            <button
+                pButton
+                type="button"
+                (click)="onCancelCreateTask()"
+            >
+                <i class="pi pi-times" pButtonIcon></i>
+                <span pButtonLabel>Cancel</span>
+            </button>
 
-            <!-- 'Cancel' + ' Add Task' Action Buttons -->
-            <div class="action-buttons-container">
-                <button
-                    pButton
-                    type="button"
-                    (click)="onCancelCreateTask()"
-                    >
-
-                    <i class="pi pi-times" pButtonIcon></i>
-                    <span pButtonLabel>Cancel</span>
-                </button>
-
-                <button
-                    pButton
-                    type="submit"
-                    [disabled]="form.invalid"
-                    >
-
-                    <i class="pi pi-plus" pButtonIcon></i>
-                    <span pButtonLabel>Add Task</span>
-                </button>
-            </div>
-        </ng-template>
-    </p-card>
+            <button
+                pButton
+                type="submit"
+                [disabled]="form.invalid"
+            >
+                <i class="pi pi-plus" pButtonIcon></i>
+                <span pButtonLabel>Add Task</span>
+            </button>
+        </div>
+    </footer>
 </form>
