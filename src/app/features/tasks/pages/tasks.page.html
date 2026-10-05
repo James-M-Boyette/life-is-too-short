@@ -19,7 +19,8 @@
         <p>Loading…</p>
     } @else {
         <ul class="list">
-            @for (task of tasksStore.tasks(); track task.id) {
+            <!-- @for (task of tasksStore.tasks(); track task.id) { -->
+            @for (task of visibleTasks(); track  task.id) {
                 <app-task-row
                     [task]="task"
                     [project]="projectsStore.getProject(task.project_id)"

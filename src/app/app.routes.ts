@@ -27,12 +27,27 @@ export const routes: Routes = [
         children: [
             {
                 path: 'tasks',
+                data: {
+                    view: 'all',
+                },
+                loadComponent: () =>
+                    import('@/features/tasks/pages/tasks.page')
+                        .then((m) => m.TasksPage),
+            },
+            {
+                path: 'tasks/inbox',
+                data: {
+                    view: 'inbox',
+                },
                 loadComponent: () =>
                     import('@/features/tasks/pages/tasks.page')
                         .then((m) => m.TasksPage),
             },
             {
                 path: 'tasks/project/:projectId',
+                data: {
+                    view: 'project',
+                },
                 loadComponent: () =>
                     import('@/features/tasks/pages/tasks.page')
                         .then((m) => m.TasksPage),
