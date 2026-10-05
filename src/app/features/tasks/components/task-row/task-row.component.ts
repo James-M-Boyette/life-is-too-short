@@ -11,6 +11,7 @@ import {
 import { CommonModule } from '@angular/common';
 
 import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
 import type { Task } from '@/features/tasks/models/tasks.model';
 import { Project, ProjectNode } from '@/features/projects/models/project.model';
 import { toProjectTreeNodes, findTreeNodeByKey } from '@/features/projects/utils/project-tree-node.util';
@@ -23,6 +24,7 @@ import type { TreeNode } from 'primeng/api';
     imports: [
         CommonModule,
         ButtonModule,
+        TooltipModule,
         FormsModule,
         TreeSelectModule
     ],
