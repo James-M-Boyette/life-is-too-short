@@ -10,6 +10,13 @@
         </button>
 
         <a
+            routerLink="/tasks"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+        >
+            All Tasks
+        </a>
+        <a
             routerLink="/tasks/inbox"
             routerLinkActive="active"
             >
@@ -34,16 +41,38 @@
     <section class="project-navigation">
         <h2>Projects</h2>
 
-        @for (node of projects(); track node.project.id) {
-            <!-- (click)="projectSelect.emit(node.project.id)" -->
+        <div class="project-tree-actions">
+            <button
+                type="button"
+                (click)="expandAll()"
+            >
+                Expand all
+            </button>
 
-            <a
-                [routerLink]="['/tasks/project', node.project.id]"
-                routerLinkActive="active">
-                {{ node.project.name }}
+            <button
+                type="button"
+                (click)="collapseAll()"
+            >
+                Collapse all
+            </button>
+        </div>
 
-            </a>
-
-        }
+        <p-tree
+            [value]="projectNodes()"
+            (onNodeExpand)="onNodeExpand($event)"
+            (onNodeCollapse)="onNodeCollapse($event)"
+        >
+            <ng-template
+                pTemplate="default"
+                let-node
+            >
+                <a
+                    [routerLink]="['/tasks/project', node.key]"
+                    routerLinkActive="active"
+                >
+                    {{ node.label }}
+                </a>
+            </ng-template>
+        </p-tree>
     </section>
 </nav>
