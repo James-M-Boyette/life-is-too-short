@@ -2,8 +2,25 @@ import type { TreeNode } from 'primeng/api';
 
 import type { ProjectNode } from '@/features/projects/models/project.model';
 
+// export function toProjectTreeNodes(
+//     nodes: ProjectNode[],
+// ): TreeNode[] {
+//     return nodes.map((node) => {
+//         const hasChildren = node.children.length > 0;
+
+//         return {
+//             key: node.project.id,
+//             label: node.project.name,
+//             leaf: !hasChildren,
+//             children: hasChildren
+//                 ? toProjectTreeNodes(node.children)
+//                 : undefined,
+//         };
+//     });
+// }
 export function toProjectTreeNodes(
     nodes: ProjectNode[],
+    expandedProjectIds: ReadonlySet<string> = new Set(),
 ): TreeNode[] {
     return nodes.map((node) => {
         const hasChildren = node.children.length > 0;
@@ -12,8 +29,12 @@ export function toProjectTreeNodes(
             key: node.project.id,
             label: node.project.name,
             leaf: !hasChildren,
+            expanded: expandedProjectIds.has(node.project.id),
             children: hasChildren
-                ? toProjectTreeNodes(node.children)
+                ? toProjectTreeNodes(
+                    node.children,
+                    expandedProjectIds,
+                )
                 : undefined,
         };
     });

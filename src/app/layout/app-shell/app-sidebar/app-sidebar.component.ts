@@ -1,6 +1,7 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, signal, computed, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TreeModule } from 'primeng/tree';
+// import type { TreeNode } from 'primeng/api';
 
 import type { ProjectNode } from '@/features/projects/models/project.model';
 import { toProjectTreeNodes } from '@/features/projects/utils/project-tree-node.util';
@@ -8,18 +9,44 @@ import { toProjectTreeNodes } from '@/features/projects/utils/project-tree-node.
 @Component({
     selector: 'app-sidebar',
     standalone: true,
-    imports: [
-        RouterLink,
-        RouterLinkActive,
-        TreeModule,
-    ],
+    imports: [RouterLink, RouterLinkActive, TreeModule],
     templateUrl: './app-sidebar.component.html',
     styleUrl: './app-sidebar.component.scss',
 })
 export class AppSidebarComponent {
     readonly projects = input<ProjectNode[]>([]);
 
+    // protected readonly projectNodes = computed(() => toProjectTreeNodes(this.projects()));
+
+    protected readonly expandedProjectIds = signal<Set<string>>(new Set());
+
     protected readonly projectNodes = computed(() =>
-        toProjectTreeNodes(this.projects())
+        toProjectTreeNodes(this.projects(), this.expandedProjectIds()),
     );
+
+    protected collapseAll(): void {
+        this.expandedProjectIds.set(new Set());
+    }
+
+    protected expandAll(): void {
+        this.expandedProjectIds.set(this.collectExpandableProjectIds(this.projects()));
+    }
+
+    private collectExpandableProjectIds(nodes: ProjectNode[]): Set<string> {
+        const ids = new Set<string>();
+
+        for (const node of nodes) {
+            if (node.children.length > 0) {
+                ids.add(node.project.id);
+
+                const childIds = this.collectExpandableProjectIds(node.children);
+
+                for (const id of childIds) {
+                    ids.add(id);
+                }
+            }
+        }
+
+        return ids;
+    }
 }

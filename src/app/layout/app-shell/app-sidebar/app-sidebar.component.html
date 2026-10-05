@@ -41,6 +41,22 @@
     <section class="project-navigation">
         <h2>Projects</h2>
 
+        <div class="project-tree-actions">
+            <button
+                type="button"
+                (click)="expandAll()"
+            >
+                Expand all
+            </button>
+
+            <button
+                type="button"
+                (click)="collapseAll()"
+            >
+                Collapse all
+            </button>
+        </div>
+
         <p-tree [value]="projectNodes()">
             <ng-template
                 pTemplate="default"
