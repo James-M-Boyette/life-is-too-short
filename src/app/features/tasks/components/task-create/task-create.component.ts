@@ -26,7 +26,7 @@ import { toProjectTreeNodes } from '@/features/projects/utils/project-tree-node.
 
 export type CreateTaskPayload = {
     title: string;
-    notes: string | null;
+    description: string | null;
     projectId: string | null; // placeholder for later
 };
 
@@ -54,7 +54,7 @@ export class TaskCreateComponent {
 
     protected readonly form = this.fb.group({
         title: ['', [Validators.required, noWhitespaceValidator]],
-        notes: [''],
+        description: [''],
         project: this.fb.control<TreeNode | null>(null),
     });
 
@@ -76,7 +76,7 @@ export class TaskCreateComponent {
     // }
 
     // Keep this as string for now so it plugs into TasksStore.add(title).
-    // Later we'll upgrade this to emit { title, notes, projectId }.
+    // Later we'll upgrade this to emit { title, description, projectId }.
     readonly create = output<CreateTaskPayload>();
 
     protected onSubmit() {
@@ -89,13 +89,13 @@ export class TaskCreateComponent {
 
         if ( this.form.invalid ) return;
 
-        const { title, notes, project } = this.form.getRawValue();
+        const { title, description, project } = this.form.getRawValue();
 
         // console.log('🔎 project form value:', project);
 
         this.create.emit({
             title: title.trim(),
-            notes: notes.trim() || null,
+            description: description.trim() || null,
             projectId: project?.key ?? null,
         });
 
