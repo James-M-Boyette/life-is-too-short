@@ -99,6 +99,20 @@
     </section>
 
     <section class="task-secondary-section">
+        <div class="description">
+            @if (editingDescription()) {
+                <form
+                    class="edit-description-form"
+                    (submit)="onDescriptionSubmit($event)"
+                >
+                    ...
+                </form>
+            } @else if (task().description) {
+                <p class="description-text">
+                    {{ task().description }}
+                </p>
+            }
+        </div>
         <div class="meta">
             <p-treeselect
                 [options]="projectOptions()"
@@ -108,37 +122,5 @@
                 [showClear]="true"
             />
         </div>
-
-
-            <div class="description">
-                @if (!editingDescription()) {
-                    <div class="description-view">
-                        <p class="description-text">{{ task().description ?? 'No description yet.' }}</p>
-                        <button type="button" (click)="startDescriptionEdit()" [disabled]="disabled()">
-                            Edit description
-                        </button>
-                    </div>
-                } @else {
-                    <form class="edit-description-form" (submit)="onDescriptionSubmit($event)">
-                        <textarea
-                            rows="3"
-                            [value]="draftDescription()"
-                            (input)="onDescriptionInput($event)"
-                            [disabled]="disabled()"
-                        ></textarea>
-                        <div class="description-actions">
-                            <button type="submit" [disabled]="disabled()">Save</button>
-                            <button
-                                type="button"
-                                (click)="cancelDescriptionEdit()"
-                                [disabled]="disabled()"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </form>
-                }
-            </div>
-
     </section>
 </li>
