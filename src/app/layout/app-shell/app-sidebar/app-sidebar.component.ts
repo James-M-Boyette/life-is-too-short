@@ -5,6 +5,7 @@ import { TreeModule } from 'primeng/tree';
 
 import type { ProjectNode } from '@/features/projects/models/project.model';
 import { toProjectTreeNodes } from '@/features/projects/utils/project-tree-node.util';
+import type { TreeNode } from 'primeng/api';
 
 @Component({
     selector: 'app-sidebar',
@@ -48,5 +49,35 @@ export class AppSidebarComponent {
         }
 
         return ids;
+    }
+
+    protected onNodeExpand(event: { node: TreeNode }): void {
+        const projectId = event.node.key;
+
+        if (!projectId) {
+            return;
+        }
+
+        this.expandedProjectIds.update((ids) => {
+            const next = new Set(ids);
+            next.add(projectId);
+
+            return next;
+        });
+    }
+
+    protected onNodeCollapse(event: { node: TreeNode }): void {
+        const projectId = event.node.key;
+
+        if (!projectId) {
+            return;
+        }
+
+        this.expandedProjectIds.update((ids) => {
+            const next = new Set(ids);
+            next.delete(projectId);
+
+            return next;
+        });
     }
 }
