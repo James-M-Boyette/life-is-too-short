@@ -1,16 +1,25 @@
-import { Component, input, } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
+import { RouterLink, RouterLinkActive } from '@angular/router';
+import { TreeModule } from 'primeng/tree';
 
 import type { ProjectNode } from '@/features/projects/models/project.model';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { toProjectTreeNodes } from '@/features/projects/utils/project-tree-node.util';
+
 @Component({
     selector: 'app-sidebar',
     standalone: true,
-    imports: [RouterLink, RouterLinkActive],
+    imports: [
+        RouterLink,
+        RouterLinkActive,
+        TreeModule,
+    ],
     templateUrl: './app-sidebar.component.html',
     styleUrl: './app-sidebar.component.scss',
 })
 export class AppSidebarComponent {
     readonly projects = input<ProjectNode[]>([]);
 
-
+    protected readonly projectNodes = computed(() =>
+        toProjectTreeNodes(this.projects())
+    );
 }
