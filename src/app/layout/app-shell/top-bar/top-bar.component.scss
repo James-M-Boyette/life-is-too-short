@@ -1,51 +1,38 @@
-:host ::ng-deep {
-    header.app-top-bar {
+:host {
+    display: block;
+}
+
+header.app-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    min-height: var(--app-topbar-height);
+    padding-inline: var(--space-4);
+
+    background: var(--surface-page);
+    border-bottom: 1px solid var(--border-subtle);
+
+    .left,
+    .right {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        gap: 1rem;
+    }
 
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    .right {
+        gap: var(--space-4);
+    }
 
-        .left {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-
-            .brand {
-                .app-name {
-                    font-weight: 700;
-                    letter-spacing: 0.2px;
-                }
-            }
-
-            nav.nav {
-                display: flex;
-                gap: 0.75rem;
-
-                a.nav-link {
-                    text-decoration: none;
-                    opacity: 0.85;
-
-                    &.active {
-                        opacity: 1;
-                        font-weight: 600;
-                        color: var(--p-primary-color);
-                    }
-                }
-            }
+    .brand {
+        .app-name {
+            color: var(--text-primary);
+            font-weight: 700;
+            letter-spacing: 0.0125rem;
         }
+    }
 
-        .right {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-
-            .user-email {
-                opacity: 0.75;
-                font-size: 0.95rem;
-            }
-        }
+    .user-email {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
     }
 }
