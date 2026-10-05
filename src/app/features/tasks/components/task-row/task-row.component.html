@@ -1,7 +1,7 @@
 <!-- Todo:
     [x] Allow a user to change a task's project once it's been created (or unassign it entirely from any project)
     [] Currently, if a task title (see *TASK TITLE*) is too long, the first part is clipped; decide how to handle this better
-    [] 'View Notes' button is too big. Maybe have 'eye' icon only?
+    [] 'View Description' button is too big. Maybe have 'eye' icon only?
     [] 'Delete' button is too big. Maybe have 'trash' icon only? + add confirmation dialog (and eventually have a toggle that's project-speicifc for safe vs unsafe CRUD? Or use an 'undo' pattern instead of a confiramtion dialog)
 -->
 <li class="row">
@@ -34,19 +34,6 @@
                     {{ task().title }}
                 </button>
             } @else {
-                <!-- <form class="edit" (submit)="onSubmit($event)">
-                    <input
-                        type="text"
-                        [value]="draftTitle()"
-                        (input)="onDraftInput($event)"
-                        [disabled]="disabled()"
-                        autofocus
-                    />
-                    <button type="submit" [disabled]="disabled()">Save</button>
-                    <button type="button" (click)="cancelEdit()" [disabled]="disabled()">
-                        Cancel
-                    </button>
-                </form> -->
                 <form
                     class="edit-title-form"
                     (submit)="onSubmit($event)"
@@ -120,47 +107,30 @@
                 placeholder="No Project"
                 [showClear]="true"
             />
-
-            <!-- <button
-                pButton
-                type="button"
-                class="task-action-btn notes-toggle-btn"
-                [pTooltip]="notesOpen() ? 'Hide notes' : 'View notes'"
-                tooltipPosition="bottom"
-                [attr.aria-label]="notesOpen() ? 'Hide task notes' : 'View task notes'"
-                [attr.aria-expanded]="notesOpen()"
-                (click)="toggleNotesOpen()"
-                [disabled]="disabled()"
-            >
-                <i
-                    [class]="notesOpen() ? 'pi pi-eye-slash' : 'pi pi-eye'"
-                    aria-hidden="true"
-                ></i>
-            </button> -->
         </div>
 
-        @if (notesOpen()) {
-            <div class="notes">
-                @if (!editingNotes()) {
-                    <div class="notes-view">
-                        <p class="notes-text">{{ task().notes ?? 'No notes yet.' }}</p>
-                        <button type="button" (click)="startNotesEdit()" [disabled]="disabled()">
-                            Edit notes
+
+            <div class="description">
+                @if (!editingDescription()) {
+                    <div class="description-view">
+                        <p class="description-text">{{ task().description ?? 'No description yet.' }}</p>
+                        <button type="button" (click)="startDescriptionEdit()" [disabled]="disabled()">
+                            Edit description
                         </button>
                     </div>
                 } @else {
-                    <form class="edit-notes-form" (submit)="onNotesSubmit($event)">
+                    <form class="edit-description-form" (submit)="onDescriptionSubmit($event)">
                         <textarea
                             rows="3"
-                            [value]="draftNotes()"
-                            (input)="onNotesInput($event)"
+                            [value]="draftDescription()"
+                            (input)="onDescriptionInput($event)"
                             [disabled]="disabled()"
                         ></textarea>
-                        <div class="notes-actions">
+                        <div class="description-actions">
                             <button type="submit" [disabled]="disabled()">Save</button>
                             <button
                                 type="button"
-                                (click)="cancelNotesEdit()"
+                                (click)="cancelDescriptionEdit()"
                                 [disabled]="disabled()"
                             >
                                 Cancel
@@ -169,6 +139,6 @@
                     </form>
                 }
             </div>
-        }
+
     </section>
 </li>

@@ -1,4 +1,4 @@
-<section class="wrap">
+<section class="tasks-page">
     <!-- App Header -->
     <!-- TODO: MOVE THIS to a seperate component and inject into parent -->
     <app-tasks-header
@@ -32,7 +32,7 @@
                     (toggleDone)="tasksStore.toggleDone($event)"
                     (remove)="tasksStore.remove($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
-                    (editNotes)="tasksStore.updateNotes($event.task, $event.notes)"
+                    (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
                 />
             }
         </ul>
