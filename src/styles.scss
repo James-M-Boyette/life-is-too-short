@@ -1,4 +1,7 @@
 // :root, :host {
 //     color-scheme: light !important; // TODO: make this dynamic based on user preference
 // }
+@use './styles/tokens';
+
 @import "primeicons/primeicons.css";
+

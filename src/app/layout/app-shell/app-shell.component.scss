@@ -1,20 +1,32 @@
 :host {
     display: block;
+    height: 100dvh;
 
     div.app-shell {
-        min-height: 100vh;
+        height: 100%;
         display: grid;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: auto minmax(0, 1fr);
     }
-
-    // app-top-bar {}
 
     div.app-body {
-        // aside.app-sidebar {}
+        min-height: 0;
+
+        display: grid;
+        grid-template-columns:
+            var(--app-sidebar-width)
+            minmax(0, 1fr);
+
+        aside.app-sidebar {
+            min-width: 0;
+            overflow-y: auto;
+        }
 
         main.app-main {
-            padding: 1rem;
+            min-width: 0;
+            min-height: 0;
+            overflow: auto;
+
+            padding: var(--space-4);
         }
     }
-
 }

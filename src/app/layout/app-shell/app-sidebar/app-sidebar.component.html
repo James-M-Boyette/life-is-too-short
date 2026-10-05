@@ -57,7 +57,11 @@
             </button>
         </div>
 
-        <p-tree [value]="projectNodes()">
+        <p-tree
+            [value]="projectNodes()"
+            (onNodeExpand)="onNodeExpand($event)"
+            (onNodeCollapse)="onNodeCollapse($event)"
+        >
             <ng-template
                 pTemplate="default"
                 let-node
