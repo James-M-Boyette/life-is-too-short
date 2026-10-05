@@ -44,6 +44,24 @@ export const routes: Routes = [
                         .then((m) => m.TasksPage),
             },
             {
+                path: 'tasks/today',
+                data: {
+                    view: 'today',
+                },
+                loadComponent: () =>
+                    import('@/features/tasks/pages/tasks.page')
+                        .then((m) => m.TasksPage),
+            },
+            {
+                path: 'tasks/upcoming',
+                data: {
+                    view: 'upcoming',
+                },
+                loadComponent: () =>
+                    import('@/features/tasks/pages/tasks.page')
+                        .then((m) => m.TasksPage),
+            },
+            {
                 path: 'tasks/project/:projectId',
                 data: {
                     view: 'project',

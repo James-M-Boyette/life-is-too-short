@@ -1,5 +1,5 @@
 /* ToDo:
-    [] Extract 'TaskView'
+    [x] Extract 'TaskView'
 
  */
 import { Component, signal, inject, computed, input } from '@angular/core';
@@ -15,7 +15,7 @@ import {
 import { TaskRowComponent } from '@/features/tasks/components/task-row/task-row.component';
 import { ProjectsStore } from '@/features/projects/state/projects.store';
 
-type TaskView = 'all' | 'inbox' | 'project';
+import type { TaskView } from '@/features/tasks/models/task-view.model';
 
 @Component({
     standalone: true,
