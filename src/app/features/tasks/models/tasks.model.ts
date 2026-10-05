@@ -9,7 +9,7 @@ export type Task = {
 
     title: string;
     is_done: boolean;
-    notes: string | null;
+    description: string | null;
     due_at: string | null;
     status: TaskStatus;
 

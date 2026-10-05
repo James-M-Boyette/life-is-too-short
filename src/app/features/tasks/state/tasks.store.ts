@@ -16,7 +16,7 @@ type NewTaskInsert = {
 // ?
 type AddTaskInput = {
     title: string;
-    notes: string | null;
+    description: string | null;
     projectId: string | null; // not used yet
 };
 
@@ -167,7 +167,7 @@ export class TasksStore {
             title: input.title,
             is_done: false,
 
-            notes: input.notes,
+            description: input.description,
             due_at: null,
 
             status: 'todo',
@@ -184,7 +184,7 @@ export class TasksStore {
                 .insert({
                     user_id: userId,
                     title: input.title,
-                    notes: input.notes,
+                    description: input.description,
                     project_id: input.projectId,
                 })
                 .select('*')
@@ -240,16 +240,16 @@ export class TasksStore {
         });
     }
 
-    async updateNotes(task: Task, notes: string | null) {
-        const nextNotes = (notes ?? '').trim();
-        const normalized = nextNotes.length ? nextNotes : null;
+    async updateDescription(task: Task, description: string | null) {
+        const nextDescription = (description ?? '').trim();
+        const normalized = nextDescription.length ? nextDescription : null;
 
-        if (normalized === task.notes) return;
+        if (normalized === task.description) return;
 
         await this.runMutation(async () => {
             const next: Task = {
                 ...task,
-                notes: normalized,
+                description: normalized,
                 updated_at: new Date().toISOString(), // optimistic
             };
 
@@ -258,7 +258,7 @@ export class TasksStore {
 
             const { data, error } = await supabase
                 .from('tasks')
-                .update({ notes: normalized })
+                .update({ description: normalized })
                 .eq('id', task.id)
                 .select('*')
                 .single();

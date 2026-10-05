@@ -99,41 +99,34 @@ export class TaskRowComponent {
         this.commitEdit();
     }
 
-    @Output() editNotes = new EventEmitter<{ task: Task; notes: string | null }>();
+    @Output() editDescription = new EventEmitter<{ task: Task; description: string | null }>();
 
-    protected readonly notesOpen = signal(false);
-    protected readonly editingNotes = signal(false);
-    protected readonly draftNotes = signal('');
+    protected readonly editingDescription = signal(false);
+    protected readonly draftDescription = signal('');
 
-    protected toggleNotesOpen() {
-        this.notesOpen.update((v) => !v);
-        if (!this.notesOpen()) this.editingNotes.set(false);
-    }
-
-    protected startNotesEdit() {
+    protected startDescriptionEdit() {
         if (this.disabled()) return;
-        this.draftNotes.set(this.task().notes ?? '');
-        this.editingNotes.set(true);
-        this.notesOpen.set(true);
+        this.draftDescription.set(this.task().description ?? '');
+        this.editingDescription.set(true);
     }
 
-    protected cancelNotesEdit() {
-        this.editingNotes.set(false);
+    protected cancelDescriptionEdit() {
+        this.editingDescription.set(false);
     }
 
-    protected commitNotesEdit() {
-        const value = this.draftNotes();
-        this.editingNotes.set(false);
-        this.editNotes.emit({ task: this.task(), notes: value });
+    protected commitDescriptionEdit() {
+        const value = this.draftDescription();
+        this.editingDescription.set(false);
+        this.editDescription.emit({ task: this.task(), description: value });
     }
 
-    protected onNotesInput(event: Event) {
+    protected onDescriptionInput(event: Event) {
         const el = event.target as HTMLTextAreaElement;
-        this.draftNotes.set(el.value);
+        this.draftDescription.set(el.value);
     }
 
-    protected onNotesSubmit(event: SubmitEvent) {
+    protected onDescriptionSubmit(event: SubmitEvent) {
         event.preventDefault();
-        this.commitNotesEdit();
+        this.commitDescriptionEdit();
     }
 }
