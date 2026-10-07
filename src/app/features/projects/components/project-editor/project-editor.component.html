@@ -1,0 +1,52 @@
+<form
+    id="project-editor-form"
+    class="project-editor-form"
+    [formGroup]="form"
+    (ngSubmit)="onSubmit()"
+>
+    <div class="form-field">
+        <label for="project-name">Project name</label>
+
+        <input
+            id="project-name"
+            type="text"
+            formControlName="name"
+            placeholder="e.g. 3D Modeling"
+        />
+
+        @if (form.controls.name.touched && form.controls.name.invalid) {
+            <small class="field-error">
+                Project name is required.
+            </small>
+        }
+    </div>
+
+    <div class="form-field">
+        <label for="parent-project">Parent project</label>
+
+        <p-treeselect
+            inputId="parent-project"
+            [options]="projectOptions()"
+            formControlName="parentProject"
+            placeholder="None (top-level project)"
+            [showClear]="true"
+            appendTo="body"
+        />
+    </div>
+
+    <footer class="form-actions">
+        <button
+            type="button"
+            (click)="cancel.emit()"
+        >
+            Cancel
+        </button>
+
+        <button
+            type="submit"
+            [disabled]="form.invalid"
+        >
+            Create Project
+        </button>
+    </footer>
+</form>

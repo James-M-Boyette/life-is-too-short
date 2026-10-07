@@ -46,14 +46,20 @@
     [resizable]="false"
     [style]="{ width: '28rem', maxWidth: '90vw' }"
 >
-    <p>Create a new project.</p>
+    @if (createProjectDialogVisible()) {
+        <app-project-editor
+            [projects]="projectsStore.projectTree()"
+            (create)="onCreateProject($event)"
+            (cancel)="closeCreateProjectDialog()"
+        />
+    }
 
-    <ng-template #footer>
+    <!-- <ng-template #footer>
         <button
             type="button"
             (click)="closeCreateProjectDialog()"
         >
             Cancel
         </button>
-    </ng-template>
+    </ng-template> -->
 </p-dialog>

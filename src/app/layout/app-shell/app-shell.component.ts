@@ -9,6 +9,7 @@ import { AppSidebarComponent } from '@/layout/app-shell/app-sidebar/app-sidebar.
 import { ProjectsStore } from '@/features/projects/state/projects.store';
 
 import { DialogModule } from 'primeng/dialog';
+import { CreateProjectPayload, ProjectEditorComponent } from '@/features/projects/components/project-editor/project-editor.component';
 
 @Component({
     standalone: true,
@@ -19,7 +20,8 @@ import { DialogModule } from 'primeng/dialog';
         ButtonModule,
         TopBarComponent,
         AppSidebarComponent,
-        DialogModule
+        DialogModule,
+        ProjectEditorComponent
     ],
     templateUrl: './app-shell.component.html',
     styleUrls: ['./app-shell.component.scss'],
@@ -36,6 +38,10 @@ export class AppShellComponent {
 
     protected openCreateProjectDialog(): void {
         this.createProjectDialogVisible.set(true);
+    }
+
+    protected onCreateProject(payload: CreateProjectPayload): void {
+        console.log('Create project:', payload);
     }
 
     protected closeCreateProjectDialog(): void {
