@@ -2,7 +2,7 @@
     <!-- App Header -->
     <!-- TODO: MOVE THIS to a seperate component and inject into parent -->
     <app-tasks-header
-        title="Tasks"
+        [title]="pageHeader()"
         [realtimeOn]="tasksStore.realtimeConnected()"
         [errorText]="tasksStore.error()"
         [disabled]="tasksStore.mutating()"
@@ -15,12 +15,17 @@
         -->
     <app-task-create [projects]="projectsStore.projectTree()" (create)="createTask($event)" />
 
+</section>
+
+<section class="task-group open-group">
     @if (tasksStore.loading()) {
         <p>Loading…</p>
     } @else {
+        <h2>Open ({{ openTasks().length }})</h2>
+
         <ul class="list">
             <!-- @for (task of tasksStore.tasks(); track task.id) { -->
-            @for (task of visibleTasks(); track  task.id) {
+            @for (task of openTasks(); track  task.id) {
                 <app-task-row
                     [task]="task"
                     [project]="projectsStore.getProject(task.project_id)"
@@ -34,7 +39,49 @@
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
                     (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
                 />
+            } @empty {
+                <p class="empty-message">No open tasks.</p>
             }
         </ul>
     }
+</section>
+
+<section class="task-group completed-group">
+    <h2>
+        <button
+            type="button"
+            class="completed-toggle"
+            [attr.aria-expanded]="showCompleted()"
+            aria-controls="completed-task-list"
+            (click)="showCompleted.set(!showCompleted())"
+            >
+            <i
+                [class]="showCompleted() ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
+                aria-hidden="true"
+            ></i>
+
+            Completed ({{ completedTasks().length }})
+        </button>
+    </h2>
+
+    <div id="completed-task-list">
+        @if (showCompleted()) {
+            <ul class="list">
+                @for (task of completedTasks(); track task.id) {
+                    <app-task-row
+                        [task]="task"
+                        [project]="projectsStore.getProject(task.project_id)"
+                        [projects]="projectsStore.projectTree()"
+                        [disabled]="tasksStore.mutating()"
+
+                        (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
+                        (toggleDone)="tasksStore.toggleDone($event)"
+                        (remove)="tasksStore.remove($event)"
+                        (rename)="tasksStore.updateTitle($event.task, $event.title)"
+                        (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
+                    />
+                }
+            </ul>
+        }
+    </div>
 </section>

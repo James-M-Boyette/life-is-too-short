@@ -6,11 +6,17 @@ import { TreeModule } from 'primeng/tree';
 import type { ProjectNode } from '@/features/projects/models/project.model';
 import { toProjectTreeNodes } from '@/features/projects/utils/project-tree-node.util';
 import type { TreeNode } from 'primeng/api';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
     selector: 'app-sidebar',
     standalone: true,
-    imports: [RouterLink, RouterLinkActive, TreeModule],
+    imports: [
+        RouterLink,
+        RouterLinkActive,
+        TreeModule,
+        TooltipModule
+    ],
     templateUrl: './app-sidebar.component.html',
     styleUrl: './app-sidebar.component.scss',
 })
