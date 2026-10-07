@@ -152,43 +152,24 @@
         section.task-secondary-section {
             width: 100%;
             display: flex;
-            align-items: center;
             flex-direction: column;
+
+            div.description {
+                margin-left: 1.9rem;
+                margin-top: 0.5rem;
+                display: flex;
+                gap: 0.5rem;
+
+                form.edit-desciption-form {}
+
+                p.description-text {}
+            }
 
             div.meta {
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
+                // justify-content: center;
                 gap: 1rem;
-            }
-
-            div.notes {
-                margin-left: 1.9rem;
-                margin-top: 0.5rem;
-                display: grid;
-                gap: 0.5rem;
-
-                div.notes-view {
-                    p.notes-text {
-                        margin: 0;
-                        white-space: pre-wrap;
-                    }
-                }
-
-                form.edit-notes-form {
-                    textarea {
-                        width: 100%;
-                        padding: 0.5rem;
-                        border-radius: 10px;
-                        border: 1px solid #ccc;
-                        resize: vertical;
-                    }
-
-                    .notes-actions {
-                        display: flex;
-                        gap: 0.5rem;
-                    }
-                }
             }
         }
     }

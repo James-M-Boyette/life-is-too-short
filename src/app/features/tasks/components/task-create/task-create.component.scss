@@ -2,7 +2,7 @@
     display: block;
 
     form.create-new-task-form {
-        overflow: hidden;
+        // overflow: hidden;
 
         background: var(--surface-page);
         border: 1px solid var(--border-subtle);
@@ -32,7 +32,7 @@
 
             textarea {
                 width: 100%;
-                min-height: 6rem;
+                // min-height: 6rem;
 
                 color: var(--text-primary);
                 font: inherit;
