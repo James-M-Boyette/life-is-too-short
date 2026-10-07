@@ -14,12 +14,19 @@ import {
 } from '@/features/tasks/components/task-create/task-create.component';
 import { TaskRowComponent } from '@/features/tasks/components/task-row/task-row.component';
 import { ProjectsStore } from '@/features/projects/state/projects.store';
+import { ButtonModule } from 'primeng/button';
 
 import type { TaskView } from '@/features/tasks/models/task-view.model';
 
 @Component({
     standalone: true,
-    imports: [CommonModule, TasksHeaderComponent, TaskCreateComponent, TaskRowComponent],
+    imports: [
+        CommonModule,
+        ButtonModule,
+        TasksHeaderComponent,
+        TaskCreateComponent,
+        TaskRowComponent
+    ],
     templateUrl: './tasks.page.html',
     styleUrls: ['./tasks.page.scss'],
 })
@@ -29,7 +36,33 @@ export class TasksPage {
     protected readonly projectsStore = inject(ProjectsStore);
     readonly error = signal<string | null>(null); // Did creating a Task fail?
 
+    readonly pageHeader = computed(() => {
+        if (this.view() === 'all') {
+            return 'All Tasks';
+        } else if (this.view() === 'inbox') {
+            return 'Inbox';
+        } else if (this.view() === 'today') {
+            return 'Today';
+        } else if (this.view() === 'upcoming') {
+            return 'Upcoming';
+        } else if (this.view() === 'project') {
+            const projectId = this.projectId();
+            const project = this.projectsStore.projects().find((p) => p.id === projectId);
+            return project ? `Project: ${project.name}` : 'Project';
+        } else {
+            return 'Tasks';
+        }
+    });
     readonly projectId = input<string | undefined>();
+    protected readonly openTasks = computed(() =>
+        this.visibleTasks().filter((task) => !task.is_done),
+    );
+
+    protected readonly completedTasks = computed(() =>
+        this.visibleTasks().filter((task) => task.is_done),
+    );
+
+    protected readonly showCompleted = signal(false);
 
     readonly view = input<TaskView>('all');
     private readonly router = inject(Router);

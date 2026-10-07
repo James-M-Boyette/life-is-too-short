@@ -13,13 +13,17 @@
             routerLink="/tasks"
             routerLinkActive="active"
             [routerLinkActiveOptions]="{ exact: true }"
+            pTooltip="A comprehensive view across every project, including unassigned tasks"
+            tooltipPosition="bottom"
         >
             All Tasks
         </a>
         <a
             routerLink="/tasks/inbox"
             routerLinkActive="active"
-            >
+            pTooltip="Start here: tasks that haven't been assigned a project or due date yet"
+            tooltipPosition="bottom"
+        >
             Inbox
         </a>
 
