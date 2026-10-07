@@ -40,8 +40,32 @@ export class AppShellComponent {
         this.createProjectDialogVisible.set(true);
     }
 
-    protected onCreateProject(payload: CreateProjectPayload): void {
-        console.log('Create project:', payload);
+    protected readonly creatingProject = signal(false);
+    protected readonly createProjectError = signal<string | null>(null);
+
+    protected async onCreateProject(
+        payload: CreateProjectPayload
+    ): Promise<void> {
+        if (this.creatingProject()) {
+            return;
+        }
+
+        this.creatingProject.set(true);
+        this.createProjectError.set(null);
+
+        try {
+            await this.projectsStore.createProject(payload);
+
+            this.closeCreateProjectDialog();
+        } catch (error: unknown) {
+            this.createProjectError.set(
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to create project'
+            );
+        } finally {
+            this.creatingProject.set(false);
+        }
     }
 
     protected closeCreateProjectDialog(): void {

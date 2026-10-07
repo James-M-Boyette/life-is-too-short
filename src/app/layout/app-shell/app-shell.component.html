@@ -52,6 +52,12 @@
             (create)="onCreateProject($event)"
             (cancel)="closeCreateProjectDialog()"
         />
+
+        @if (createProjectError()) {
+            <p class="project-create-error" role="alert">
+                {{ createProjectError() }}
+            </p>
+        }
     }
 
     <!-- <ng-template #footer>
