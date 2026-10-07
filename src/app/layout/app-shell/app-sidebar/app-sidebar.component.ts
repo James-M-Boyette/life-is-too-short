@@ -1,4 +1,4 @@
-import { Component, signal, computed, input } from '@angular/core';
+import { Component, signal, computed, input, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TreeModule } from 'primeng/tree';
 // import type { TreeNode } from 'primeng/api';
@@ -30,6 +30,8 @@ export class AppSidebarComponent {
     protected readonly projectNodes = computed(() =>
         toProjectTreeNodes(this.projects(), this.expandedProjectIds()),
     );
+
+    readonly createProject = output<void>();
 
     protected collapseAll(): void {
         this.expandedProjectIds.set(new Set());

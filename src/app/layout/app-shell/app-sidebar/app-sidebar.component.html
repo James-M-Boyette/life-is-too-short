@@ -43,7 +43,21 @@
     </section>
 
     <section class="project-navigation">
-        <h2>Projects</h2>
+        <!-- <h2>Projects</h2> -->
+        <header class="project-navigation-header">
+            <h2>Projects</h2>
+
+            <button
+                type="button"
+                class="add-project-btn"
+                pTooltip="Create project"
+                tooltipPosition="bottom"
+                aria-label="Create a project"
+                (click)="createProject.emit()"
+            >
+                <i class="pi pi-plus" aria-hidden="true"></i>
+            </button>
+        </header>
 
         <div class="project-tree-actions">
             <button

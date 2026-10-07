@@ -1,6 +1,6 @@
-import { Component, computed, effect, inject } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 
 import { ButtonModule } from 'primeng/button';
 import { AuthStore } from '@/shared/supabase/auth.store';
@@ -8,17 +8,18 @@ import { TopBarComponent } from '@/layout/app-shell/top-bar/top-bar.component';
 import { AppSidebarComponent } from '@/layout/app-shell/app-sidebar/app-sidebar.component';
 import { ProjectsStore } from '@/features/projects/state/projects.store';
 
+import { DialogModule } from 'primeng/dialog';
+
 @Component({
     standalone: true,
     selector: 'app-shell',
     imports: [
         CommonModule,
         RouterOutlet,
-        RouterLink,
-        RouterLinkActive,
         ButtonModule,
         TopBarComponent,
         AppSidebarComponent,
+        DialogModule
     ],
     templateUrl: './app-shell.component.html',
     styleUrls: ['./app-shell.component.scss'],
@@ -30,6 +31,16 @@ export class AppShellComponent {
     protected readonly userEmail = computed(() => this.auth.user()?.email ?? null);
 
     protected readonly projectsStore = inject(ProjectsStore);
+
+    protected readonly createProjectDialogVisible = signal(false);
+
+    protected openCreateProjectDialog(): void {
+        this.createProjectDialogVisible.set(true);
+    }
+
+    protected closeCreateProjectDialog(): void {
+        this.createProjectDialogVisible.set(false);
+    }
 
     constructor() {
         // Keep shell protected even if someone deep-links into /tasks

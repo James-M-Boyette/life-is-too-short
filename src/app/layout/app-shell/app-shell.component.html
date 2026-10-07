@@ -25,6 +25,7 @@
         <aside class="app-sidebar">
             <app-sidebar
                 [projects]="projectsStore.projectTree()"
+                (createProject)="openCreateProjectDialog()"
             />
         </aside>
 
@@ -35,3 +36,24 @@
     </div>
 
 </div>
+
+<p-dialog
+    header="Create Project"
+    [modal]="true"
+    [visible]="createProjectDialogVisible()"
+    (visibleChange)="createProjectDialogVisible.set($event)"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: '28rem', maxWidth: '90vw' }"
+>
+    <p>Create a new project.</p>
+
+    <ng-template #footer>
+        <button
+            type="button"
+            (click)="closeCreateProjectDialog()"
+        >
+            Cancel
+        </button>
+    </ng-template>
+</p-dialog>
