@@ -5,6 +5,11 @@ import { supabase } from '@/shared/supabase/supabase.client';
 import type { Project } from '@/features/projects/models/project.model';
 import { buildProjectTree } from '@/features/projects/utils/project-tree.util';
 
+export type CreateProjectInput = {
+    name: string;
+    parentProjectId: string | null;
+};
+
 @Injectable({ providedIn: 'root' })
 export class ProjectsStore {
     readonly projects = signal<Project[]>([]); // What Projects are currently available?
@@ -65,5 +70,53 @@ export class ProjectsStore {
         }
 
         return this.projectsById().get(projectId) ?? null;
+    }
+
+    async createProject(input: CreateProjectInput): Promise<Project> {
+        const userId = this.auth.userId();
+
+        if (!userId) {
+            throw new Error('User is not authenticated');
+        }
+
+        const name = input.name.trim();
+
+        if (!name) {
+            throw new Error('Project name is required');
+        }
+
+        // Validate that the selected parent belongs to the loaded project set.
+        if (
+            input.parentProjectId !== null &&
+            !this.projectsById().has(input.parentProjectId)
+        ) {
+            throw new Error('Selected parent project does not exist');
+        }
+
+        this.error.set(null);
+
+        const { data, error } = await supabase
+            .from('projects')
+            .insert({
+                user_id: userId,
+                name,
+                parent_project_id: input.parentProjectId,
+            })
+            .select('*')
+            .single();
+
+        if (error) {
+            this.error.set(error.message);
+            throw error;
+        }
+
+        const createdProject = data as Project;
+
+        this.projects.update(projects => [
+            ...projects,
+            createdProject,
+        ]);
+
+        return createdProject;
     }
 }

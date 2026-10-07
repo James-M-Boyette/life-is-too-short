@@ -1,0 +1,47 @@
+:host {
+    display: block;
+
+    form.project-editor-form {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+
+        div.form-field {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+
+            label {
+                color: var(--text-primary);
+                font-weight: 500;
+            }
+
+            input {
+                width: 100%;
+                padding: var(--space-2) var(--space-3);
+
+                color: var(--text-primary);
+                font: inherit;
+
+                background: var(--surface-page);
+                border: 1px solid var(--border-subtle);
+                border-radius: var(--radius-md);
+            }
+
+            p-treeselect {
+                width: 100%;
+            }
+
+            small.field-error {
+                color: var(--p-red-600);
+            }
+        }
+
+        footer.form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--space-2);
+            margin-top: var(--space-2);
+        }
+    }
+}
