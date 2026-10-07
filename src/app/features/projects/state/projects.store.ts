@@ -10,6 +10,12 @@ export type CreateProjectInput = {
     parentProjectId: string | null;
 };
 
+export type UpdateProjectInput = {
+    projectId: string;
+    name: string;
+    parentProjectId: string | null;
+};
+
 @Injectable({ providedIn: 'root' })
 export class ProjectsStore {
     readonly projects = signal<Project[]>([]); // What Projects are currently available?
@@ -118,5 +124,88 @@ export class ProjectsStore {
         ]);
 
         return createdProject;
+    }
+
+    async updateProject(input: UpdateProjectInput): Promise<Project> {
+        const userId = this.auth.userId();
+
+        if (!userId) {
+            throw new Error('User is not authenticated');
+        }
+
+        const project = this.getProject(input.projectId);
+
+        if (!project) {
+            throw new Error('Project does not exist');
+        }
+
+        const name = input.name.trim();
+
+        if (!name) {
+            throw new Error('Project name is required');
+        }
+
+        const parentId = input.parentProjectId;
+
+        if (parentId !== null) {
+            const parent = this.getProject(parentId);
+
+            if (!parent) {
+                throw new Error('Selected parent project does not exist');
+            }
+
+            // Walk upward through the proposed parent's ancestors.
+            // Encountering the edited project would create a cycle.
+            const visited = new Set<string>();
+            let current: Project | null = parent;
+
+            while (current) {
+                if (current.id === project.id) {
+                    throw new Error(
+                        'A project cannot be moved beneath itself or its descendants'
+                    );
+                }
+
+                if (visited.has(current.id)) {
+                    throw new Error('The project hierarchy contains a cycle');
+                }
+
+                visited.add(current.id);
+
+                current = current.parent_project_id
+                    ? this.getProject(current.parent_project_id)
+                    : null;
+            }
+        }
+
+        this.error.set(null);
+
+        const { data, error } = await supabase
+            .from('projects')
+            .update({
+                name,
+                parent_project_id: parentId,
+            })
+            .eq('id', project.id)
+            .eq('user_id', userId)
+            .select('*')
+            .single();
+
+        if (error) {
+            this.error.set(error.message);
+            throw error;
+        }
+
+        const updatedProject = data as Project;
+
+        this.projects.update(projects =>
+            projects.map(existing =>
+                existing.id === updatedProject.id
+                    ? updatedProject
+                    : existing
+            )
+        );
+
+        return updatedProject;
     }
 }

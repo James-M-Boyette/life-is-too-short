@@ -32,6 +32,7 @@ export class AppSidebarComponent {
     );
 
     readonly createProject = output<void>();
+    readonly editProject = output<string>();
 
     protected collapseAll(): void {
         this.expandedProjectIds.set(new Set());

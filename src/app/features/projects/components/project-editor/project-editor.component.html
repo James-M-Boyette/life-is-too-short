@@ -12,6 +12,7 @@
             type="text"
             formControlName="name"
             placeholder="e.g. 3D Modeling"
+            [disabled]="disabled()"
         />
 
         @if (form.controls.name.touched && form.controls.name.invalid) {
@@ -31,12 +32,14 @@
             placeholder="None (top-level project)"
             [showClear]="true"
             appendTo="body"
+            [disabled]="disabled()"
         />
     </div>
 
     <footer class="form-actions">
         <button
             type="button"
+            [disabled]="disabled()"
             (click)="cancel.emit()"
         >
             Cancel
@@ -44,9 +47,9 @@
 
         <button
             type="submit"
-            [disabled]="form.invalid"
+            [disabled]="form.invalid || disabled()"
         >
-            Create Project
+            {{ isEditing() ? 'Save Changes' : 'Create Project' }}
         </button>
     </footer>
 </form>

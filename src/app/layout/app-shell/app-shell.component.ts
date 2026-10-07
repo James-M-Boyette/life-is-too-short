@@ -10,6 +10,7 @@ import { ProjectsStore } from '@/features/projects/state/projects.store';
 
 import { DialogModule } from 'primeng/dialog';
 import { CreateProjectPayload, ProjectEditorComponent } from '@/features/projects/components/project-editor/project-editor.component';
+import type { Project } from '@/features/projects/models/project.model';
 
 @Component({
     standalone: true,
@@ -33,15 +34,41 @@ export class AppShellComponent {
     protected readonly userEmail = computed(() => this.auth.user()?.email ?? null);
 
     protected readonly projectsStore = inject(ProjectsStore);
+    protected readonly editingProject = signal<Project | null>(null);
+
+    protected readonly projectDialogTitle = computed(() =>
+        this.editingProject() ? 'Edit Project' : 'Create Project'
+    );
 
     protected readonly createProjectDialogVisible = signal(false);
 
+    protected readonly creatingProject = signal(false);
+    protected readonly createProjectError = signal<string | null>(null);
+
+    constructor() {
+    // Keep shell protected even if someone deep-links into /tasks
+        effect(() => {
+            if (!this.auth.isAuthed()) void this.router.navigateByUrl('/login');
+        });
+    }
+
     protected openCreateProjectDialog(): void {
+        this.editingProject.set(null);
+        this.createProjectError.set(null);
         this.createProjectDialogVisible.set(true);
     }
 
-    protected readonly creatingProject = signal(false);
-    protected readonly createProjectError = signal<string | null>(null);
+    protected openEditProjectDialog(projectId: string): void {
+        const project = this.projectsStore.getProject(projectId);
+
+        if (!project) {
+            return;
+        }
+
+        this.editingProject.set(project);
+        this.createProjectError.set(null);
+        this.createProjectDialogVisible.set(true);
+    }
 
     protected async onCreateProject(
         payload: CreateProjectPayload
@@ -68,15 +95,42 @@ export class AppShellComponent {
         }
     }
 
-    protected closeCreateProjectDialog(): void {
-        this.createProjectDialogVisible.set(false);
+    protected async onSaveProject(
+        payload: CreateProjectPayload
+    ): Promise<void> {
+        if (this.creatingProject()) {
+            return;
+        }
+
+        this.creatingProject.set(true);
+        this.createProjectError.set(null);
+
+        try {
+            const project = this.editingProject();
+
+            if (project) {
+                await this.projectsStore.updateProject({
+                    projectId: project.id,
+                    ...payload,
+                });
+            } else {
+                await this.projectsStore.createProject(payload);
+            }
+
+            this.closeCreateProjectDialog();
+        } catch (error: unknown) {
+            this.createProjectError.set(
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to save project'
+            );
+        } finally {
+            this.creatingProject.set(false);
+        }
     }
 
-    constructor() {
-        // Keep shell protected even if someone deep-links into /tasks
-        effect(() => {
-            if (!this.auth.isAuthed()) void this.router.navigateByUrl('/login');
-        });
+    protected closeCreateProjectDialog(): void {
+        this.createProjectDialogVisible.set(false);
     }
 
     protected async signOut() {

@@ -80,16 +80,24 @@
             (onNodeExpand)="onNodeExpand($event)"
             (onNodeCollapse)="onNodeCollapse($event)"
         >
-            <ng-template
-                pTemplate="default"
-                let-node
-            >
-                <a
-                    [routerLink]="['/tasks/project', node.key]"
-                    routerLinkActive="active"
-                >
-                    {{ node.label }}
-                </a>
+            <ng-template pTemplate="default" let-node>
+                <div class="project-tree-item">
+                    <a
+                        [routerLink]="['/tasks/project', node.key]"
+                        routerLinkActive="active"
+                    >
+                        {{ node.label }}
+                    </a>
+
+                    <button
+                        type="button"
+                        class="edit-project-btn"
+                        [attr.aria-label]="'Edit ' + node.label"
+                        (click)="editProject.emit(node.key)"
+                    >
+                        <i class="pi pi-pencil" aria-hidden="true"></i>
+                    </button>
+                </div>
             </ng-template>
         </p-tree>
     </section>
