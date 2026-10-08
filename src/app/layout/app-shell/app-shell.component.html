@@ -28,6 +28,7 @@
                 [expandProjectRequest]="expandProjectRequest()"
                 (createProject)="openCreateProjectDialog()"
                 (editProject)="openEditProjectDialog($event)"
+                (deleteProject)="openDeleteProjectDialog($event)"
             />
         </aside>
 
@@ -65,5 +66,67 @@
                 {{ createProjectError() }}
             </p>
         }
+    }
+</p-dialog>
+
+<p-dialog
+    header="Delete project?"
+    [modal]="true"
+    [visible]="projectToDelete() !== null"
+    (visibleChange)="!$event && closeDeleteProjectDialog()"
+    [closable]="!deletingProject()"
+    [closeOnEscape]="!deletingProject()"
+    [dismissableMask]="false"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: '30rem', maxWidth: '90vw' }"
+>
+    @if (projectToDelete(); as project) {
+        <p>
+            Are you sure you want to delete
+            <strong>{{ project.name }}</strong>?
+        </p>
+
+        <p>
+            This will delete the project itself, but preserve its contents:
+        </p>
+
+        <ul>
+            <li>
+                {{ directTaskCount() }}
+                directly assigned task(s) will move to Inbox.
+            </li>
+            <li>
+                {{ directChildCount() }}
+                immediate child project(s) will become top-level projects.
+                Their descendants and tasks will remain intact.
+            </li>
+        </ul>
+
+        <p>This action cannot be undone.</p>
+
+        @if (deleteProjectError(); as error) {
+            <p role="alert" class="project-delete-error">
+                {{ error }}
+            </p>
+        }
+
+        <div class="project-delete-actions">
+            <p-button
+                label="Cancel"
+                severity="secondary"
+                [outlined]="true"
+                [disabled]="deletingProject()"
+                (onClick)="closeDeleteProjectDialog()"
+            />
+
+            <p-button
+                label="Delete project"
+                severity="danger"
+                [loading]="deletingProject()"
+                [disabled]="deletingProject()"
+                (onClick)="confirmDeleteProject()"
+            />
+        </div>
     }
 </p-dialog>
