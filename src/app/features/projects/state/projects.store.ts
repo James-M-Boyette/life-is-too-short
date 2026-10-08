@@ -208,4 +208,41 @@ export class ProjectsStore {
 
         return updatedProject;
     }
+
+    async deleteProject(projectId: string): Promise<void> {
+        const userId = this.auth.userId();
+
+        if (!userId) {
+            throw new Error('User is not authenticated');
+        }
+
+        const project = this.getProject(projectId);
+
+        if (!project) {
+            throw new Error('Project does not exist');
+        }
+
+        this.error.set(null);
+
+        const { error } = await supabase.rpc('delete_project', {
+            p_project_id: projectId,
+        });
+
+        if (error) {
+            this.error.set(error.message);
+            throw error;
+        }
+
+        // The database operation succeeded. Remove the deleted project
+        // from our local state so the sidebar updates immediately.
+        this.projects.update(projects =>
+            projects
+                .filter(existing => existing.id !== projectId)
+                .map(existing =>
+                    existing.parent_project_id === projectId
+                        ? { ...existing, parent_project_id: null }
+                        : existing
+                )
+        );
+    }
 }
