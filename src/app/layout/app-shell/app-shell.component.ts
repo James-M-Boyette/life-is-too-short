@@ -70,30 +70,9 @@ export class AppShellComponent {
         this.createProjectDialogVisible.set(true);
     }
 
-    protected async onCreateProject(
-        payload: CreateProjectPayload
-    ): Promise<void> {
-        if (this.creatingProject()) {
-            return;
-        }
-
-        this.creatingProject.set(true);
-        this.createProjectError.set(null);
-
-        try {
-            await this.projectsStore.createProject(payload);
-
-            this.closeCreateProjectDialog();
-        } catch (error: unknown) {
-            this.createProjectError.set(
-                error instanceof Error
-                    ? error.message
-                    : 'Failed to create project'
-            );
-        } finally {
-            this.creatingProject.set(false);
-        }
-    }
+    protected readonly expandProjectRequest = signal<{
+        projectId: string;
+    } | null>(null);
 
     protected async onSaveProject(
         payload: CreateProjectPayload
@@ -106,15 +85,19 @@ export class AppShellComponent {
         this.createProjectError.set(null);
 
         try {
-            const project = this.editingProject();
+           const project = this.editingProject();
 
-            if (project) {
-                await this.projectsStore.updateProject({
+            const savedProject = project
+                ? await this.projectsStore.updateProject({
                     projectId: project.id,
                     ...payload,
+                })
+                : await this.projectsStore.createProject(payload);
+
+            if (savedProject.parent_project_id) {
+                this.expandProjectRequest.set({
+                    projectId: savedProject.parent_project_id,
                 });
-            } else {
-                await this.projectsStore.createProject(payload);
             }
 
             this.closeCreateProjectDialog();
