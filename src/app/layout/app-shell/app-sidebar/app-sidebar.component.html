@@ -89,22 +89,24 @@
                         {{ node.label }}
                     </a>
 
-                    <button
-                        type="button"
-                        class="edit-project-btn"
-                        [attr.aria-label]="'Edit ' + node.label"
-                        (click)="editProject.emit(node.key)"
-                    >
-                        <i class="pi pi-pencil" aria-hidden="true"></i>
-                    </button>
-                    <button
-                        type="button"
-                        class="delete-project-btn"
-                        [attr.aria-label]="'Delete ' + node.label"
-                        (click)="deleteProject.emit(node.key)"
-                    >
-                        <i class="pi pi-trash" aria-hidden="true"></i>
-                    </button>
+                    <div class="action-buttons-container">
+                        <button
+                            type="button"
+                            class="edit-project-btn"
+                            [attr.aria-label]="'Edit ' + node.label"
+                            (click)="editProject.emit(node.key)"
+                        >
+                            <i class="pi pi-pencil" aria-hidden="true"></i>
+                        </button>
+                        <button
+                            type="button"
+                            class="delete-project-btn"
+                            [attr.aria-label]="'Delete ' + node.label"
+                            (click)="deleteProject.emit(node.key)"
+                        >
+                            <i class="pi pi-trash" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
             </ng-template>
         </p-tree>

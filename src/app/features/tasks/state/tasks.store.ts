@@ -61,7 +61,9 @@ export class TasksStore {
             }
 
             // Load current state once
-            void this.refreshTasks();
+            void this.refreshTasks().catch(() => {
+                // refreshTasks() has already recorded the error in this.error.
+            });
 
             // Start realtime subscription scoped to this user
             this.channel = supabase
@@ -142,8 +144,14 @@ export class TasksStore {
 
             if (error) throw error;
             this.tasks.set((data ?? []) as Task[]); // Set tasks from DB (or empty array if null)
-        } catch (e: any) {
-            this.error.set(e?.message ?? 'Failed to load tasks');
+        } catch (error: unknown) {
+            this.error.set(
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to load tasks'
+            );
+
+            throw error;
         } finally {
             this.loading.set(false);
         }

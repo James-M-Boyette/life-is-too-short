@@ -20,7 +20,12 @@
         (signOut)="signOut()"
     />
 
-    <div class="app-body">
+    <div
+        class="app-body"
+        [style.grid-template-columns]="
+            sidebarWidth() + 'px 6px minmax(0, 1fr)'
+        "
+        >
         <!-- App Sidebar -->
         <aside class="app-sidebar">
             <app-sidebar
@@ -31,6 +36,15 @@
                 (deleteProject)="openDeleteProjectDialog($event)"
             />
         </aside>
+
+        <!-- Vertical Border Handle (for re-sizing) -->
+        <div
+            class="sidebar-resize-handle"
+            (pointerdown)="startSidebarResize($event)"
+            (pointermove)="resizeSidebar($event)"
+            (pointerup)="stopSidebarResize($event)"
+            (pointercancel)="stopSidebarResize($event)"
+        ></div>
 
         <!-- App Main Content -->
         <main class="app-main">

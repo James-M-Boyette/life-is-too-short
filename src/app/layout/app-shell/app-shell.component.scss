@@ -21,6 +21,16 @@
             overflow-y: auto;
         }
 
+        div.sidebar-resize-handle {
+            width: 6px;
+            cursor: col-resize;
+            touch-action: none;
+
+            &:hover {
+                background: var(--p-primary-color);
+            }
+        }
+
         main.app-main {
             min-width: 0;
             min-height: 0;
