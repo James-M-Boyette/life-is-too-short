@@ -183,7 +183,8 @@ div.project-tree-item {
         min-width: 0;
     }
 
-    button.edit-project-btn {
+    button.edit-project-btn,
+    button.delete-project-btn {
         display: grid;
         place-items: center;
         width: 1.75rem;
