@@ -40,10 +40,20 @@
         <!-- Vertical Border Handle (for re-sizing) -->
         <div
             class="sidebar-resize-handle"
+            role="separator"
+            aria-label="Resize sidebar"
+            aria-orientation="vertical"
+            tabindex="0"
+            [attr.aria-valuemin]="minSidebarWidth"
+            [attr.aria-valuemax]="maxSidebarWidth"
+            [attr.aria-valuenow]="sidebarWidth()"
+            [class.is-resizing]="isResizingSidebar()"
             (pointerdown)="startSidebarResize($event)"
             (pointermove)="resizeSidebar($event)"
             (pointerup)="stopSidebarResize($event)"
             (pointercancel)="stopSidebarResize($event)"
+            (keydown)="onSidebarResizeKeydown($event)"
+            (dblclick)="resetSidebarWidth()"
         ></div>
 
         <!-- App Main Content -->

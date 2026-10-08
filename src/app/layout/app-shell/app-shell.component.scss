@@ -12,9 +12,9 @@
         min-height: 0;
 
         display: grid;
-        grid-template-columns:
-            var(--app-sidebar-width)
-            minmax(0, 1fr);
+        // grid-template-columns:
+        //     var(--app-sidebar-width)
+        //     minmax(0, 1fr);
 
         aside.app-sidebar {
             min-width: 0;
@@ -23,11 +23,28 @@
 
         div.sidebar-resize-handle {
             width: 6px;
+            height: 100%;
+
             cursor: col-resize;
             touch-action: none;
+            user-select: none;
 
-            &:hover {
+            background: transparent;
+            border-left: 1px solid var(--border-subtle);
+
+            transition: background-color 120ms ease;
+
+            &:hover,
+            &.is-resizing {
                 background: var(--p-primary-color);
+                // TODO: make this look nicer
+                width: 8px;
+                box-shadow: 2px 0px 5px var(--text-muted);
+            }
+
+            &:focus-visible {
+                outline: 2px solid var(--p-primary-color);
+                outline-offset: -2px;
             }
         }
 

@@ -199,8 +199,8 @@ export class AppShellComponent {
     }
 
     private readonly defaultSidebarWidth = 260;
-    private readonly minSidebarWidth = 200;
-    private readonly maxSidebarWidth = 480;
+    readonly minSidebarWidth = 200;
+    readonly maxSidebarWidth = 480;
 
     protected readonly sidebarWidth = signal(this.defaultSidebarWidth);
     protected readonly isResizingSidebar = signal(false);
