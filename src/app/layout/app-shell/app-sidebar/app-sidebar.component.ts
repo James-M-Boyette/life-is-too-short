@@ -1,4 +1,4 @@
-import { Component, signal, computed, input, output } from '@angular/core';
+import { Component, signal, computed, effect, input, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TreeModule } from 'primeng/tree';
 // import type { TreeNode } from 'primeng/api';
@@ -87,6 +87,24 @@ export class AppSidebarComponent {
             next.delete(projectId);
 
             return next;
+        });
+    }
+
+    readonly expandProjectRequest = input<{
+        projectId: string;
+    } | null>(null);
+
+    constructor() {
+        effect(() => {
+            const request = this.expandProjectRequest();
+
+            if (!request) return;
+
+            this.expandedProjectIds.update(ids => {
+                const next = new Set(ids);
+                next.add(request.projectId);
+                return next;
+            });
         });
     }
 }

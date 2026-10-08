@@ -25,6 +25,7 @@
         <aside class="app-sidebar">
             <app-sidebar
                 [projects]="projectsStore.projectTree()"
+                [expandProjectRequest]="expandProjectRequest()"
                 (createProject)="openCreateProjectDialog()"
                 (editProject)="openEditProjectDialog($event)"
             />
