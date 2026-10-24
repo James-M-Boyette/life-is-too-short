@@ -12,7 +12,6 @@ import {
     TaskCreateComponent,
     CreateTaskPayload,
 } from '@/features/tasks/components/task-create/task-create.component';
-import { TaskRowComponent } from '@/features/tasks/components/task-row/task-row.component';
 import { ProjectsStore } from '@/features/projects/state/projects.store';
 import { ButtonModule } from 'primeng/button';
 
@@ -36,7 +35,6 @@ import { TaskListComponent } from '@/features/tasks/components/task-list/task-li
         ButtonModule,
         TasksHeaderComponent,
         TaskCreateComponent,
-        TaskRowComponent,
         TaskListComponent,
     ],
     templateUrl: './tasks.page.html',
