@@ -5,8 +5,15 @@
         "ng": "ng",
         "start": "ng serve --port 4300 --host 127.0.0.1",
         "build": "ng build",
+        "build:dev": "ng build --configuration development",
         "watch": "ng build --watch --configuration development",
-        "test": "ng test"
+        "test": "ng test",
+
+        "git:add": "git add -A",
+        "git:commit": "git commit -m \"Build app\"",
+        "git:push": "git push",
+
+        "push": "pnpm run build && pnpm run git:add && pnpm run git:commit && pnpm run git:push"
     },
     "prettier": {
         "printWidth": 100,

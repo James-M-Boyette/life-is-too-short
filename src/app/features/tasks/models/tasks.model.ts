@@ -1,5 +1,11 @@
 // What state(s) can a task have?
-export type TaskStatus = 'todo' | 'in_progress' | 'waiting' | 'deferred' | 'cancelled' | 'done';
+export type TaskStatus =
+    'todo' |
+    'in_progress' |
+    'waiting' |
+    'deferred' |
+    'cancelled' |
+    'done';
 
 // What makes-up a "Task"?
 export type Task = {
@@ -10,7 +16,11 @@ export type Task = {
     title: string;
     is_done: boolean;
     description: string | null;
+
+    planned_date: string | null;
+    due_date: string | null;
     due_at: string | null;
+
     status: TaskStatus;
 
     created_at: string;
