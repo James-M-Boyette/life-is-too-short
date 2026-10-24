@@ -5,13 +5,12 @@ import type { ProjectNode } from '@/features/projects/models/project.model';
 
 import { TaskRowComponent } from '@/features/tasks/components/task-row/task-row.component';
 
-import { JsonPipe } from '@angular/common';
+// import { JsonPipe } from '@angular/common';
 
 @Component({
     selector: 'app-task-list',
     standalone: true,
     imports: [
-        JsonPipe,
         TaskRowComponent,
     ],
     templateUrl: './task-list.component.html',
