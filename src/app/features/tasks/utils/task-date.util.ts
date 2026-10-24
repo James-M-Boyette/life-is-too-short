@@ -1,3 +1,7 @@
+export function getLocalDateString(date: Date = new Date()): string {
+    return formatLocalDate(date)!;
+}
+
 export function parseLocalDate(value: string | null): Date | null {
     if (!value) return null;
 
