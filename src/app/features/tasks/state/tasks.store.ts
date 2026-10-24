@@ -176,6 +176,9 @@ export class TasksStore {
             is_done: false,
 
             description: input.description,
+
+            planned_date: null,
+            due_date: null,
             due_at: null,
 
             status: 'todo',
@@ -315,6 +318,58 @@ export class TasksStore {
 
             // Reconcile with DB
             this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? (data as Task) : t)));
+        });
+    }
+
+    async updatePlannedDate(task: Task, plannedDate: string | null): Promise<void> {
+        if (plannedDate === task.planned_date) {
+            return;
+        }
+
+        await this.runMutation(async () => {
+            const previousDate = task.planned_date;
+
+            // Optimistically update the local signal.
+            this.tasks.update((tasks) =>
+                tasks.map((current) =>
+                    current.id === task.id
+                        ? {
+                            ...current,
+                            planned_date: plannedDate,
+                        }
+                        : current,
+                ),
+            );
+
+            const { data, error } = await supabase
+                .from('tasks')
+                .update({ planned_date: plannedDate })
+                .eq('id', task.id)
+                .select('*')
+                .single();
+
+            if (error) {
+                // Restore the previous date if Supabase rejects the update.
+                this.tasks.update((tasks) =>
+                    tasks.map((current) =>
+                        current.id === task.id
+                            ? {
+                                ...current,
+                                planned_date: previousDate,
+                            }
+                            : current,
+                    ),
+                );
+
+                throw error;
+            }
+
+            // Reconcile the optimistic state with the saved database row.
+            this.tasks.update((tasks) =>
+                tasks.map((current) =>
+                    current.id === task.id ? (data as Task) : current,
+                ),
+            );
         });
     }
 
