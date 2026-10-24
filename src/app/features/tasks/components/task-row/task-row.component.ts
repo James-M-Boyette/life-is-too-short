@@ -22,7 +22,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import {
     parseLocalDate,
     formatLocalDate,
-} from '@/features/tasks/utils/task-date.util';
+} from '@/shared/utils/date.util';
 
 @Component({
     standalone: true,
@@ -39,8 +39,6 @@ import {
     styleUrls: ['./task-row.component.scss'],
 })
 export class TaskRowComponent {
-    // @Input({ required: true }) task!: Task;
-    // @Input() disabled = false;
     disabled = input<boolean>(false);
 
     @Output() toggleDone = new EventEmitter<Task>();
@@ -95,18 +93,6 @@ export class TaskRowComponent {
         this.rename.emit({ task: this.task(), title });
     }
 
-    // protected readonly plannedDate = computed<Date | null>(() => {
-    //     const value = this.task().planned_date;
-
-    //     if (!value) {
-    //         return null;
-    //     }
-
-    //     const [year, month, day] = value.split('-').map(Number);
-
-    //     return new Date(year, month - 1, day);
-    // });
-
     protected readonly plannedDate = computed(() =>
         parseLocalDate(this.task().planned_date),
     );
@@ -121,23 +107,6 @@ export class TaskRowComponent {
     }>();
 
     protected onPlannedDateChange(date: Date | null): void {
-        // if (!date) {
-        //     this.plannedDateChange.emit({
-        //         task: this.task(),
-        //         plannedDate: null,
-        //     });
-        //     return;
-        // }
-
-        // const year = date.getFullYear();
-        // const month = String(date.getMonth() + 1).padStart(2, '0');
-        // const day = String(date.getDate()).padStart(2, '0');
-
-        // this.plannedDateChange.emit({
-        //     task: this.task(),
-        //     plannedDate: `${year}-${month}-${day}`,
-        // });
-
         this.plannedDateChange.emit({
             task: this.task(),
             plannedDate: formatLocalDate(date),

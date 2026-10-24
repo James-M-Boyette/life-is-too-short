@@ -19,13 +19,13 @@ import { ButtonModule } from 'primeng/button';
 import type { TaskView } from '@/features/tasks/models/task-view.model';
 import { CalendarClockService } from '@/shared/services/calendar-clock.service';
 import {
+    getTaskDisplayDate,
     getTaskDateGroup,
 } from '@/features/tasks/utils/task-scheduling.util';
 import {
     addLocalDays,
     parseLocalDate,
-} from '@/features/tasks/utils/task-date.util';
-import { getTaskDisplayDate } from '@/features/tasks/utils/task-scheduling.util';
+} from '@/shared/utils/date.util';
 
 @Component({
     standalone: true,
@@ -146,20 +146,6 @@ export class TasksPage {
     );
 
     protected readonly upcomingDays = computed(() => {
-        // const today = this.calendarClock.today();
-        // const tasks = this.tasksStore.tasks().filter((task) => !task.is_done);
-
-        // return [
-        //     { label: 'Today', date: today },
-        //     { label: 'Tomorrow', date: addLocalDays(today, 1) },
-        //     { label: 'Day After Tomorrow', date: addLocalDays(today, 2) },
-        // ].map((day) => ({
-        //     ...day,
-        //     tasks: tasks.filter(
-        //         (task) => getTaskDisplayDate(task) === day.date,
-        //     ),
-        // }));
-
         const today = this.calendarClock.today();
         const tasks = this.tasksStore.tasks().filter((task) => !task.is_done);
 

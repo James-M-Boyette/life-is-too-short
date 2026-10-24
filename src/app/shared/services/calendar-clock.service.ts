@@ -1,5 +1,5 @@
 import { Injectable, OnDestroy, signal } from '@angular/core';
-import { getLocalDateString } from '@/features/tasks/utils/task-date.util';
+import { getLocalDateString } from '@/shared/utils/date.util';
 
 @Injectable({ providedIn: 'root' })
 export class CalendarClockService implements OnDestroy {
