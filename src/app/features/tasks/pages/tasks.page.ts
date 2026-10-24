@@ -27,6 +27,8 @@ import {
     parseLocalDate,
 } from '@/shared/utils/date.util';
 
+import { TaskListComponent } from '@/features/tasks/components/task-list/task-list.component';
+
 @Component({
     standalone: true,
     imports: [
@@ -35,7 +37,7 @@ import {
         TasksHeaderComponent,
         TaskCreateComponent,
         TaskRowComponent,
-
+        TaskListComponent,
     ],
     templateUrl: './tasks.page.html',
     styleUrls: ['./tasks.page.scss'],
