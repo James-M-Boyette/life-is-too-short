@@ -19,3 +19,15 @@ export function formatLocalDate(value: Date | null): string | null {
 
     return `${year}-${month}-${day}`;
 }
+
+export function addLocalDays(dateString: string, days: number): string {
+    const date = parseLocalDate(dateString);
+
+    if (!date) {
+        throw new Error(`Invalid date: ${dateString}`);
+    }
+
+    date.setDate(date.getDate() + days);
+
+    return formatLocalDate(date)!;
+}

@@ -21,6 +21,11 @@ import { CalendarClockService } from '@/shared/services/calendar-clock.service';
 import {
     getTaskDateGroup,
 } from '@/features/tasks/utils/task-scheduling.util';
+import {
+    addLocalDays,
+    parseLocalDate,
+} from '@/features/tasks/utils/task-date.util';
+import { getTaskDisplayDate } from '@/features/tasks/utils/task-scheduling.util';
 
 @Component({
     standalone: true,
@@ -139,4 +144,35 @@ export class TasksPage {
                 getTaskDateGroup(task, this.calendarClock.today()) === 'overdue',
         ),
     );
+
+    protected readonly upcomingDays = computed(() => {
+        // const today = this.calendarClock.today();
+        // const tasks = this.tasksStore.tasks().filter((task) => !task.is_done);
+
+        // return [
+        //     { label: 'Today', date: today },
+        //     { label: 'Tomorrow', date: addLocalDays(today, 1) },
+        //     { label: 'Day After Tomorrow', date: addLocalDays(today, 2) },
+        // ].map((day) => ({
+        //     ...day,
+        //     tasks: tasks.filter(
+        //         (task) => getTaskDisplayDate(task) === day.date,
+        //     ),
+        // }));
+
+        const today = this.calendarClock.today();
+        const tasks = this.tasksStore.tasks().filter((task) => !task.is_done);
+
+        return [
+            { label: 'Today', date: today },
+            { label: 'Tomorrow', date: addLocalDays(today, 1) },
+            { label: '', date: addLocalDays(today, 2) },
+        ].map((day) => ({
+            ...day,
+            displayDate: parseLocalDate(day.date),
+            tasks: tasks.filter(
+                (task) => getTaskDisplayDate(task) === day.date,
+            ),
+        }));
+    });
 }
