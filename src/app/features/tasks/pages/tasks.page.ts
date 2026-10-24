@@ -17,6 +17,15 @@ import { ProjectsStore } from '@/features/projects/state/projects.store';
 import { ButtonModule } from 'primeng/button';
 
 import type { TaskView } from '@/features/tasks/models/task-view.model';
+import { CalendarClockService } from '@/shared/services/calendar-clock.service';
+import {
+    getTaskDateGroup,
+} from '@/features/tasks/utils/task-scheduling.util';
+import {
+    addLocalDays,
+    parseLocalDate,
+} from '@/features/tasks/utils/task-date.util';
+import { getTaskDisplayDate } from '@/features/tasks/utils/task-scheduling.util';
 
 @Component({
     standalone: true,
@@ -25,7 +34,8 @@ import type { TaskView } from '@/features/tasks/models/task-view.model';
         ButtonModule,
         TasksHeaderComponent,
         TaskCreateComponent,
-        TaskRowComponent
+        TaskRowComponent,
+
     ],
     templateUrl: './tasks.page.html',
     styleUrls: ['./tasks.page.scss'],
@@ -35,6 +45,7 @@ export class TasksPage {
     protected readonly tasksStore = inject(TasksStore);
     protected readonly projectsStore = inject(ProjectsStore);
     readonly error = signal<string | null>(null); // Did creating a Task fail?
+    protected readonly calendarClock = inject(CalendarClockService);
 
     readonly pageHeader = computed(() => {
         if (this.view() === 'all') {
@@ -108,5 +119,60 @@ export class TasksPage {
             default:
                 return tasks;
         }
+    });
+
+    protected readonly todayTasks = computed(() =>
+        this.tasksStore.tasks().filter(
+            (task) =>
+                !task.is_done &&
+                getTaskDateGroup(task, this.calendarClock.today()) === 'today',
+        ),
+    );
+
+    protected readonly unscheduledTasks = computed(() =>
+        this.tasksStore.tasks().filter(
+            (task) =>
+                !task.is_done &&
+                getTaskDateGroup(task, this.calendarClock.today()) === 'unscheduled',
+        ),
+    );
+
+    protected readonly overdueTasks = computed(() =>
+        this.tasksStore.tasks().filter(
+            (task) =>
+                !task.is_done &&
+                getTaskDateGroup(task, this.calendarClock.today()) === 'overdue',
+        ),
+    );
+
+    protected readonly upcomingDays = computed(() => {
+        // const today = this.calendarClock.today();
+        // const tasks = this.tasksStore.tasks().filter((task) => !task.is_done);
+
+        // return [
+        //     { label: 'Today', date: today },
+        //     { label: 'Tomorrow', date: addLocalDays(today, 1) },
+        //     { label: 'Day After Tomorrow', date: addLocalDays(today, 2) },
+        // ].map((day) => ({
+        //     ...day,
+        //     tasks: tasks.filter(
+        //         (task) => getTaskDisplayDate(task) === day.date,
+        //     ),
+        // }));
+
+        const today = this.calendarClock.today();
+        const tasks = this.tasksStore.tasks().filter((task) => !task.is_done);
+
+        return [
+            { label: 'Today', date: today },
+            { label: 'Tomorrow', date: addLocalDays(today, 1) },
+            { label: '', date: addLocalDays(today, 2) },
+        ].map((day) => ({
+            ...day,
+            displayDate: parseLocalDate(day.date),
+            tasks: tasks.filter(
+                (task) => getTaskDisplayDate(task) === day.date,
+            ),
+        }));
     });
 }
