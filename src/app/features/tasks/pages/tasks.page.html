@@ -25,6 +25,9 @@
                         [projects]="projectsStore.projectTree()"
                         [disabled]="tasksStore.mutating()"
 
+                        (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
+                        (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
+
                         (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
 
                         (toggleDone)="tasksStore.toggleDone($event)"
@@ -70,6 +73,9 @@
                             [project]="projectsStore.getProject(task.project_id)"
                             [projects]="projectsStore.projectTree()"
                             [disabled]="tasksStore.mutating()"
+
+                            (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
+                            (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
 
                             (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
                             (toggleDone)="tasksStore.toggleDone($event)"

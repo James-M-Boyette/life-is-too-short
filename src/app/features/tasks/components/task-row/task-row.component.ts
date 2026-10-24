@@ -18,6 +18,11 @@ import { toProjectTreeNodes, findTreeNodeByKey } from '@/features/projects/utils
 import { FormsModule } from '@angular/forms';
 import { TreeSelectModule } from 'primeng/treeselect';
 import type { TreeNode } from 'primeng/api';
+import { DatePickerModule } from 'primeng/datepicker';
+import {
+    parseLocalDate,
+    formatLocalDate,
+} from '@/features/tasks/utils/task-date.util';
 
 @Component({
     standalone: true,
@@ -26,7 +31,8 @@ import type { TreeNode } from 'primeng/api';
         ButtonModule,
         TooltipModule,
         FormsModule,
-        TreeSelectModule
+        TreeSelectModule,
+        DatePickerModule,
     ],
     selector: 'app-task-row',
     templateUrl: './task-row.component.html',
@@ -87,6 +93,67 @@ export class TaskRowComponent {
 
         if (!title || title === this.task().title) return;
         this.rename.emit({ task: this.task(), title });
+    }
+
+    // protected readonly plannedDate = computed<Date | null>(() => {
+    //     const value = this.task().planned_date;
+
+    //     if (!value) {
+    //         return null;
+    //     }
+
+    //     const [year, month, day] = value.split('-').map(Number);
+
+    //     return new Date(year, month - 1, day);
+    // });
+
+    protected readonly plannedDate = computed(() =>
+        parseLocalDate(this.task().planned_date),
+    );
+
+    protected readonly dueDate = computed(() =>
+        parseLocalDate(this.task().due_date),
+    );
+
+    readonly plannedDateChange = output<{
+        task: Task;
+        plannedDate: string | null;
+    }>();
+
+    protected onPlannedDateChange(date: Date | null): void {
+        // if (!date) {
+        //     this.plannedDateChange.emit({
+        //         task: this.task(),
+        //         plannedDate: null,
+        //     });
+        //     return;
+        // }
+
+        // const year = date.getFullYear();
+        // const month = String(date.getMonth() + 1).padStart(2, '0');
+        // const day = String(date.getDate()).padStart(2, '0');
+
+        // this.plannedDateChange.emit({
+        //     task: this.task(),
+        //     plannedDate: `${year}-${month}-${day}`,
+        // });
+
+        this.plannedDateChange.emit({
+            task: this.task(),
+            plannedDate: formatLocalDate(date),
+        });
+    };
+
+    readonly dueDateChange = output<{
+        task: Task;
+        dueDate: string | null;
+    }>();
+
+    protected onDueDateChange(date: Date | null): void {
+    this.dueDateChange.emit({
+            task: this.task(),
+            dueDate: formatLocalDate(date),
+        });
     }
 
     protected onDraftInput(event: Event) {

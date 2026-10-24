@@ -114,6 +114,28 @@
             }
         </div>
         <div class="meta">
+            <p-datepicker
+                [ngModel]="plannedDate()"
+                (ngModelChange)="onPlannedDateChange($event)"
+                placeholder="Plan date"
+                dateFormat="M d, yy"
+                [showIcon]="true"
+                [showClear]="true"
+                [disabled]="disabled()"
+                ariaLabel="Planned date"
+            />
+
+            <p-datepicker
+                [ngModel]="dueDate()"
+                (ngModelChange)="onDueDateChange($event)"
+                placeholder="Due date"
+                dateFormat="M d, yy"
+                [showIcon]="true"
+                [showClear]="true"
+                [disabled]="disabled()"
+                ariaLabel="Due date"
+            />
+
             <p-treeselect
                 [options]="projectOptions()"
                 [ngModel]="selectedProjectNode()"

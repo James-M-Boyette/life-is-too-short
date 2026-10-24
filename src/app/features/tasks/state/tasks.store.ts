@@ -130,19 +130,32 @@ export class TasksStore {
     }
 
     private sortDesc(list: Task[]) {
-        return [...list].sort((a, b) => b.created_at.localeCompare(a.created_at));
+        // return [...list].sort(
+        // (a, b) =>
+        //  b.created_at.localeCompare(a.created_at));
+        return [...list].sort(
+        (a, b) =>
+            b.created_at.localeCompare(a.created_at) ||
+            a.id.localeCompare(b.id),
+    );
     }
 
     async refreshTasks() {
         this.loading.set(true);
         this.error.set(null);
         try {
+            // const { data, error } = await supabase
+            //     .from('tasks')
+            //     .select('*')
+            //     .order('created_at', { ascending: false });
             const { data, error } = await supabase
                 .from('tasks')
                 .select('*')
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .order('id', { ascending: true });
 
             if (error) throw error;
+
             this.tasks.set((data ?? []) as Task[]); // Set tasks from DB (or empty array if null)
         } catch (error: unknown) {
             this.error.set(
@@ -156,6 +169,7 @@ export class TasksStore {
             this.loading.set(false);
         }
     }
+
 
     async addTask(input: AddTaskInput) {
         const userId = this.auth.userId();
@@ -365,6 +379,47 @@ export class TasksStore {
             }
 
             // Reconcile the optimistic state with the saved database row.
+            this.tasks.update((tasks) =>
+                tasks.map((current) =>
+                    current.id === task.id ? (data as Task) : current,
+                ),
+            );
+        });
+    }
+
+    async updateDueDate(task: Task, dueDate: string | null): Promise<void> {
+        if (dueDate === task.due_date) return;
+
+        await this.runMutation(async () => {
+            const previousDate = task.due_date;
+
+            this.tasks.update((tasks) =>
+                tasks.map((current) =>
+                    current.id === task.id
+                        ? { ...current, due_date: dueDate }
+                        : current,
+                ),
+            );
+
+            const { data, error } = await supabase
+                .from('tasks')
+                .update({ due_date: dueDate })
+                .eq('id', task.id)
+                .select('*')
+                .single();
+
+            if (error) {
+                this.tasks.update((tasks) =>
+                    tasks.map((current) =>
+                        current.id === task.id
+                            ? { ...current, due_date: previousDate }
+                            : current,
+                    ),
+                );
+
+                throw error;
+            }
+
             this.tasks.update((tasks) =>
                 tasks.map((current) =>
                     current.id === task.id ? (data as Task) : current,

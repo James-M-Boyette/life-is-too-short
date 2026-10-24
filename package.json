@@ -9,8 +9,8 @@
         "watch": "ng build --watch --configuration development",
         "test": "ng test",
 
-        "git:add": "git add -A",
-        "git:commit": "git commit -m\"Build app\"",
+        "git:add": "git add .",
+        "git:commit": "git commit -m\"Routine build of app\"",
         "git:push": "git push",
 
         "push": "pnpm run build && pnpm run git:add && pnpm run git:commit && pnpm run git:push"
