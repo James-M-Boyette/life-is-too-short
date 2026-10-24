@@ -9,38 +9,10 @@
         (signOut)="signOut()"
     />
 
-    <app-task-create [projects]="projectsStore.projectTree()" (create)="createTask($event)" />
-
-    <!-- <section class="task-group open-group">
-        @if (tasksStore.loading()) {
-            <p>Loading…</p>
-        } @else {
-            <h2>Open ({{ openTasks().length }})</h2>
-
-            <ul class="list">
-                @for (task of openTasks(); track  task.id) {
-                    <app-task-row
-                        [task]="task"
-                        [project]="projectsStore.getProject(task.project_id)"
-                        [projects]="projectsStore.projectTree()"
-                        [disabled]="tasksStore.mutating()"
-
-                        (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
-                        (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
-
-                        (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
-
-                        (toggleDone)="tasksStore.toggleDone($event)"
-                        (remove)="tasksStore.remove($event)"
-                        (rename)="tasksStore.updateTitle($event.task, $event.title)"
-                        (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
-                    />
-                } @empty {
-                    <p class="empty-message">No open tasks.</p>
-                }
-            </ul>
-        }
-    </section> -->
+    <app-task-create
+        [projects]="projectsStore.projectTree()"
+        (create)="createTask($event)"
+    />
 
     @if (view() === 'today') {
         <section class="today-board" aria-label="Today's task board">
@@ -136,7 +108,6 @@
                             {{ day.label }} —
                         }
 
-                        <!-- {{ day.date | date: 'EEE, MMM d' }} -->
                         {{ day.displayDate | date: 'EEE, MMM d' }}
                         ({{ day.tasks.length }})
                     </h2>
