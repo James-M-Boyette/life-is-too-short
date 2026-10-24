@@ -10,7 +10,7 @@
         "test": "ng test",
 
         "git:add": "git add -A",
-        "git:commit": "git commit -m \"Build app\"",
+        "git:commit": "git commit -m\"Build app\"",
         "git:push": "git push",
 
         "push": "pnpm run build && pnpm run git:add && pnpm run git:commit && pnpm run git:push"
