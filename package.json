@@ -11,8 +11,8 @@
         "test": "ng test",
 
         "git:add": "git add .",
-        "git:commit": "git commit -m\"Routine build of app\"",
-        "git:commit_prod": "git commit -m\"Routine build of app for prod\"",
+        "git:commit": "git diff --cached --quiet || git commit -m\"Routine build of app\"",
+        "git:commit_prod": "git diff --cached --quiet || git commit -m\"Routine build of app for prod\"",
         "git:push": "git push",
 
         "push": "pnpm run build && pnpm run git:add && pnpm run git:commit && pnpm run git:push",
