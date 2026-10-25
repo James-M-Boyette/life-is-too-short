@@ -137,6 +137,24 @@
                 placeholder="No Project"
                 [showClear]="true"
             />
+
+            <div class="task-date-tags">
+                @if (plannedDate(); as date) {
+                    <p-tag
+                        severity="secondary"
+                        [value]="'Planned: ' + (date | date: 'MMM d')"
+                        icon="pi pi-calendar"
+                    />
+                }
+
+                @if (dueDate(); as date) {
+                    <p-tag
+                        [severity]="isDueOverdue() ? 'danger' : 'secondary'"
+                        [value]="'Due: ' + (date | date: 'MMM d')"
+                        icon="pi pi-flag"
+                    />
+                }
+            </div>
         </div>
     </section>
 </li>
