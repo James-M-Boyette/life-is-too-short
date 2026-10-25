@@ -4,6 +4,30 @@
         <meta charset="utf-8" />
         <title>LifeIsTooShort</title>
         <base href="/" />
+        <script>
+            const params = new URLSearchParams(window.location.search);
+            const redirect = params.get('redirect');
+
+            if (redirect !== null) {
+                const basePath = document.querySelector('base').getAttribute('href');
+
+                const restoredUrl = new URL(
+                    redirect.replace(/^\/+/, ''),
+                    window.location.origin + basePath
+                );
+
+                if (restoredUrl.origin === window.location.origin &&
+                    restoredUrl.pathname.startsWith(basePath)) {
+                    window.history.replaceState(
+                        null,
+                        '',
+                        restoredUrl.pathname +
+                        restoredUrl.search +
+                        restoredUrl.hash
+                    );
+                }
+            }
+        </script>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" type="image/x-icon" href="./favicon.ico" />
     </head>
