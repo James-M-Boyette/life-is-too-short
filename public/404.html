@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>Redirecting...</title>
+        <script>
+            const basePath = '/life-is-too-short/';
+            const currentPath = window.location.pathname;
+
+            if (currentPath.startsWith(basePath)) {
+                const route = currentPath.slice(basePath.length);
+                const search = window.location.search;
+                const hash = window.location.hash;
+
+                const redirectUrl = new URL(basePath, window.location.origin);
+
+                redirectUrl.searchParams.set(
+                    'redirect',
+                    route + search + hash
+                );
+
+                window.location.replace(redirectUrl.href);
+            }
+        </script>
+    </head>
+
+    <body>
+        <p>Redirecting...</p>
+    </body>
+</html>

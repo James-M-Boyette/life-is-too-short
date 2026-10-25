@@ -45,6 +45,7 @@
                     },
                     "configurations": {
                         "production": {
+                            "baseHref": "/life-is-too-short/",
                             "budgets": [
                                 {
                                     "type": "initial",
