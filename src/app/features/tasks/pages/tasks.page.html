@@ -11,6 +11,7 @@
 
     <app-task-create
         [projects]="projectsStore.projectTree()"
+        [defaultProjectId]="view() === 'project' ? (projectId() ?? null) : null"
         (create)="createTask($event)"
     />
 

@@ -1,28 +1,24 @@
-import { Component, EventEmitter, inject, computed, signal, input, output } from '@angular/core';
+import { Component, effect, inject, computed, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
-// import { EditorModule } from 'primeng/editor'; // Needs `pnpm install quill`
+
 import { ButtonModule } from 'primeng/button';
 import { TreeSelectModule } from 'primeng/treeselect';
 import type { ProjectNode } from '@/features/projects/models/project.model';
 import { TreeNode } from 'primeng/api';
 import {
     ReactiveFormsModule,
-    FormGroup,
-    FormControl,
     Validators,
     NonNullableFormBuilder,
 } from '@angular/forms';
 import { noWhitespaceValidator } from '@/shared/validators/no-whitespace-validator';
-import { toProjectTreeNodes } from '@/features/projects/utils/project-tree-node.util';
-
-// type ProjectOption = {
-//     label: string;
-//     items: Array<{ label: string; value: string }>;
-// };
+import {
+    toProjectTreeNodes,
+    findTreeNodeByKey,
+} from '@/features/projects/utils/project-tree-node.util';
 
 export type CreateTaskPayload = {
     title: string;
@@ -47,8 +43,9 @@ export type CreateTaskPayload = {
     styleUrls: ['./task-create.component.scss'],
 })
 export class TaskCreateComponent {
-    // readonly disabled = input<boolean>(false);
     readonly projects = input<ProjectNode[]>([]);
+
+    readonly defaultProjectId = input<string | null>(null);
 
     private readonly fb = inject(NonNullableFormBuilder);
 
@@ -62,36 +59,50 @@ export class TaskCreateComponent {
         toProjectTreeNodes(this.projects())
     );
 
-    // constructor() {
-        // Diagnostic Logging:
-        // this.form.controls.project.valueChanges.subscribe((value) => {
-        //     console.log('🌲 project changed:', value);
+    private readonly defaultProjectNode = computed(() => {
+        const projectId = this.defaultProjectId();
 
-        //     if (value) {
-        //         console.log('🌲 selected project key:', value.key);
-        //     } else {
-        //         console.log('🌲 project was cleared/reset');
-        //     }
-        // });
-    // }
+        return projectId
+            ? findTreeNodeByKey(this.projectOptions(), projectId)
+            : null;
+    });
+
+    private lastDefaultProjectId: string | null = null;
+    private defaultApplied = false;
+
+    private readonly syncDefaultProject = effect(() => {
+        const projectId = this.defaultProjectId();
+        const selectedNode = this.defaultProjectNode();
+
+        console.log('Default project ID:', projectId);
+        console.log('Matching project node:', selectedNode);
+
+        if (projectId !== this.lastDefaultProjectId) {
+            this.lastDefaultProjectId = projectId;
+            this.defaultApplied = false;
+
+            this.form.controls.project.setValue(null, {
+                emitEvent: false,
+            });
+        }
+
+        if (!this.defaultApplied && (!projectId || selectedNode)) {
+            this.form.controls.project.setValue(selectedNode, {
+                emitEvent: false,
+            });
+
+            this.defaultApplied = true;
+        }
+    });
 
     // Keep this as string for now so it plugs into TasksStore.add(title).
     // Later we'll upgrade this to emit { title, description, projectId }.
     readonly create = output<CreateTaskPayload>();
 
     protected onSubmit() {
-        // Diagnostic Logging:
-        // console.log('🔎 form value:', this.form.getRawValue());
-        // console.log('🔎 form valid:', this.form.valid);
-        // console.log('🔎 form errors:', this.form.errors);
-        // console.log('🔎 title:', this.form.controls.title);
-        // console.log('🔎 project:', this.form.controls.project);
-
         if ( this.form.invalid ) return;
 
         const { title, description, project } = this.form.getRawValue();
-
-        // console.log('🔎 project form value:', project);
 
         this.create.emit({
             title: title.trim(),
@@ -99,18 +110,14 @@ export class TaskCreateComponent {
             projectId: project?.key ?? null,
         });
 
-        this.form.reset();
+        this.form.reset({
+            title: '',
+            description: '',
+            project: project,
+        });
     }
 
     protected onCancelCreateTask() {
-        // console.log(`❌ Canceling and Clearing the new Task form`);
-        // console.log('🚨🚨🚨 NEW CODE IS RUNNING 🚨🚨🚨');
         this.form.reset();
     }
-
-    // Diagnostic Logging:
-    // protected onProjectSelect(event: unknown) {
-    //     console.log('🌲 TreeSelect event:', event);
-    //     console.log('🌲 project control value:', this.form.controls.project.value);
-    // }
 }
