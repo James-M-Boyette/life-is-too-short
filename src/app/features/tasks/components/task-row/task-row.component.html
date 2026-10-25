@@ -15,7 +15,7 @@
                 [disabled]="disabled()"
                 [attr.aria-label]="task().is_done ? 'Mark task not done' : 'Mark task done'"
                 [attr.aria-pressed]="task().is_done"
-            >
+                >
                 <span class="sr-only">
                     {{ task().is_done ? 'Completed' : 'Not completed' }}
                 </span>
@@ -29,7 +29,7 @@
                     (click)="startEdit()"
                     [disabled]="disabled()"
                     aria-label="Edit task title"
-                >
+                    >
                     <!-- *TASK TITLE* -->
                     {{ task().title }}
                 </button>
@@ -81,21 +81,37 @@
             }
         </div>
 
-        <button
-            pButton
-            type="button"
-            class="task-action-btn delete-task-btn"
-            pTooltip="Delete task"
-            tooltipPosition="bottom"
-            aria-label="Delete task"
-            (click)="remove.emit(task().id)"
-            [disabled]="disabled()"
-            >
-            <i
-                class="pi pi-trash"
-                aria-hidden="true"
-            ></i>
-        </button>
+        <div class="task-actions">
+            <button
+                pButton
+                type="button"
+                class="task-action-btn schedule-task-btn"
+                pTooltip="Schedule task"
+                tooltipPosition="bottom"
+                aria-label="Schedule task"
+                aria-haspopup="dialog"
+                [disabled]="disabled()"
+                (click)="schedulePopover.toggle($event)"
+                >
+                <i class="pi pi-calendar-clock" aria-hidden="true"></i>
+            </button>
+
+            <button
+                pButton
+                type="button"
+                class="task-action-btn delete-task-btn"
+                pTooltip="Delete task"
+                tooltipPosition="bottom"
+                aria-label="Delete task"
+                (click)="remove.emit(task().id)"
+                [disabled]="disabled()"
+                >
+                <i
+                    class="pi pi-trash"
+                    aria-hidden="true"
+                ></i>
+            </button>
+        </div>
     </section>
 
     <section class="task-secondary-section">
@@ -114,28 +130,6 @@
             }
         </div>
         <div class="meta">
-            <p-datepicker
-                [ngModel]="plannedDate()"
-                (ngModelChange)="onPlannedDateChange($event)"
-                placeholder="Plan date"
-                dateFormat="M d, yy"
-                [showIcon]="true"
-                [showClear]="true"
-                [disabled]="disabled()"
-                ariaLabel="Planned date"
-            />
-
-            <p-datepicker
-                [ngModel]="dueDate()"
-                (ngModelChange)="onDueDateChange($event)"
-                placeholder="Due date"
-                dateFormat="M d, yy"
-                [showIcon]="true"
-                [showClear]="true"
-                [disabled]="disabled()"
-                ariaLabel="Due date"
-            />
-
             <p-treeselect
                 [options]="projectOptions()"
                 [ngModel]="selectedProjectNode()"
@@ -146,3 +140,45 @@
         </div>
     </section>
 </li>
+
+<p-popover #schedulePopover>
+    <div class="schedule-popover">
+        <h3>Schedule task</h3>
+
+        <div class="schedule-field">
+            <label [for]="'planned-date-' + task().id">
+                Planned date
+            </label>
+
+            <p-datepicker
+                [inputId]="'planned-date-' + task().id"
+                [ngModel]="plannedDate()"
+                (ngModelChange)="onPlannedDateChange($event)"
+                placeholder="Choose planned date"
+                dateFormat="M d, yy"
+                [showIcon]="true"
+                [showClear]="true"
+                [showOnFocus]="false"
+                [disabled]="disabled()"
+            />
+        </div>
+
+        <div class="schedule-field">
+            <label [for]="'due-date-' + task().id">
+                Due date
+            </label>
+
+            <p-datepicker
+                [inputId]="'due-date-' + task().id"
+                [ngModel]="dueDate()"
+                (ngModelChange)="onDueDateChange($event)"
+                placeholder="Choose due date"
+                dateFormat="M d, yy"
+                [showIcon]="true"
+                [showClear]="true"
+                [showOnFocus]="false"
+                [disabled]="disabled()"
+            />
+        </div>
+    </div>
+</p-popover>

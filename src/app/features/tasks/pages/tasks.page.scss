@@ -11,17 +11,6 @@ section.tasks-page {
     flex-direction: column;
     gap: var(--space-4);
 
-    ul.list {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-2);
-
-        margin: 0;
-        padding: 0;
-
-        list-style: none;
-    }
-
      section.task-group {
         display: flex;
         flex-direction: column;
@@ -33,13 +22,6 @@ section.tasks-page {
             color: var(--text-secondary);
             font-size: 0.875rem;
             font-weight: 600;
-        }
-
-        p.empty-message {
-            margin: 0;
-            padding: var(--space-3);
-
-            color: var(--text-muted);
         }
 
         button.completed-toggle {
@@ -67,6 +49,7 @@ section.tasks-page {
         }
     }
 }
+
 .today-board,
 .upcoming-board {
     display: grid;
@@ -84,15 +67,6 @@ section.tasks-page {
         h2 {
             margin: 0 0 1rem;
             font-size: 1rem;
-        }
-
-        .list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            padding: 0;
-            margin: 0;
-            list-style: none;
         }
     }
 }
