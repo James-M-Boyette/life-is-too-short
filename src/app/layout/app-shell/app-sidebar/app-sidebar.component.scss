@@ -210,6 +210,14 @@ div.project-tree-item {
                 outline-offset: 2px;
             }
         }
+
+        button.delete-project-btn {
+            color: var(--surface-warning);
+
+            &:hover {
+                color: var(--surface-warning-hover);
+            }
+        }
     }
 }
 

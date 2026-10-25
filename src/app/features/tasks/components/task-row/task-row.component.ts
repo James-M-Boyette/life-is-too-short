@@ -16,6 +16,9 @@ import type { Task } from '@/features/tasks/models/tasks.model';
 import { Project, ProjectNode } from '@/features/projects/models/project.model';
 import { toProjectTreeNodes, findTreeNodeByKey } from '@/features/projects/utils/project-tree-node.util';
 import { FormsModule } from '@angular/forms';
+import { TagModule } from 'primeng/tag';
+import { CalendarClockService } from '@/shared/services/calendar-clock.service';
+import { inject } from '@angular/core';
 import { TreeSelectModule } from 'primeng/treeselect';
 import type { TreeNode } from 'primeng/api';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -32,6 +35,7 @@ import { PopoverModule } from 'primeng/popover';
         ButtonModule,
         TooltipModule,
         FormsModule,
+        TagModule,
         TreeSelectModule,
         DatePickerModule,
         PopoverModule,
@@ -52,6 +56,19 @@ export class TaskRowComponent {
     readonly task = input.required<Task>(); // The current task
     readonly project = input<Project | null>(null); // The project that the current task belongs to (if any)
     readonly projects = input<ProjectNode[]>([]); // The list of all *possible* projects (for the project dropdown)
+
+    protected readonly calendarClock = inject(CalendarClockService);
+
+    protected readonly isDueOverdue = computed(() => {
+        const task = this.task();
+        const dueDate = task.due_date;
+
+        return (
+            !task.is_done &&
+            dueDate !== null &&
+            dueDate < this.calendarClock.today()
+        );
+    });
 
     protected readonly projectOptions = computed(() => toProjectTreeNodes(this.projects()));
 
