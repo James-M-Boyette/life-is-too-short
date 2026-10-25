@@ -144,9 +144,6 @@
                     }
                 }
             }
-
-            button.delete-task-btn {
-            }
         }
 
         section.task-secondary-section {
@@ -159,10 +156,6 @@
                 margin-top: 0.5rem;
                 display: flex;
                 gap: 0.5rem;
-
-                form.edit-desciption-form {}
-
-                p.description-text {}
             }
 
             div.meta {
@@ -171,6 +164,47 @@
                 // justify-content: center;
                 gap: 1rem;
             }
+        }
+    }
+}
+
+.task-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: 0 0 auto;
+
+    button.delete-task-btn {
+        background-color: var(--surface-warning);
+        border-color: var(--surface-warning);
+
+        &:hover {
+            background-color: var(--surface-warning-hover);
+            border-color: var(--surface-warning-hover);
+        }
+    }
+}
+
+.schedule-popover {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 16rem;
+
+    h3 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
+    .schedule-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.375rem;
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 500;
         }
     }
 }

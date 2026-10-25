@@ -25,6 +25,8 @@ import {
     addLocalDays,
     parseLocalDate,
 } from '@/shared/utils/date.util';
+import { ConfirmationService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { TaskListComponent } from '@/features/tasks/components/task-list/task-list.component';
 
@@ -36,7 +38,9 @@ import { TaskListComponent } from '@/features/tasks/components/task-list/task-li
         TasksHeaderComponent,
         TaskCreateComponent,
         TaskListComponent,
+        ConfirmDialogModule,
     ],
+    providers: [ConfirmationService],
     templateUrl: './tasks.page.html',
     styleUrls: ['./tasks.page.scss'],
 })
@@ -46,6 +50,8 @@ export class TasksPage {
     protected readonly projectsStore = inject(ProjectsStore);
     readonly error = signal<string | null>(null); // Did creating a Task fail?
     protected readonly calendarClock = inject(CalendarClockService);
+
+    private readonly confirmationService = inject(ConfirmationService);
 
     readonly pageHeader = computed(() => {
         if (this.view() === 'all') {
@@ -161,4 +167,20 @@ export class TasksPage {
             ),
         }));
     });
+
+    protected confirmDeleteTask(taskId: string): void {
+        this.confirmationService.confirm({
+            header: 'Delete task?',
+            message: `Are you sure you want to delete this task? \n
+            This action cannot be undone.`,
+            icon: 'pi pi-exclamation-triangle',
+            acceptLabel: 'Delete',
+            rejectLabel: 'Cancel',
+            acceptButtonStyleClass: 'p-button-danger',
+            rejectButtonStyleClass: 'p-button-text',
+            accept: () => {
+                void this.tasksStore.remove(taskId);
+            },
+        });
+    }
 }

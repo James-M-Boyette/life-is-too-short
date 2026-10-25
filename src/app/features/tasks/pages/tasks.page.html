@@ -30,7 +30,7 @@
                     (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
                     (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
                     (toggleDone)="tasksStore.toggleDone($event)"
-                    (remove)="tasksStore.remove($event)"
+                    (remove)="confirmDeleteTask($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
                     (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
                 />
@@ -52,7 +52,7 @@
                     (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
                     (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
                     (toggleDone)="tasksStore.toggleDone($event)"
-                    (remove)="tasksStore.remove($event)"
+                    (remove)="confirmDeleteTask($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
                     (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
                 />
@@ -72,7 +72,7 @@
                     (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
                     (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
                     (toggleDone)="tasksStore.toggleDone($event)"
-                    (remove)="tasksStore.remove($event)"
+                    (remove)="confirmDeleteTask($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
                     (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
                 />
@@ -103,7 +103,7 @@
                         (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
                         (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
                         (toggleDone)="tasksStore.toggleDone($event)"
-                        (remove)="tasksStore.remove($event)"
+                        (remove)="confirmDeleteTask($event)"
                         (rename)="tasksStore.updateTitle($event.task, $event.title)"
                         (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
                     />
@@ -126,7 +126,7 @@
                     (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
                     (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
                     (toggleDone)="tasksStore.toggleDone($event)"
-                    (remove)="tasksStore.remove($event)"
+                    (remove)="confirmDeleteTask($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
                     (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
                 />
@@ -167,7 +167,7 @@
                     (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
                     (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
                     (toggleDone)="tasksStore.toggleDone($event)"
-                    (remove)="tasksStore.remove($event)"
+                    (remove)="confirmDeleteTask($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
                     (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
                 />
@@ -176,3 +176,4 @@
     </section>
 </section>
 
+<p-confirmDialog />

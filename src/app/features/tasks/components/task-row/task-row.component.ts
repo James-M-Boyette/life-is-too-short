@@ -23,6 +23,7 @@ import {
     parseLocalDate,
     formatLocalDate,
 } from '@/shared/utils/date.util';
+import { PopoverModule } from 'primeng/popover';
 
 @Component({
     standalone: true,
@@ -33,6 +34,7 @@ import {
         FormsModule,
         TreeSelectModule,
         DatePickerModule,
+        PopoverModule,
     ],
     selector: 'app-task-row',
     templateUrl: './task-row.component.html',
