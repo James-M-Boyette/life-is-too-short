@@ -27,6 +27,7 @@ import {
     formatLocalDate,
 } from '@/shared/utils/date.util';
 import { PopoverModule } from 'primeng/popover';
+import { CdkDrag, CdkDragHandle, } from '@angular/cdk/drag-drop';
 
 @Component({
     standalone: true,
@@ -39,6 +40,8 @@ import { PopoverModule } from 'primeng/popover';
         TreeSelectModule,
         DatePickerModule,
         PopoverModule,
+        CdkDrag,
+        CdkDragHandle
     ],
     selector: 'app-task-row',
     templateUrl: './task-row.component.html',
@@ -58,6 +61,8 @@ export class TaskRowComponent {
     readonly projects = input<ProjectNode[]>([]); // The list of all *possible* projects (for the project dropdown)
 
     protected readonly calendarClock = inject(CalendarClockService);
+
+    readonly draggable = input(false);
 
     protected readonly isDueOverdue = computed(() => {
         const task = this.task();

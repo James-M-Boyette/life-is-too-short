@@ -26,6 +26,11 @@
                     [tasks]="todayTasks()"
                     [projects]="projectsStore.projectTree()"
                     [disabled]="tasksStore.mutating()"
+                    [draggable]="true"
+                    dropListId="board-today"
+                    [connectedDropLists]="todayDropLists"
+                    [destinationDate]="calendarClock.today()"
+                    (taskDropped)="onTaskDropped($event)"
                     emptyMessage="Nothing planned for today."
                     (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
                     (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
@@ -48,6 +53,11 @@
                     [tasks]="unscheduledTasks()"
                     [projects]="projectsStore.projectTree()"
                     [disabled]="tasksStore.mutating()"
+                    [draggable]="true"
+                    dropListId="board-unscheduled"
+                    [connectedDropLists]="todayDropLists"
+                    [destinationDate]="null"
+                    (taskDropped)="onTaskDropped($event)"
                     emptyMessage="No unscheduled tasks."
                     (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
                     (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
@@ -68,6 +78,11 @@
                     [tasks]="overdueTasks()"
                     [projects]="projectsStore.projectTree()"
                     [disabled]="tasksStore.mutating()"
+                    [draggable]="true"
+                    dropListId="board-overdue"
+                    [connectedDropLists]="todayDropLists"
+                    [acceptsDrops]="false"
+                    (taskDropped)="onTaskDropped($event)"
                     emptyMessage="Nothing overdue."
                     (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
                     (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
@@ -81,11 +96,11 @@
         </section>
     } @else if (view() === 'upcoming') {
         <section class="upcoming-board" aria-label="Upcoming task board">
-            @for (day of upcomingDays(); track day.date) {
+            @for (day of upcomingDays(); track day.date; let i = $index) {
                 <section
                     class="upcoming-board__column"
                     [attr.aria-labelledby]="'upcoming-' + day.date"
-                >
+                    >
                     <h2 [id]="'upcoming-' + day.date">
                         @if (day.label === 'Today' || day.label === 'Tomorrow') {
                             {{ day.label }} —
@@ -99,6 +114,11 @@
                         [tasks]="day.tasks"
                         [projects]="projectsStore.projectTree()"
                         [disabled]="tasksStore.mutating()"
+                        [draggable]="true"
+                        [dropListId]="'board-upcoming-' + i"
+                        [connectedDropLists]="upcomingDropLists"
+                        [destinationDate]="day.date"
+                        (taskDropped)="onTaskDropped($event)"
                         emptyMessage="No tasks scheduled."
                         (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
                         (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"

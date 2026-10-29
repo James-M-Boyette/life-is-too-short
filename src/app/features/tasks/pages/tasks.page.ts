@@ -17,18 +17,13 @@ import { ButtonModule } from 'primeng/button';
 
 import type { TaskView } from '@/features/tasks/models/task-view.model';
 import { CalendarClockService } from '@/shared/services/calendar-clock.service';
-import {
-    getTaskDisplayDate,
-    getTaskDateGroup,
-} from '@/features/tasks/utils/task-scheduling.util';
-import {
-    addLocalDays,
-    parseLocalDate,
-} from '@/shared/utils/date.util';
+import { getTaskDisplayDate, getTaskDateGroup } from '@/features/tasks/utils/task-scheduling.util';
+import { addLocalDays, parseLocalDate } from '@/shared/utils/date.util';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { TaskListComponent } from '@/features/tasks/components/task-list/task-list.component';
+import type { TaskScheduleDrop } from '@/features/tasks/models/task-schedule-drop.model';
 
 @Component({
     standalone: true,
@@ -79,12 +74,31 @@ export class TasksPage {
         this.visibleTasks().filter((task) => task.is_done),
     );
 
+    protected readonly todayDropLists = ['board-today', 'board-unscheduled', 'board-overdue'];
+
+    protected readonly upcomingDropLists = [
+        'board-upcoming-0',
+        'board-upcoming-1',
+        'board-upcoming-2',
+    ];
+
+    protected async onTaskDropped(event: TaskScheduleDrop): Promise<void> {
+        if (event.task.planned_date === event.plannedDate) {
+            return;
+        }
+
+        try {
+            await this.tasksStore.updatePlannedDate(event.task, event.plannedDate);
+        } catch (error) {
+            // The store records the error and rolls back the optimistic update.
+            console.error('Could not reschedule task:', error);
+        }
+    }
+
     protected readonly showCompleted = signal(false);
 
     readonly view = input<TaskView>('all');
     private readonly router = inject(Router);
-
-    constructor() {}
 
     protected async signOut() {
         await this.auth.signOut();
@@ -128,27 +142,32 @@ export class TasksPage {
     });
 
     protected readonly todayTasks = computed(() =>
-        this.tasksStore.tasks().filter(
-            (task) =>
-                !task.is_done &&
-                getTaskDateGroup(task, this.calendarClock.today()) === 'today',
-        ),
+        this.tasksStore
+            .tasks()
+            .filter(
+                (task) =>
+                    !task.is_done && getTaskDateGroup(task, this.calendarClock.today()) === 'today',
+            ),
     );
 
     protected readonly unscheduledTasks = computed(() =>
-        this.tasksStore.tasks().filter(
-            (task) =>
-                !task.is_done &&
-                getTaskDateGroup(task, this.calendarClock.today()) === 'unscheduled',
-        ),
+        this.tasksStore
+            .tasks()
+            .filter(
+                (task) =>
+                    !task.is_done &&
+                    getTaskDateGroup(task, this.calendarClock.today()) === 'unscheduled',
+            ),
     );
 
     protected readonly overdueTasks = computed(() =>
-        this.tasksStore.tasks().filter(
-            (task) =>
-                !task.is_done &&
-                getTaskDateGroup(task, this.calendarClock.today()) === 'overdue',
-        ),
+        this.tasksStore
+            .tasks()
+            .filter(
+                (task) =>
+                    !task.is_done &&
+                    getTaskDateGroup(task, this.calendarClock.today()) === 'overdue',
+            ),
     );
 
     protected readonly upcomingDays = computed(() => {
@@ -162,9 +181,7 @@ export class TasksPage {
         ].map((day) => ({
             ...day,
             displayDate: parseLocalDate(day.date),
-            tasks: tasks.filter(
-                (task) => getTaskDisplayDate(task) === day.date,
-            ),
+            tasks: tasks.filter((task) => getTaskDisplayDate(task) === day.date),
         }));
     });
 

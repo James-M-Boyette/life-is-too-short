@@ -4,9 +4,27 @@
     [] 'View Description' button is too big. Maybe have 'eye' icon only?
     [] 'Delete' button is too big. Maybe have 'trash' icon only? + add confirmation dialog (and eventually have a toggle that's project-speicifc for safe vs unsafe CRUD? Or use an 'undo' pattern instead of a confiramtion dialog)
 -->
-<li class="row">
+<li
+    class="row"
+    cdkDrag
+    [cdkDragData]="task()"
+    [cdkDragDisabled]="!draggable() || disabled() || editing() || editingDescription()"
+    >
     <section class="task-primary-section">
         <div class="left-column">
+            @if (draggable()) {
+                <button
+                    type="button"
+                    class="task-drag-handle"
+                    cdkDragHandle
+                    [disabled]="disabled()"
+                    [attr.aria-label]="'Drag task: ' + task().title"
+                    pTooltip="Drag to schedule"
+                    tooltipPosition="bottom"
+                >
+                    <i class="pi pi-bars" aria-hidden="true"></i>
+                </button>
+            }
             <button
                 type="button"
                 class="complete-toggle"
