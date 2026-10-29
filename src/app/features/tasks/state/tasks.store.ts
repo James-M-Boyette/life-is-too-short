@@ -7,6 +7,8 @@ import { supabase } from '@/shared/supabase/supabase.client';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import type { TaskStatus, Task } from '@/features/tasks/models/tasks.model';
 
+import type { TaskOrderField } from '@/features/tasks/utils/task-ordering.util';
+
 // Type for inserting a new task
 type NewTaskInsert = {
     user_id: string;
@@ -170,7 +172,6 @@ export class TasksStore {
         }
     }
 
-
     async addTask(input: AddTaskInput) {
         const userId = this.auth.userId();
 
@@ -300,6 +301,76 @@ export class TasksStore {
             // reconcile
             this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? (data as Task) : t)));
         });
+    }
+
+    async updateTaskPosition(
+        task: Task,
+        field: TaskOrderField,
+        position: number,
+        ): Promise<void> {
+            // Don't make unnecessary database requests.
+            if (task[field] === position) {
+                return;
+            }
+
+            // Reject invalid positions before updating local state.
+            if (!Number.isFinite(position)) {
+                throw new Error('Invalid task position');
+            }
+
+            await this.runMutation(async () => {
+                const previousPosition = task[field];
+
+                // 1. Optimistically update the task in our signal.
+                this.tasks.update((tasks) =>
+                    tasks.map((current) =>
+                        current.id === task.id
+                            ? {
+                                ...current,
+                                [field]: position,
+                            }
+                            : current,
+                    ),
+                );
+
+                try {
+                    // 2. Persist the position to Supabase.
+                    const { data, error } = await supabase
+                        .from('tasks')
+                        .update({ [field]: position })
+                        .eq('id', task.id)
+                        .eq('user_id', task.user_id)
+                        .select('*')
+                        .single();
+
+                    if (error) {
+                        throw error;
+                    }
+
+                    // 3. Reconcile with the saved database record.
+                    this.tasks.update((tasks) =>
+                        tasks.map((current) =>
+                            current.id === task.id
+                                ? (data as Task)
+                                : current,
+                        ),
+                    );
+                } catch (error) {
+                    // 4. Restore the previous position if persistence fails.
+                    this.tasks.update((tasks) =>
+                        tasks.map((current) =>
+                            current.id === task.id
+                                ? {
+                                    ...current,
+                                    [field]: previousPosition,
+                                }
+                                : current,
+                        ),
+                    );
+
+                    throw error;
+                }
+            });
     }
 
     async updateProject(task: Task, projectId: string | null) {
