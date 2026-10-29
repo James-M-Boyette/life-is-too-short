@@ -1,4 +1,5 @@
 import type { Task } from '@/features/tasks/models/tasks.model';
+import { getTaskDisplayDate } from './task-scheduling.util';
 
 export type TaskOrderField =
     | 'project_position'
@@ -59,4 +60,23 @@ export function calculateTaskPosition(
     }
 
     return midpoint;
+}
+
+export function getTaskPlanningContext(task: Task): string {
+    return getTaskDisplayDate(task) ?? 'unscheduled';
+}
+
+export function getNextTaskPosition(
+    tasks: Task[],
+    field: TaskOrderField,
+): number {
+    const positions = tasks
+        .map((task) => task[field])
+        .filter((position): position is number => position !== null);
+
+    if (positions.length === 0) {
+        return 1000;
+    }
+
+    return Math.max(...positions) + 1000;
 }

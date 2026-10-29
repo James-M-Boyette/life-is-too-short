@@ -9,6 +9,11 @@ import type { TaskStatus, Task } from '@/features/tasks/models/tasks.model';
 
 import type { TaskOrderField } from '@/features/tasks/utils/task-ordering.util';
 
+import {
+    getNextTaskPosition,
+    getTaskPlanningContext,
+} from '@/features/tasks/utils/task-ordering.util';
+
 // Type for inserting a new task
 type NewTaskInsert = {
     user_id: string;
@@ -80,8 +85,16 @@ export class TasksStore {
                     },
                     (payload) => this.onTasksChange(payload),
                 )
-                .subscribe((status) => {
+                // .subscribe((status) => {
+                //     this.realtimeConnected.set(status === 'SUBSCRIBED');
+                // });
+                .subscribe((status, error) => {
                     this.realtimeConnected.set(status === 'SUBSCRIBED');
+
+                    console.log('[Tasks Realtime]', {
+                        status,
+                        errorMessage: error?.message ?? null,
+                    });
                 });
 
             onCleanup(() => this.teardownRealtime());
@@ -136,10 +149,8 @@ export class TasksStore {
         // (a, b) =>
         //  b.created_at.localeCompare(a.created_at));
         return [...list].sort(
-        (a, b) =>
-            b.created_at.localeCompare(a.created_at) ||
-            a.id.localeCompare(b.id),
-    );
+            (a, b) => b.created_at.localeCompare(a.created_at) || a.id.localeCompare(b.id),
+        );
     }
 
     async refreshTasks() {
@@ -160,11 +171,7 @@ export class TasksStore {
 
             this.tasks.set((data ?? []) as Task[]); // Set tasks from DB (or empty array if null)
         } catch (error: unknown) {
-            this.error.set(
-                error instanceof Error
-                    ? error.message
-                    : 'Failed to load tasks'
-            );
+            this.error.set(error instanceof Error ? error.message : 'Failed to load tasks');
 
             throw error;
         } finally {
@@ -176,6 +183,22 @@ export class TasksStore {
         const userId = this.auth.userId();
 
         if (!userId) throw new Error(`✋⛔ User not authenticated`);
+
+        const existingTasks = this.tasks().filter((task) => task.user_id === userId);
+
+        // Find tasks belonging to the same project.
+        // null represents Inbox.
+        const projectTasks = existingTasks.filter((task) => task.project_id === input.projectId);
+
+        const projectPosition = getNextTaskPosition(projectTasks, 'project_position');
+
+        // New tasks currently have no planned_date or due_date.
+        // Therefore, they enter the Unscheduled planning context.
+        const unscheduledTasks = existingTasks.filter(
+            (task) => getTaskPlanningContext(task) === 'unscheduled',
+        );
+
+        const plannedPosition = getNextTaskPosition(unscheduledTasks, 'planned_position');
 
         this.error.set(null);
         this.creating.set(true);
@@ -196,8 +219,8 @@ export class TasksStore {
             due_date: null,
             due_at: null,
 
-            project_position: null,
-            planned_position: null,
+            project_position: projectPosition,
+            planned_position: plannedPosition,
 
             status: 'todo',
 
@@ -215,6 +238,8 @@ export class TasksStore {
                     title: input.title,
                     description: input.description,
                     project_id: input.projectId,
+                    project_position: projectPosition,
+                    planned_position: plannedPosition,
                 })
                 .select('*')
                 .single();
@@ -303,74 +328,66 @@ export class TasksStore {
         });
     }
 
-    async updateTaskPosition(
-        task: Task,
-        field: TaskOrderField,
-        position: number,
-        ): Promise<void> {
-            // Don't make unnecessary database requests.
-            if (task[field] === position) {
-                return;
-            }
+    async updateTaskPosition(task: Task, field: TaskOrderField, position: number): Promise<void> {
+        // Don't make unnecessary database requests.
+        if (task[field] === position) {
+            return;
+        }
 
-            // Reject invalid positions before updating local state.
-            if (!Number.isFinite(position)) {
-                throw new Error('Invalid task position');
-            }
+        // Reject invalid positions before updating local state.
+        if (!Number.isFinite(position)) {
+            throw new Error('Invalid task position');
+        }
 
-            await this.runMutation(async () => {
-                const previousPosition = task[field];
+        await this.runMutation(async () => {
+            const previousPosition = task[field];
 
-                // 1. Optimistically update the task in our signal.
+            // 1. Optimistically update the task in our signal.
+            this.tasks.update((tasks) =>
+                tasks.map((current) =>
+                    current.id === task.id
+                        ? {
+                              ...current,
+                              [field]: position,
+                          }
+                        : current,
+                ),
+            );
+
+            try {
+                // 2. Persist the position to Supabase.
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .update({ [field]: position })
+                    .eq('id', task.id)
+                    .eq('user_id', task.user_id)
+                    .select('*')
+                    .single();
+
+                if (error) {
+                    throw error;
+                }
+
+                // 3. Reconcile with the saved database record.
+                this.tasks.update((tasks) =>
+                    tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
+                );
+            } catch (error) {
+                // 4. Restore the previous position if persistence fails.
                 this.tasks.update((tasks) =>
                     tasks.map((current) =>
                         current.id === task.id
                             ? {
-                                ...current,
-                                [field]: position,
-                            }
+                                  ...current,
+                                  [field]: previousPosition,
+                              }
                             : current,
                     ),
                 );
 
-                try {
-                    // 2. Persist the position to Supabase.
-                    const { data, error } = await supabase
-                        .from('tasks')
-                        .update({ [field]: position })
-                        .eq('id', task.id)
-                        .eq('user_id', task.user_id)
-                        .select('*')
-                        .single();
-
-                    if (error) {
-                        throw error;
-                    }
-
-                    // 3. Reconcile with the saved database record.
-                    this.tasks.update((tasks) =>
-                        tasks.map((current) =>
-                            current.id === task.id
-                                ? (data as Task)
-                                : current,
-                        ),
-                    );
-                } catch (error) {
-                    // 4. Restore the previous position if persistence fails.
-                    this.tasks.update((tasks) =>
-                        tasks.map((current) =>
-                            current.id === task.id
-                                ? {
-                                    ...current,
-                                    [field]: previousPosition,
-                                }
-                                : current,
-                        ),
-                    );
-
-                    throw error;
-                }
-            });
+                throw error;
+            }
+        });
     }
 
     async updateProject(task: Task, projectId: string | null) {
@@ -422,9 +439,9 @@ export class TasksStore {
                 tasks.map((current) =>
                     current.id === task.id
                         ? {
-                            ...current,
-                            planned_date: plannedDate,
-                        }
+                              ...current,
+                              planned_date: plannedDate,
+                          }
                         : current,
                 ),
             );
@@ -442,9 +459,9 @@ export class TasksStore {
                     tasks.map((current) =>
                         current.id === task.id
                             ? {
-                                ...current,
-                                planned_date: previousDate,
-                            }
+                                  ...current,
+                                  planned_date: previousDate,
+                              }
                             : current,
                     ),
                 );
@@ -454,9 +471,7 @@ export class TasksStore {
 
             // Reconcile the optimistic state with the saved database row.
             this.tasks.update((tasks) =>
-                tasks.map((current) =>
-                    current.id === task.id ? (data as Task) : current,
-                ),
+                tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
             );
         });
     }
@@ -469,9 +484,7 @@ export class TasksStore {
 
             this.tasks.update((tasks) =>
                 tasks.map((current) =>
-                    current.id === task.id
-                        ? { ...current, due_date: dueDate }
-                        : current,
+                    current.id === task.id ? { ...current, due_date: dueDate } : current,
                 ),
             );
 
@@ -485,9 +498,7 @@ export class TasksStore {
             if (error) {
                 this.tasks.update((tasks) =>
                     tasks.map((current) =>
-                        current.id === task.id
-                            ? { ...current, due_date: previousDate }
-                            : current,
+                        current.id === task.id ? { ...current, due_date: previousDate } : current,
                     ),
                 );
 
@@ -495,9 +506,7 @@ export class TasksStore {
             }
 
             this.tasks.update((tasks) =>
-                tasks.map((current) =>
-                    current.id === task.id ? (data as Task) : current,
-                ),
+                tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
             );
         });
     }
