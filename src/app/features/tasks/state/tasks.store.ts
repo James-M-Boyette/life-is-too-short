@@ -432,35 +432,80 @@ export class TasksStore {
         }
 
         await this.runMutation(async () => {
+            // Keep a snapshot of the task's previous scheduling state.
             const previousDate = task.planned_date;
+            const previousPosition = task.planned_position;
 
-            // Optimistically update the local signal.
+            // Determine the context the task will enter.
+            // If plannedDate is cleared, due_date may still determine
+            // its effective date (including an overdue date).
+            const destinationTask: Task = {
+                ...task,
+                planned_date: plannedDate,
+            };
+
+            const destinationContext = getTaskPlanningContext(destinationTask);
+
+            const currentContext = getTaskPlanningContext(task);
+
+            // Only assign a new position when the effective
+            // planning context actually changes.
+            const position =
+                destinationContext === currentContext && previousPosition !== null
+                    ? previousPosition
+                    : getNextTaskPosition(
+                          this.tasks().filter(
+                              (current) =>
+                                  current.id !== task.id &&
+                                  current.user_id === task.user_id &&
+                                  getTaskPlanningContext(current) === destinationContext,
+                          ),
+                          'planned_position',
+                      );
+
+            // Optimistically update both fields.
             this.tasks.update((tasks) =>
                 tasks.map((current) =>
                     current.id === task.id
                         ? {
                               ...current,
                               planned_date: plannedDate,
+                              planned_position: position,
                           }
                         : current,
                 ),
             );
 
-            const { data, error } = await supabase
-                .from('tasks')
-                .update({ planned_date: plannedDate })
-                .eq('id', task.id)
-                .select('*')
-                .single();
+            try {
+                // Persist the scheduling change atomically.
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .update({
+                        planned_date: plannedDate,
+                        planned_position: position,
+                    })
+                    .eq('id', task.id)
+                    .eq('user_id', task.user_id)
+                    .select('*')
+                    .single();
 
-            if (error) {
-                // Restore the previous date if Supabase rejects the update.
+                if (error) {
+                    throw error;
+                }
+
+                // Reconcile with the saved row.
+                this.tasks.update((tasks) =>
+                    tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
+                );
+            } catch (error) {
+                // Restore both properties on failure.
                 this.tasks.update((tasks) =>
                     tasks.map((current) =>
                         current.id === task.id
                             ? {
                                   ...current,
                                   planned_date: previousDate,
+                                  planned_position: previousPosition,
                               }
                             : current,
                     ),
@@ -468,11 +513,6 @@ export class TasksStore {
 
                 throw error;
             }
-
-            // Reconcile the optimistic state with the saved database row.
-            this.tasks.update((tasks) =>
-                tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
-            );
         });
     }
 
