@@ -195,6 +195,9 @@ export class TasksStore {
             due_date: null,
             due_at: null,
 
+            project_position: null,
+            planned_position: null,
+
             status: 'todo',
 
             created_at: new Date().toISOString(),
