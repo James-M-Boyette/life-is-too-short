@@ -24,6 +24,12 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { TaskListComponent } from '@/features/tasks/components/task-list/task-list.component';
 import type { TaskScheduleDrop } from '@/features/tasks/models/task-schedule-drop.model';
+import type { TaskReorder } from '@/features/tasks/models/task-reorder.model';
+
+import {
+    calculateTaskPosition,
+    sortTasksByPosition,
+} from '@/features/tasks/utils/task-ordering.util';
 
 @Component({
     standalone: true,
@@ -95,6 +101,45 @@ export class TasksPage {
         }
     }
 
+    protected async onTaskReordered(event: TaskReorder): Promise<void> {
+        const { task, previousIndex, currentIndex, tasks } = event;
+
+        // Work on a copy. Never mutate a signal-derived input array.
+        const reordered = [...tasks];
+
+        const [movedTask] = reordered.splice(previousIndex, 1);
+        reordered.splice(currentIndex, 0, movedTask);
+
+        const previousTask = reordered[currentIndex - 1] ?? null;
+        const nextTask = reordered[currentIndex + 1] ?? null;
+
+        try {
+            // A missing position is not a valid neighbor boundary.
+            // We'll handle new-task position initialization separately.
+            if (
+                (previousTask && previousTask.planned_position === null) ||
+                (nextTask && nextTask.planned_position === null)
+            ) {
+                throw new Error('Cannot reorder tasks with uninitialized positions');
+            }
+
+            const newPosition = calculateTaskPosition(
+                previousTask?.planned_position ?? null,
+                nextTask?.planned_position ?? null,
+            );
+
+            await this.tasksStore.updateTaskPosition(
+                task,
+                'planned_position',
+                newPosition,
+            );
+        } catch (error) {
+            console.error('Could not reorder task:', error);
+            // Store errors are recorded by TasksStore; calculation errors
+            // also need a user-visible message before this is production-ready.
+        }
+    }
+
     protected readonly showCompleted = signal(false);
 
     readonly view = input<TaskView>('all');
@@ -142,12 +187,17 @@ export class TasksPage {
     });
 
     protected readonly todayTasks = computed(() =>
-        this.tasksStore
-            .tasks()
-            .filter(
+        sortTasksByPosition(
+            this.tasksStore.tasks().filter(
                 (task) =>
-                    !task.is_done && getTaskDateGroup(task, this.calendarClock.today()) === 'today',
+                    !task.is_done &&
+                    getTaskDateGroup(
+                        task,
+                        this.calendarClock.today(),
+                    ) === 'today',
             ),
+            'planned_position',
+        ),
     );
 
     protected readonly unscheduledTasks = computed(() =>
@@ -172,7 +222,8 @@ export class TasksPage {
 
     protected readonly upcomingDays = computed(() => {
         const today = this.calendarClock.today();
-        const tasks = this.tasksStore.tasks().filter((task) => !task.is_done);
+        const tasks = this.tasksStore.tasks().
+            filter((task) => !task.is_done);
 
         return [
             { label: 'Today', date: today },
@@ -181,7 +232,12 @@ export class TasksPage {
         ].map((day) => ({
             ...day,
             displayDate: parseLocalDate(day.date),
-            tasks: tasks.filter((task) => getTaskDisplayDate(task) === day.date),
+            tasks: sortTasksByPosition(
+                tasks.filter(
+                    (task) => getTaskDisplayDate(task) === day.date,
+                ),
+                'planned_position',
+            ),
         }));
     });
 
