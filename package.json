@@ -9,12 +9,10 @@
         "build:prod": "ng build --configuration production",
         "watch": "ng build --watch --configuration development",
         "test": "ng test",
-
         "git:add": "git add .",
         "git:commit": "git diff --cached --quiet || git commit -m\"Routine build of app\"",
         "git:commit_prod": "git diff --cached --quiet || git commit -m\"Routine build of app for prod\"",
         "git:push": "git push",
-
         "push": "pnpm run build && pnpm run git:add && pnpm run git:commit && pnpm run git:push",
         "push_prod": "pnpm  build:prod && pnpm git:add && pnpm git:commit_prod && pnpm git:push"
     },
@@ -33,6 +31,7 @@
     "private": true,
     "packageManager": "pnpm@9.15.9",
     "dependencies": {
+        "@angular/cdk": "^21",
         "@angular/common": "^21.1.0",
         "@angular/compiler": "^21.1.0",
         "@angular/core": "^21.1.0",

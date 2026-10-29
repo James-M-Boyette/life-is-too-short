@@ -1,11 +1,22 @@
 <!-- For debugging ... -->
 <!-- <pre>{{ debugTasks() | json }}</pre> -->
-<ul class="list">
+<ul
+    class="list"
+    cdkDropList
+    [id]="dropListId()"
+    [cdkDropListData]="tasks()"
+    [cdkDropListConnectedTo]="connectedDropLists()"
+    [cdkDropListDisabled]="!draggable()"
+    [cdkDropListSortingDisabled]="true"
+    [cdkDropListEnterPredicate]="canEnter"
+    (cdkDropListDropped)="onDrop($event)"
+    >
     @for (task of tasks(); track task.id) {
         <app-task-row
             [task]="task"
             [projects]="projects()"
             [disabled]="disabled()"
+            [draggable]="draggable()"
             (toggleDone)="toggleDone.emit($event)"
             (remove)="remove.emit($event)"
             (rename)="rename.emit($event)"

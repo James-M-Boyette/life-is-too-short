@@ -7,6 +7,29 @@
     list-style: none;
 }
 
+.cdk-drag-preview {
+    box-sizing: border-box;
+    border-radius: 0.5rem;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+    background: var(--p-content-background);
+}
+
+.cdk-drag-placeholder {
+    opacity: 0.25;
+}
+
+.cdk-drag-animating {
+    transition: transform 180ms ease;
+}
+
+.list.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+    transition: transform 180ms ease;
+}
+
+.list {
+    min-height: 3rem;
+}
+
 .empty-message {
     padding: 0.75rem;
     color: var(--text-muted);
