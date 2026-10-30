@@ -424,4 +424,59 @@ describe('TasksStore', () => {
         expect(store.tasks()[0].planned_position).toBe(1000);
         expect(store.mutating()).toBe(false);
     });
+
+    it('preserves an optimistic position while its database update is pending', async () => {
+        const task = createTask({
+            planned_position: 1000,
+        });
+
+        store.tasks.set([task]);
+
+        // Hold the Supabase request open so we control when it finishes.
+        let resolveRequest!: (result: { data: Task; error: null }) => void;
+
+        const pendingRequest = new Promise<{
+            data: Task;
+            error: null;
+        }>((resolve) => {
+            resolveRequest = resolve;
+        });
+
+        single.mockReturnValue(pendingRequest);
+
+        // Begin saving the reordered task, but don't await it yet.
+        const mutation = store.updateTaskPosition(task, 'planned_position', 2500);
+
+        // The optimistic update should happen immediately.
+        expect(store.tasks()[0].planned_position).toBe(2500);
+
+        // Simulate a stale Realtime UPDATE arriving before Supabase
+        // finishes the request.
+        const staleTask = {
+            ...task,
+            planned_position: 1000,
+        };
+
+        store['upsertFromRealtime'](staleTask);
+
+        // Capture the state before the request finishes.
+        const positionAfterRealtime = store.tasks()[0].planned_position;
+
+        // Finish the database request and cleanly settle the mutation.
+        resolveRequest({
+            data: {
+                ...task,
+                planned_position: 2500,
+            },
+            error: null,
+        });
+
+        await mutation;
+
+        // The stale event should not have overwritten the optimistic value.
+        expect(positionAfterRealtime).toBe(2500);
+
+        // The final persisted value should also be correct.
+        expect(store.tasks()[0].planned_position).toBe(2500);
+    });
 });

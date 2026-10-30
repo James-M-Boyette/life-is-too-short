@@ -35,6 +35,7 @@ export class TasksStore {
     readonly loading = signal(false); // Are we fetching them?
     readonly creating = signal(false); // Are we in the process of creating a new task (showing the form)?
     readonly mutating = signal(false); // Are we performing a mutation (add, update, delete) on the server?
+    private readonly pendingTaskIds = new Set<string>();
     readonly error = signal<string | null>(null); // Did fetching or mutating fail?
 
     readonly realtimeConnected = signal(false);
@@ -68,6 +69,11 @@ export class TasksStore {
                 this.realtimeConnected.set(false);
                 return;
             }
+
+            // Load current state once
+            void this.refreshTasks().catch(() => {
+                // refreshTasks() has already recorded the error in this.error.
+            });
 
             // Start realtime subscription scoped to this user
             this.channel = this.supabase
@@ -114,6 +120,11 @@ export class TasksStore {
     }
 
     private upsertFromRealtime(row: Task) {
+         // Guard: Don't overwrite a task while a local mutation is pending.
+        if (this.pendingTaskIds.has(row.id)) {
+            return;
+        }
+
         this.tasks.update((prev) => {
             const idx = prev.findIndex((t) => t.id === row.id);
 
@@ -327,19 +338,22 @@ export class TasksStore {
         await this.runMutation(async () => {
             const previousPosition = task[field];
 
-            // 1. Optimistically update the task in our signal.
-            this.tasks.update((tasks) =>
-                tasks.map((current) =>
-                    current.id === task.id
-                        ? {
-                              ...current,
-                              [field]: position,
-                          }
-                        : current,
-                ),
-            );
+            // Mark this task as having an active local mutation.
+            this.pendingTaskIds.add(task.id);
 
             try {
+                // 1. Optimistically update the task in our signal.
+                this.tasks.update((tasks) =>
+                    tasks.map((current) =>
+                        current.id === task.id
+                            ? {
+                                ...current,
+                                [field]: position,
+                            }
+                            : current,
+                    ),
+                );
+
                 // 2. Persist the position to Supabase.
                 const { data, error } = await this.supabase
                     .from('tasks')
@@ -355,7 +369,11 @@ export class TasksStore {
 
                 // 3. Reconcile with the saved database record.
                 this.tasks.update((tasks) =>
-                    tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
+                    tasks.map((current) =>
+                        current.id === task.id
+                            ? (data as Task)
+                            : current,
+                    ),
                 );
             } catch (error) {
                 // 4. Restore the previous position if persistence fails.
@@ -371,6 +389,9 @@ export class TasksStore {
                 );
 
                 throw error;
+            } finally {
+                // This runs after success AND failure.
+                this.pendingTaskIds.delete(task.id);
             }
         });
     }
