@@ -8,10 +8,10 @@ import { AuthStore } from '@/shared/supabase/auth.store';
 import { TasksStore } from '@/features/tasks/state/tasks.store';
 import { Router } from '@angular/router';
 import { TasksHeaderComponent } from '@/features/tasks/components/tasks-header/tasks-header.component';
-import {
-    TaskCreateComponent,
-    CreateTaskPayload,
-} from '@/features/tasks/components/task-create/task-create.component';
+// import {
+//     TaskCreateComponent,
+//     CreateTaskPayload,
+// } from '@/features/tasks/components/task-create/task-create.component';
 import { ProjectsStore } from '@/features/projects/state/projects.store';
 import { ButtonModule } from 'primeng/button';
 
@@ -31,7 +31,8 @@ import {
     sortTasksByPosition,
 } from '@/features/tasks/utils/task-ordering.util';
 
-import { DialogModule } from 'primeng/dialog';
+// import { DialogModule } from 'primeng/dialog';
+import { TaskCreateDialogService } from '@/features/tasks/services/task-create-dialog.service';
 
 @Component({
     standalone: true,
@@ -39,9 +40,9 @@ import { DialogModule } from 'primeng/dialog';
         CommonModule,
         ButtonModule,
         TasksHeaderComponent,
-        TaskCreateComponent,
+        // TaskCreateComponent,
         TaskListComponent,
-        DialogModule,
+        // DialogModule,
         ConfirmDialogModule,
     ],
     providers: [ConfirmationService],
@@ -57,23 +58,26 @@ export class TasksPage {
 
     private readonly confirmationService = inject(ConfirmationService);
 
-    protected readonly taskDialogVisible = signal(false);
-    protected readonly creatingTask = signal(false);
-    protected readonly taskCreateError = signal<string | null>(null);
+    private readonly taskCreateDialog = inject(TaskCreateDialogService);
+    // protected readonly taskDialogVisible = signal(false);
+    // protected readonly creatingTask = signal(false);
+    // protected readonly taskCreateError = signal<string | null>(null);
 
     protected openTaskDialog(): void {
-        this.taskCreateError.set(null);
-        this.taskDialogVisible.set(true);
+        this.taskCreateDialog.open({
+            projectId: null,
+            plannedDate: this.calendarClock.today(),
+        });
     }
 
-    protected closeTaskDialog(): void {
-        if (this.creatingTask()) {
-            return;
-        }
+    // protected closeTaskDialog(): void {
+    //     if (this.creatingTask()) {
+    //         return;
+    //     }
 
-        this.taskDialogVisible.set(false);
-        this.taskCreateError.set(null);
-    }
+    //     this.taskDialogVisible.set(false);
+    //     this.taskCreateError.set(null);
+    // }
 
     readonly pageHeader = computed(() => {
         if (this.view() === 'all') {
@@ -174,29 +178,29 @@ export class TasksPage {
         await this.router.navigateByUrl('/login');
     }
 
-    protected async createTask(payload: CreateTaskPayload): Promise<void> {
-        if (this.creatingTask()) {
-            return;
-        }
+    // protected async createTask(payload: CreateTaskPayload): Promise<void> {
+    //     if (this.creatingTask()) {
+    //         return;
+    //     }
 
-        this.creatingTask.set(true);
-        this.taskCreateError.set(null);
+    //     this.creatingTask.set(true);
+    //     this.taskCreateError.set(null);
 
-        try {
-            await this.tasksStore.addTask(payload);
+    //     try {
+    //         await this.tasksStore.addTask(payload);
 
-            // Only close when Supabase confirms success.
-            this.taskDialogVisible.set(false);
-        } catch (error: unknown) {
-            // Leave the dialog and form mounted so the user
-            // can correct or retry without retyping everything.
-            this.taskCreateError.set(
-                error instanceof Error ? error.message : 'Could not create task. Please try again.',
-            );
-        } finally {
-            this.creatingTask.set(false);
-        }
-    }
+    //         // Only close when Supabase confirms success.
+    //         this.taskDialogVisible.set(false);
+    //     } catch (error: unknown) {
+    //         // Leave the dialog and form mounted so the user
+    //         // can correct or retry without retyping everything.
+    //         this.taskCreateError.set(
+    //             error instanceof Error ? error.message : 'Could not create task. Please try again.',
+    //         );
+    //     } finally {
+    //         this.creatingTask.set(false);
+    //     }
+    // }
 
     protected readonly visibleTasks = computed(() => {
         const tasks = this.tasksStore.tasks();

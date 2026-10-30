@@ -19,6 +19,9 @@ import {
     TaskCreateComponent,
     type CreateTaskPayload,
 } from '@/features/tasks/components/task-create/task-create.component';
+import { TaskCreateContext } from '@/features/tasks/models/task-create-context.model';
+import { TaskCreateDialogService } from '@/features/tasks/services/task-create-dialog.service';
+import { CalendarClockService } from '@/shared/services/calendar-clock.service';
 
 @Component({
     standalone: true,
@@ -45,19 +48,54 @@ export class AppShellComponent {
     protected readonly projectsStore = inject(ProjectsStore);
     protected readonly tasksStore = inject(TasksStore);
 
-    protected readonly taskDialogVisible = signal(false);
+    private readonly taskCreateDialog = inject(TaskCreateDialogService);
+    protected readonly taskDialogVisible = computed(() => this.taskCreateDialog.context() !== null);
+    protected readonly taskCreateContext = this.taskCreateDialog.context;
     protected readonly creatingTask = signal(false);
     protected readonly taskCreateError = signal<string | null>(null);
+    private readonly calendarClock = inject(CalendarClockService);
+
+    private getCurrentTaskContext(): TaskCreateContext {
+        const path = this.router.url.split('?')[0];
+
+        if (path === '/tasks/today') {
+            return {
+                projectId: null,
+                plannedDate: this.calendarClock.today(),
+            };
+        }
+
+        if (path.startsWith('/tasks/project/')) {
+            const projectId = path.split('/')[3];
+
+            if (projectId && this.projectsStore.getProject(projectId)) {
+                return {
+                    projectId,
+                    plannedDate: null,
+                };
+            }
+        }
+
+        return {
+            projectId: null,
+            plannedDate: null,
+        };
+    }
 
     protected openTaskDialog(): void {
         this.taskCreateError.set(null);
-        this.taskDialogVisible.set(true);
+        this.taskCreateDialog.open(this.getCurrentTaskContext());
     }
 
     protected closeTaskDialog(): void {
         if (this.creatingTask()) return;
 
-        this.taskDialogVisible.set(false);
+        this.taskCreateDialog.close();
+        this.taskCreateError.set(null);
+    }
+
+    private closeTaskDialogAfterSave(): void {
+        this.taskCreateDialog.close();
         this.taskCreateError.set(null);
     }
 
@@ -77,11 +115,6 @@ export class AppShellComponent {
         } finally {
             this.creatingTask.set(false);
         }
-    }
-
-    private closeTaskDialogAfterSave(): void {
-        this.taskDialogVisible.set(false);
-        this.taskCreateError.set(null);
     }
 
     protected readonly createProjectDialogVisible = signal(false);

@@ -69,11 +69,11 @@
     [style]="{ width: '36rem', maxWidth: '95vw' }"
     appendTo="body"
 >
-    @if (taskDialogVisible()) {
+    @if (taskCreateContext(); as context) {
         <app-task-create
             [projects]="projectsStore.projectTree()"
-            [defaultProjectId]="null"
-            [defaultPlannedDate]="null"
+            [defaultProjectId]="context.projectId"
+            [defaultPlannedDate]="context.plannedDate"
             [disabled]="creatingTask()"
             (create)="createTask($event)"
             (cancel)="closeTaskDialog()"
