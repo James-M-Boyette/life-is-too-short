@@ -46,7 +46,10 @@ export class TasksStore {
 
     private channel: RealtimeChannel | null = null;
 
-    private async runMutation<T>(taskId: string, fn: () => Promise<T>): Promise<T> {
+    private async runMutation<T>(
+        taskId: string,
+        fn: (isCurrentSession: () => boolean) => Promise<T>,
+    ): Promise<T> {
         // Capture the session when the mutation is requested.
         const generationAtStart = this.sessionGeneration;
 
@@ -66,7 +69,7 @@ export class TasksStore {
                 this.error.set(null);
                 this.markTaskChanged(taskId);
 
-                return fn();
+                return fn(isCurrentSession);
             });
 
         const settled = operation.then(
@@ -405,7 +408,7 @@ export class TasksStore {
             return;
         }
 
-        await this.runMutation(task.id, async () => {
+        await this.runMutation(task.id, async (isCurrentSession) => {
             // Read the latest state when this queued operation begins,
             // rather than using the snapshot supplied by the component.
             const currentTask = this.tasks().find((current) => current.id === task.id);
@@ -445,22 +448,30 @@ export class TasksStore {
                     throw error;
                 }
 
+                // The response belongs to an expired session.
+                // Do not apply it to the current user's tasks.
+                if (!isCurrentSession()) {
+                    return;
+                }
+
                 // Reconcile with the authoritative saved row.
                 this.tasks.update((tasks) =>
                     tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
                 );
             } catch (error) {
-                // Roll back only the field this mutation changed.
-                this.tasks.update((tasks) =>
-                    tasks.map((current) =>
-                        current.id === task.id
-                            ? {
-                                  ...current,
-                                  title: previousTitle,
-                              }
-                            : current,
-                    ),
-                );
+                // Don't roll back into another user's session.
+                if (isCurrentSession()) {
+                    this.tasks.update((tasks) =>
+                        tasks.map((current) =>
+                            current.id === task.id
+                                ? {
+                                      ...current,
+                                      title: previousTitle,
+                                  }
+                                : current,
+                        ),
+                    );
+                }
 
                 throw error;
             }
