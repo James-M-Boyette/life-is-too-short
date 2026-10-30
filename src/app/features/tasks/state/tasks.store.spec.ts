@@ -1176,4 +1176,146 @@ describe('TasksStore', () => {
         // The old user's tasks must not reappear.
         expect(store.tasks()).toEqual([]);
     });
+
+    it('does not report an old mutation error after logout', async () => {
+        const task = createTask({
+            user_id: 'user-1',
+            title: 'Original title',
+        });
+
+        // Allow the authenticated constructor effect to refresh.
+        const order = vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({
+                data: [task],
+                error: null,
+            }),
+        });
+
+        select.mockReturnValueOnce({ order });
+
+        userId.set('user-1');
+        TestBed.tick();
+
+        await vi.waitFor(() => {
+            expect(store.loading()).toBe(false);
+        });
+
+        store.tasks.set([task]);
+
+        let resolveMutation!: (result: { data: null; error: Error }) => void;
+
+        single.mockReturnValue(
+            new Promise((resolve) => {
+                resolveMutation = resolve;
+            }),
+        );
+
+        // Start editing the title.
+        const mutation = store.updateTitle(task, 'Updated title');
+
+        await vi.waitFor(() => {
+            expect(single).toHaveBeenCalledOnce();
+        });
+
+        // Log out before the database responds.
+        userId.set(null);
+        TestBed.tick();
+
+        expect(store.tasks()).toEqual([]);
+        expect(store.error()).toBeNull();
+
+        // The old request now fails.
+        resolveMutation({
+            data: null,
+            error: new Error('Old session request failed'),
+        });
+
+        await expect(mutation).rejects.toThrow('Old session request failed');
+
+        // The previous session must not contaminate current state.
+        expect(store.tasks()).toEqual([]);
+        expect(store.error()).toBeNull();
+    });
+
+    it('does not apply an old mutation response after switching users', async () => {
+        const userATask = createTask({
+            id: 'shared-task-id',
+            user_id: 'user-a',
+            title: 'User A task',
+        });
+
+        const userBTask = createTask({
+            id: 'shared-task-id',
+            user_id: 'user-b',
+            title: 'User B task',
+        });
+
+        // The constructor effect starts a refresh when the user changes.
+        // Return an empty result so the test controls the task state.
+        const secondOrder = vi.fn().mockResolvedValue({
+            data: [],
+            error: null,
+        });
+
+        const firstOrder = vi.fn().mockReturnValue({
+            order: secondOrder,
+        });
+
+        // The refresh query needs order().
+        // The mutation query needs single().
+        select.mockReturnValue({
+            order: firstOrder,
+            single,
+        });
+
+        // Sign in as User A.
+        userId.set('user-a');
+        TestBed.tick();
+
+        await vi.waitFor(() => {
+            expect(store.loading()).toBe(false);
+        });
+
+        store.tasks.set([userATask]);
+
+        // Hold User A's title update open.
+        let resolveMutation!: (result: { data: Task; error: null }) => void;
+
+        single.mockReturnValue(
+            new Promise((resolve) => {
+                resolveMutation = resolve;
+            }),
+        );
+
+        const mutation = store.updateTitle(userATask, 'Updated User A task');
+
+        await vi.waitFor(() => {
+            expect(single).toHaveBeenCalledOnce();
+        });
+
+        // Switch to User B before User A's request completes.
+        userId.set('user-b');
+        TestBed.tick();
+
+        await vi.waitFor(() => {
+            expect(store.loading()).toBe(false);
+        });
+
+        store.tasks.set([userBTask]);
+
+        // Complete User A's outstanding database request.
+        resolveMutation({
+            data: {
+                ...userATask,
+                title: 'Updated User A task',
+            },
+            error: null,
+        });
+
+        await mutation;
+
+        // The response must not overwrite User B's task.
+        expect(store.tasks()).toEqual([userBTask]);
+        expect(store.error()).toBeNull();
+    });
 });

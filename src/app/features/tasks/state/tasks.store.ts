@@ -47,21 +47,28 @@ export class TasksStore {
     private channel: RealtimeChannel | null = null;
 
     private async runMutation<T>(taskId: string, fn: () => Promise<T>): Promise<T> {
+        // Capture the session when the mutation is requested.
+        const generationAtStart = this.sessionGeneration;
+
+        const isCurrentSession = () => generationAtStart === this.sessionGeneration;
+
         const previous = this.taskMutationQueues.get(taskId) ?? Promise.resolve();
 
-        // Queue the next operation regardless of whether the previous
-        // operation succeeded or failed.
         const operation = previous
             .catch(() => undefined)
             .then(async () => {
+                // A queued operation must not start after logout
+                // or an account switch.
+                if (!isCurrentSession()) {
+                    throw new Error('Mutation cancelled: session changed');
+                }
+
                 this.error.set(null);
                 this.markTaskChanged(taskId);
 
                 return fn();
             });
 
-        // Track the operation's completion without leaving a rejected
-        // Promise in the queue.
         const settled = operation.then(
             () => undefined,
             () => undefined,
@@ -74,7 +81,11 @@ export class TasksStore {
         try {
             return await operation;
         } catch (error: unknown) {
-            this.error.set(error instanceof Error ? error.message : 'Failed to update task');
+            // Only the session that initiated this request
+            // may update the shared error signal.
+            if (isCurrentSession()) {
+                this.error.set(error instanceof Error ? error.message : 'Failed to update task');
+            }
 
             throw error;
         } finally {
@@ -82,7 +93,7 @@ export class TasksStore {
                 this.taskMutationQueues.delete(taskId);
                 this.pendingTaskIds.delete(taskId);
 
-                if (this.tasksNeedingReconciliation.delete(taskId)) {
+                if (isCurrentSession() && this.tasksNeedingReconciliation.delete(taskId)) {
                     try {
                         await this.reconcileTask(taskId);
                     } catch (error) {
@@ -91,7 +102,9 @@ export class TasksStore {
                 }
             }
 
-            this.mutating.set(this.taskMutationQueues.size > 0);
+            if (isCurrentSession()) {
+                this.mutating.set(this.taskMutationQueues.size > 0);
+            }
         }
     }
 
@@ -101,7 +114,17 @@ export class TasksStore {
             const userId = this.auth.userId();
 
             // Invalidate requests started under the previous session.
-            this.sessionGeneration;
+            this.sessionGeneration++;
+
+            this.taskMutationQueues.clear();
+            this.pendingTaskIds.clear();
+            this.tasksNeedingReconciliation.clear();
+            this.taskRevisions.clear();
+
+            this.mutating.set(false);
+            this.creating.set(false);
+            this.loading.set(false);
+            this.error.set(null);
 
             // Always tear down prior subscription when user changes/logs out
             this.teardownRealtime();
