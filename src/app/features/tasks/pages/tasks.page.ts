@@ -8,10 +8,6 @@ import { AuthStore } from '@/shared/supabase/auth.store';
 import { TasksStore } from '@/features/tasks/state/tasks.store';
 import { Router } from '@angular/router';
 import { TasksHeaderComponent } from '@/features/tasks/components/tasks-header/tasks-header.component';
-// import {
-//     TaskCreateComponent,
-//     CreateTaskPayload,
-// } from '@/features/tasks/components/task-create/task-create.component';
 import { ProjectsStore } from '@/features/projects/state/projects.store';
 import { ButtonModule } from 'primeng/button';
 
@@ -25,13 +21,13 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TaskListComponent } from '@/features/tasks/components/task-list/task-list.component';
 import type { TaskScheduleDrop } from '@/features/tasks/models/task-schedule-drop.model';
 import type { TaskReorder } from '@/features/tasks/models/task-reorder.model';
+import type { TaskCreateContext } from '../models/task-create-context.model';
 
 import {
     calculateTaskPosition,
     sortTasksByPosition,
 } from '@/features/tasks/utils/task-ordering.util';
 
-// import { DialogModule } from 'primeng/dialog';
 import { TaskCreateDialogService } from '@/features/tasks/services/task-create-dialog.service';
 
 @Component({
@@ -40,9 +36,7 @@ import { TaskCreateDialogService } from '@/features/tasks/services/task-create-d
         CommonModule,
         ButtonModule,
         TasksHeaderComponent,
-        // TaskCreateComponent,
         TaskListComponent,
-        // DialogModule,
         ConfirmDialogModule,
     ],
     providers: [ConfirmationService],
@@ -53,31 +47,16 @@ export class TasksPage {
     protected readonly auth = inject(AuthStore);
     protected readonly tasksStore = inject(TasksStore);
     protected readonly projectsStore = inject(ProjectsStore);
-    readonly error = signal<string | null>(null); // Did creating a Task fail?
+    readonly error = signal<string | null>(null);
     protected readonly calendarClock = inject(CalendarClockService);
 
     private readonly confirmationService = inject(ConfirmationService);
 
     private readonly taskCreateDialog = inject(TaskCreateDialogService);
-    // protected readonly taskDialogVisible = signal(false);
-    // protected readonly creatingTask = signal(false);
-    // protected readonly taskCreateError = signal<string | null>(null);
 
-    protected openTaskDialog(): void {
-        this.taskCreateDialog.open({
-            projectId: null,
-            plannedDate: this.calendarClock.today(),
-        });
+    protected openTaskDialog(context: TaskCreateContext): void {
+        this.taskCreateDialog.open(context);
     }
-
-    // protected closeTaskDialog(): void {
-    //     if (this.creatingTask()) {
-    //         return;
-    //     }
-
-    //     this.taskDialogVisible.set(false);
-    //     this.taskCreateError.set(null);
-    // }
 
     readonly pageHeader = computed(() => {
         if (this.view() === 'all') {
@@ -177,30 +156,6 @@ export class TasksPage {
         await this.auth.signOut();
         await this.router.navigateByUrl('/login');
     }
-
-    // protected async createTask(payload: CreateTaskPayload): Promise<void> {
-    //     if (this.creatingTask()) {
-    //         return;
-    //     }
-
-    //     this.creatingTask.set(true);
-    //     this.taskCreateError.set(null);
-
-    //     try {
-    //         await this.tasksStore.addTask(payload);
-
-    //         // Only close when Supabase confirms success.
-    //         this.taskDialogVisible.set(false);
-    //     } catch (error: unknown) {
-    //         // Leave the dialog and form mounted so the user
-    //         // can correct or retry without retyping everything.
-    //         this.taskCreateError.set(
-    //             error instanceof Error ? error.message : 'Could not create task. Please try again.',
-    //         );
-    //     } finally {
-    //         this.creatingTask.set(false);
-    //     }
-    // }
 
     protected readonly visibleTasks = computed(() => {
         const tasks = this.tasksStore.tasks();

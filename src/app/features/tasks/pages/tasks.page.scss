@@ -11,7 +11,7 @@ section.tasks-page {
     flex-direction: column;
     gap: var(--space-4);
 
-     section.task-group {
+    section.task-group {
         display: flex;
         flex-direction: column;
         gap: var(--space-2);
@@ -22,6 +22,12 @@ section.tasks-page {
             color: var(--text-secondary);
             font-size: 0.875rem;
             font-weight: 600;
+        }
+
+        .add-task-wrapper {
+            display: flex;
+            // justify-content: center;
+            margin: 1rem 0 1rem 1rem;
         }
 
         button.completed-toggle {
@@ -50,6 +56,88 @@ section.tasks-page {
     }
 }
 
+.today-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+
+    padding-block: 0.5rem;
+    border-bottom: 1px solid var(--p-content-border-color);
+
+    &__description {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        min-width: 0;
+        margin-left: 1rem;
+    }
+
+    &__title {
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+
+    &__subtitle {
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        line-height: 1.5;
+        font-style: italic;
+        margin-left: 0.5rem;
+    }
+
+    &__modes {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+
+        padding: 0.25rem;
+        border: 1px solid var(--p-content-border-color);
+        border-radius: 0.65rem;
+        background: var(--p-content-background);
+    }
+
+    &__mode {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+
+        min-height: 2.25rem;
+        padding: 0.4rem 0.85rem;
+
+        border: 0;
+        border-radius: 0.45rem;
+        background: transparent;
+
+        color: var(--text-secondary);
+        font: inherit;
+        font-size: 0.875rem;
+
+        cursor: pointer;
+        transition:
+            background-color 150ms ease,
+            color 150ms ease;
+
+        &:hover:not(&--active) {
+            background: var(--p-content-hover-background);
+            color: var(--text-primary);
+        }
+
+        &--active {
+            background: var(--p-primary-color);
+            color: var(--p-primary-contrast-color);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--p-primary-color);
+            outline-offset: 3px;
+        }
+    }
+}
+
 /* Shared layout and column styling */
 .today-board,
 .upcoming-board {
@@ -68,6 +156,22 @@ section.tasks-page {
             margin: 0 0 1rem;
             font-size: 1rem;
         }
+
+        .add-task-button {
+            margin-bottom: 1.5rem;
+            margin-left: 1rem;
+        }
+        // .today-header-container {
+        //     display: flex;
+        //     justify-content: space-between;
+        //     gap: 1rem;
+        //     margin-bottom: 2rem;
+
+        //     h2 {
+        //         margin: 0 0 1rem;
+        //         font-size: 1rem;
+        //     }
+        // }
     }
 }
 
@@ -75,6 +179,12 @@ section.tasks-page {
 .today-board--planning,
 .upcoming-board {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    // .add-task-wrapper {
+    //     display: flex;
+    //     justify-content: center;
+    //     margin-bottom: 1rem;
+    // }
 }
 
 /* Centered Today column with a secondary planning prompt */
@@ -134,95 +244,4 @@ section.tasks-page {
     .upcoming-board {
         grid-template-columns: minmax(0, 1fr);
     }
-}
-
-.today-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 1rem;
-
-    padding-block: 0.5rem;
-    border-bottom: 1px solid var(--p-content-border-color);
-
-    &__description {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-        min-width: 0;
-    }
-
-    &__title {
-        color: var(--text-primary);
-        font-size: 0.95rem;
-        font-weight: 600;
-    }
-
-    &__subtitle {
-        color: var(--text-secondary);
-        font-size: 0.8rem;
-        line-height: 1.5;
-    }
-
-    &__modes {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-
-        padding: 0.25rem;
-        border: 1px solid var(--p-content-border-color);
-        border-radius: 0.65rem;
-        background: var(--p-content-background);
-    }
-
-    &__mode {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-
-        min-height: 2.25rem;
-        padding: 0.4rem 0.85rem;
-
-        border: 0;
-        border-radius: 0.45rem;
-        background: transparent;
-
-        color: var(--text-secondary);
-        font: inherit;
-        font-size: 0.875rem;
-
-        cursor: pointer;
-        transition: background-color 150ms ease, color 150ms ease;
-
-        &:hover:not(&--active) {
-            background: var(--p-content-hover-background);
-            color: var(--text-primary);
-        }
-
-        &--active {
-            background: var(--p-primary-color);
-            color: var(--p-primary-contrast-color);
-        }
-
-        &:focus-visible {
-            outline: 2px solid var(--p-primary-color);
-            outline-offset: 3px;
-        }
-    }
-}
-
-.today-header-container {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.task-create-error {
-    margin: 0.75rem 0 0;
-    color: var(--p-red-600);
-    font-size: 0.875rem;
-    line-height: 1.5;
 }

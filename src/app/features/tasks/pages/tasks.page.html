@@ -25,9 +25,9 @@
                         Move tasks between Today, Unscheduled and Overdue.
                     </span>
                 } @else {
-                    <span class="today-toolbar__title">Today's priorities</span>
+                    <span class="today-toolbar__title">Only today's priorities</span>
                     <span class="today-toolbar__subtitle">
-                        Stay focused on what matters today.
+                        Stay focused on what matters right now.
                     </span>
                 }
             </div>
@@ -64,19 +64,24 @@
             aria-label="Today's task board"
         >
             <section class="today-board__column" aria-labelledby="today-heading">
-                <div class="today-header-container">
-                    <h2 id="today-heading">Today ({{ todayTasks().length }})</h2>
+                <h2 id="today-heading">Today ({{ todayTasks().length }})</h2>
 
-                    <button
-                        pButton
-                        type="button"
-                        (click)="openTaskDialog()"
-                        class="add-task-button"
-                    >
-                        <i class="pi pi-plus" pButtonIcon></i>
-                        <span pButtonLabel>Add Task</span>
-                    </button>
-                </div>
+                <button
+                    pButton
+                    type="button"
+                    class="add-task-button"
+                    (click)="
+                        openTaskDialog({
+                            projectId: null,
+                            plannedDate: calendarClock.today(),
+                        })
+                    "
+                >
+                    <i class="pi pi-plus" pButtonIcon aria-hidden="true"></i>
+                    <span pButtonLabel>Add Task</span>
+                </button>
+                <!-- <div class="today-header-container">
+                </div> -->
 
                 <app-task-list
                     [tasks]="todayTasks()"
@@ -199,6 +204,23 @@
                         ({{ day.tasks.length }})
                     </h2>
 
+                    <button
+                        pButton
+                        type="button"
+                        class="add-task-button"
+                        (click)="
+                            openTaskDialog({
+                                projectId: null,
+                                plannedDate: day.date,
+                            })
+                        "
+                    >
+                        <i class="pi pi-plus" pButtonIcon aria-hidden="true"></i>
+                        <span pButtonLabel>Add Task</span>
+                    </button>
+                    <!-- <div class="add-task-wrapper">
+                    </div> -->
+
                     <app-task-list
                         [tasks]="day.tasks"
                         [projects]="projectsStore.projectTree()"
@@ -232,6 +254,25 @@
                 <p>Loading…</p>
             } @else {
                 <h2>Open ({{ openTasks().length }})</h2>
+
+                <!-- @if (view() === 'inbox' || view() === 'project') { -->
+                    <div class="add-task-wrapper">
+                        <button
+                            pButton
+                            type="button"
+                            class="add-task-button"
+                            (click)="
+                                openTaskDialog({
+                                    projectId: view() === 'project' ? (projectId() ?? null) : null,
+                                    plannedDate: null,
+                                })
+                            "
+                        >
+                            <i class="pi pi-plus" pButtonIcon aria-hidden="true"></i>
+                            <span pButtonLabel>Add Task</span>
+                        </button>
+                    </div>
+                <!-- } -->
 
                 <app-task-list
                     [tasks]="openTasks()"
@@ -300,35 +341,5 @@
         </div>
     </section>
 </section>
-
-<!-- <p-dialog
-    header="Add Task"
-    [modal]="true"
-    [visible]="taskDialogVisible()"
-    (visibleChange)="!$event && closeTaskDialog()"
-    [closable]="!creatingTask()"
-    [closeOnEscape]="!creatingTask()"
-    [dismissableMask]="false"
-    [draggable]="false"
-    [resizable]="false"
-    [style]="{ width: '36rem', maxWidth: '95vw' }"
->
-    @if (taskDialogVisible()) {
-        <app-task-create
-            [projects]="projectsStore.projectTree()"
-            [defaultProjectId]="view() === 'project' ? (projectId() ?? null) : null"
-            [defaultPlannedDate]="view() === 'today' ? calendarClock.today() : null"
-            [disabled]="creatingTask()"
-            (create)="createTask($event)"
-            (cancel)="closeTaskDialog()"
-        />
-
-        @if (taskCreateError(); as error) {
-            <p class="task-create-error" role="alert">
-                {{ error }}
-            </p>
-        }
-    }
-</p-dialog> -->
 
 <p-confirmDialog />

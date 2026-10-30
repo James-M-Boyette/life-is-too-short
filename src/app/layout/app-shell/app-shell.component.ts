@@ -19,7 +19,7 @@ import {
     TaskCreateComponent,
     type CreateTaskPayload,
 } from '@/features/tasks/components/task-create/task-create.component';
-import { TaskCreateContext } from '@/features/tasks/models/task-create-context.model';
+import type { TaskCreateContext } from '@/features/tasks/models/task-create-context.model';
 import { TaskCreateDialogService } from '@/features/tasks/services/task-create-dialog.service';
 import { CalendarClockService } from '@/shared/services/calendar-clock.service';
 
@@ -36,6 +36,7 @@ import { CalendarClockService } from '@/shared/services/calendar-clock.service';
         ProjectEditorComponent,
         TaskCreateComponent,
     ],
+    providers: [TaskCreateDialogService],
     templateUrl: './app-shell.component.html',
     styleUrls: ['./app-shell.component.scss'],
 })
