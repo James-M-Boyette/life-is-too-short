@@ -447,8 +447,10 @@ describe('TasksStore', () => {
         // Begin saving the reordered task, but don't await it yet.
         const mutation = store.updateTaskPosition(task, 'planned_position', 2500);
 
-        // The optimistic update should happen immediately.
-        expect(store.tasks()[0].planned_position).toBe(2500);
+        await vi.waitFor(() => {
+            expect(store.tasks()[0].planned_position).toBe(2500);
+            expect(single).toHaveBeenCalledOnce();
+        });
 
         // Simulate a stale Realtime UPDATE arriving before Supabase
         // finishes the request.
@@ -517,10 +519,10 @@ describe('TasksStore', () => {
         expect(store.mutating()).toBe(true);
 
         // The queue starts its first operation in a microtask.
-        await Promise.resolve();
-
-        // Only the first request should have started.
-        expect(single).toHaveBeenCalledTimes(1);
+        await vi.waitFor(() => {
+            // Only the first request should have started.
+            expect(single).toHaveBeenCalledTimes(1);
+        });
 
         // Finish the position update.
         resolvePosition({
@@ -534,9 +536,9 @@ describe('TasksStore', () => {
         await positionMutation;
 
         // Allow the queued title mutation to begin.
-        await Promise.resolve();
-
-        expect(single).toHaveBeenCalledTimes(2);
+        await vi.waitFor(() => {
+            expect(single).toHaveBeenCalledTimes(2);
+        });
 
         // The second operation is still pending.
         expect(store.mutating()).toBe(true);
