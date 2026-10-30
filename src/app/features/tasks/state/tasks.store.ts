@@ -36,6 +36,7 @@ export class TasksStore {
     readonly creating = signal(false); // Are we in the process of creating a new task (showing the form)?
     readonly mutating = signal(false); // Are we performing a mutation (add, update, delete) on the server?
     private readonly pendingTaskIds = new Set<string>();
+    private readonly taskMutationQueues = new Map<string, Promise<void>>();
     readonly error = signal<string | null>(null); // Did fetching or mutating fail?
 
     readonly realtimeConnected = signal(false);
@@ -43,19 +44,45 @@ export class TasksStore {
     private channel: RealtimeChannel | null = null;
 
     private async runMutation<T>(taskId: string, fn: () => Promise<T>): Promise<T> {
-        this.error.set(null);
-        this.mutating.set(true);
+        const previous = this.taskMutationQueues.get(taskId) ?? Promise.resolve();
+
+        // Queue the next operation regardless of whether the previous
+        // operation succeeded or failed.
+        const operation = previous
+            .catch(() => undefined)
+            .then(async () => {
+                this.error.set(null);
+
+                return fn();
+            });
+
+        // Track the operation's completion without leaving a rejected
+        // Promise in the queue.
+        const settled = operation.then(
+            () => undefined,
+            () => undefined,
+        );
+
+        this.taskMutationQueues.set(taskId, settled);
         this.pendingTaskIds.add(taskId);
+        this.mutating.set(true);
 
         try {
-            return await fn();
+            return await operation;
         } catch (error: unknown) {
             this.error.set(error instanceof Error ? error.message : 'Failed to update task');
 
             throw error;
         } finally {
-            this.pendingTaskIds.delete(taskId);
-            this.mutating.set(false);
+            // Only the last queued operation may clear this task's
+            // pending marker.
+            if (this.taskMutationQueues.get(taskId) === settled) {
+                this.taskMutationQueues.delete(taskId);
+                this.pendingTaskIds.delete(taskId);
+            }
+
+            // Other tasks may still be running.
+            this.mutating.set(this.taskMutationQueues.size > 0);
         }
     }
 

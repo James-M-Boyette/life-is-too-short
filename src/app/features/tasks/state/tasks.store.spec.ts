@@ -479,4 +479,93 @@ describe('TasksStore', () => {
         // The final persisted value should also be correct.
         expect(store.tasks()[0].planned_position).toBe(2500);
     });
+
+    it('keeps a task protected until all queued mutations finish', async () => {
+        const task = createTask({
+            planned_position: 1000,
+            title: 'Original title',
+        });
+
+        store.tasks.set([task]);
+
+        // Control when each Supabase request finishes.
+        let resolvePosition!: (result: { data: Task; error: null }) => void;
+
+        let resolveTitle!: (result: { data: Task; error: null }) => void;
+
+        const positionRequest = new Promise<{
+            data: Task;
+            error: null;
+        }>((resolve) => {
+            resolvePosition = resolve;
+        });
+
+        const titleRequest = new Promise<{
+            data: Task;
+            error: null;
+        }>((resolve) => {
+            resolveTitle = resolve;
+        });
+
+        single.mockReturnValueOnce(positionRequest).mockReturnValueOnce(titleRequest);
+
+        // Start two mutations affecting the same task.
+        const positionMutation = store.updateTaskPosition(task, 'planned_position', 2500);
+
+        const titleMutation = store.updateTitle(task, 'Updated title');
+
+        expect(store.mutating()).toBe(true);
+
+        // The queue starts its first operation in a microtask.
+        await Promise.resolve();
+
+        // Only the first request should have started.
+        expect(single).toHaveBeenCalledTimes(1);
+
+        // Finish the position update.
+        resolvePosition({
+            data: {
+                ...task,
+                planned_position: 2500,
+            },
+            error: null,
+        });
+
+        await positionMutation;
+
+        // Allow the queued title mutation to begin.
+        await Promise.resolve();
+
+        expect(single).toHaveBeenCalledTimes(2);
+
+        // The second operation is still pending.
+        expect(store.mutating()).toBe(true);
+
+        // Simulate a stale Realtime event.
+        store['upsertFromRealtime']({
+            ...task,
+            title: 'Original title',
+            planned_position: 1000,
+        });
+
+        // The pending mutation should protect the task.
+        expect(store.tasks()[0].title).toBe('Updated title');
+
+        // Finish the title update.
+        resolveTitle({
+            data: {
+                ...task,
+                title: 'Updated title',
+                planned_position: 2500,
+            },
+            error: null,
+        });
+
+        await titleMutation;
+
+        // Everything has finished.
+        expect(store.mutating()).toBe(false);
+        expect(store.tasks()[0].title).toBe('Updated title');
+        expect(store.tasks()[0].planned_position).toBe(2500);
+    });
 });
