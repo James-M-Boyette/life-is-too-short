@@ -16,6 +16,10 @@ import {
     findTreeNodeByKey,
 } from '@/features/projects/utils/project-tree-node.util';
 import { DatePickerModule } from 'primeng/datepicker';
+import {
+    parseLocalDate,
+    formatLocalDate,
+} from '@/shared/utils/date.util';
 
 export type CreateTaskPayload = {
     title: string;
@@ -45,6 +49,7 @@ export class TaskCreateComponent {
     readonly projects = input<ProjectNode[]>([]);
 
     readonly defaultProjectId = input<string | null>(null);
+    readonly defaultPlannedDate = input<string | null>(null);
 
     private readonly fb = inject(NonNullableFormBuilder);
 
@@ -63,6 +68,12 @@ export class TaskCreateComponent {
         const projectId = this.defaultProjectId();
 
         return projectId ? findTreeNodeByKey(this.projectOptions(), projectId) : null;
+    });
+
+    private readonly syncDefaultPlannedDate = effect(() => {
+        const plannedDate = this.defaultPlannedDate();
+
+        this.form.controls.plannedDate.setValue(parseLocalDate(plannedDate), { emitEvent: false });
     });
 
     private lastDefaultProjectId: string | null = null;
@@ -106,13 +117,7 @@ export class TaskCreateComponent {
             title: title.trim(),
             description: description.trim() || null,
             projectId: project?.key ?? null,
-            plannedDate: plannedDate
-            ? [
-                  plannedDate.getFullYear(),
-                  String(plannedDate.getMonth() + 1).padStart(2, '0'),
-                  String(plannedDate.getDate()).padStart(2, '0'),
-              ].join('-')
-            : null,
+            plannedDate: formatLocalDate(plannedDate),
         });
 
         // Do not reset here.

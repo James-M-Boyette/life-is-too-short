@@ -67,7 +67,12 @@
                 <div class="today-header-container">
                     <h2 id="today-heading">Today ({{ todayTasks().length }})</h2>
 
-                    <button pButton type="button" (click)="openTaskDialog()" class="add-task-button">
+                    <button
+                        pButton
+                        type="button"
+                        (click)="openTaskDialog()"
+                        class="add-task-button"
+                    >
                         <i class="pi pi-plus" pButtonIcon></i>
                         <span pButtonLabel>Add Task</span>
                     </button>
@@ -307,14 +312,12 @@
     [draggable]="false"
     [resizable]="false"
     [style]="{ width: '36rem', maxWidth: '95vw' }"
-    appendTo="body"
 >
     @if (taskDialogVisible()) {
         <app-task-create
             [projects]="projectsStore.projectTree()"
-            [defaultProjectId]="
-                view() === 'project' ? (projectId() ?? null) : null
-            "
+            [defaultProjectId]="view() === 'project' ? (projectId() ?? null) : null"
+            [defaultPlannedDate]="view() === 'today' ? calendarClock.today() : null"
             [disabled]="creatingTask()"
             (create)="createTask($event)"
             (cancel)="closeTaskDialog()"
