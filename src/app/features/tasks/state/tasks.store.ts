@@ -11,6 +11,7 @@ import type { TaskStatus, Task } from '@/features/tasks/models/tasks.model';
 import type { TaskOrderField } from '@/features/tasks/utils/task-ordering.util';
 
 import {
+    getFirstTaskPosition,
     getNextTaskPosition,
     getTaskPlanningContext,
 } from '@/features/tasks/utils/task-ordering.util';
@@ -345,7 +346,7 @@ export class TasksStore {
         // null represents Inbox.
         const projectTasks = existingTasks.filter((task) => task.project_id === input.projectId);
 
-        const projectPosition = getNextTaskPosition(projectTasks, 'project_position');
+        const projectPosition = getFirstTaskPosition(projectTasks, 'project_position');
 
         const plannedDate = input.plannedDate ?? null;
 
@@ -360,7 +361,7 @@ export class TasksStore {
             (task) => getTaskPlanningContext(task) === destinationContext,
         );
 
-        const plannedPosition = getNextTaskPosition(destinationTasks, 'planned_position');
+        const plannedPosition = getFirstTaskPosition(destinationTasks, 'planned_position');
 
         this.error.set(null);
         this.creating.set(true);

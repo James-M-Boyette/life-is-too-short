@@ -55,14 +55,26 @@ export function getTaskPlanningContext(task: Task): string {
     return getTaskDisplayDate(task) ?? 'unscheduled';
 }
 
+export function getFirstTaskPosition(tasks: Task[], field: TaskOrderField): number {
+    const positions = tasks
+        .map((task) => task[field])
+        .filter((position): position is number => position !== null);
+
+    if (positions.length === 0) {
+        return POSITION_STEP;
+    }
+
+    return Math.min(...positions) - POSITION_STEP;
+}
+
 export function getNextTaskPosition(tasks: Task[], field: TaskOrderField): number {
     const positions = tasks
         .map((task) => task[field])
         .filter((position): position is number => position !== null);
 
     if (positions.length === 0) {
-        return 1000;
+        return POSITION_STEP;
     }
 
-    return Math.max(...positions) + 1000;
+    return Math.max(...positions) + POSITION_STEP;
 }
