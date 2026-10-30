@@ -448,27 +448,20 @@ export class TasksStore {
                     throw error;
                 }
 
-                // The response belongs to an expired session.
-                // Do not apply it to the current user's tasks.
+                // This request may have completed after an account switch.
                 if (!isCurrentSession()) {
                     return;
                 }
 
-                // Reconcile with the authoritative saved row.
+                // Only apply the response if its session is still active.
                 this.tasks.update((tasks) =>
                     tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
                 );
             } catch (error) {
-                // Don't roll back into another user's session.
                 if (isCurrentSession()) {
                     this.tasks.update((tasks) =>
                         tasks.map((current) =>
-                            current.id === task.id
-                                ? {
-                                      ...current,
-                                      title: previousTitle,
-                                  }
-                                : current,
+                            current.id === task.id ? { ...current, title: previousTitle } : current,
                         ),
                     );
                 }
@@ -534,7 +527,7 @@ export class TasksStore {
             throw new Error('Invalid task position');
         }
 
-        await this.runMutation(task.id, async () => {
+        await this.runMutation(task.id, async (isCurrentSession) => {
             const currentTask = this.tasks().find((current) => current.id === task.id);
 
             if (!currentTask) {
@@ -565,17 +558,23 @@ export class TasksStore {
 
                 if (error) throw error;
 
+                if (!isCurrentSession()) {
+                    return;
+                }
+
                 this.tasks.update((tasks) =>
                     tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
                 );
             } catch (error) {
-                this.tasks.update((tasks) =>
-                    tasks.map((current) =>
-                        current.id === task.id
-                            ? { ...current, [field]: previousPosition }
-                            : current,
-                    ),
-                );
+                if (isCurrentSession()) {
+                    this.tasks.update((tasks) =>
+                        tasks.map((current) =>
+                            current.id === task.id
+                                ? { ...current, [field]: previousPosition }
+                                : current,
+                        ),
+                    );
+                }
 
                 throw error;
             }
