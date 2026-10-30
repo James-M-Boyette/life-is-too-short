@@ -9,6 +9,7 @@
         "build:prod": "ng build --configuration production",
         "watch": "ng build --watch --configuration development",
         "test": "ng test",
+        "backup:prod": "powershell -NoProfile -File ./scripts/backup-prod.ps1",
         "git:add": "git add .",
         "git:commit": "git diff --cached --quiet || git commit -m\"Routine build of app\"",
         "git:commit_prod": "git diff --cached --quiet || git commit -m\"Routine build of app for prod\"",

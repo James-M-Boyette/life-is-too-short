@@ -1587,7 +1587,7 @@ describe('TasksStore', () => {
         const supabase = store['supabase'];
 
         vi.spyOn(supabase, 'channel').mockReturnValue(
-            channel as ReturnType<typeof supabase.channel>,
+            channel as unknown as ReturnType<typeof supabase.channel>,
         );
 
         // Sign in as User A.

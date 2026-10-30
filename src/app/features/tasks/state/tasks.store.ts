@@ -145,6 +145,13 @@ export class TasksStore {
             });
 
             // Start realtime subscription scoped to this user
+            // Capture the session that owns this subscription.
+            const generationAtStart = this.sessionGeneration;
+
+            const isCurrentSession = () =>
+                generationAtStart === this.sessionGeneration && this.auth.userId() === userId;
+
+            // Start Realtime for the authenticated user.
             this.channel = this.supabase
                 .channel(`tasks:${userId}`)
                 .on(
@@ -155,9 +162,19 @@ export class TasksStore {
                         table: 'tasks',
                         filter: `user_id=eq.${userId}`,
                     },
-                    (payload) => this.onTasksChange(payload),
+                    (payload) => {
+                        if (!isCurrentSession()) {
+                            return;
+                        }
+
+                        this.onTasksChange(payload);
+                    },
                 )
                 .subscribe((status, error) => {
+                    if (!isCurrentSession()) {
+                        return;
+                    }
+
                     this.realtimeConnected.set(status === 'SUBSCRIBED');
                 });
 
