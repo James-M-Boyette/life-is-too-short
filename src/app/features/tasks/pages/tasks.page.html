@@ -149,6 +149,7 @@
                     [draggable]="view() === 'inbox' || view() === 'project'"
                     [sortable]="view() === 'inbox' || view() === 'project'"
                     orderField="project_position"
+                    [dropListId]="view() === 'inbox' ? 'tasks-inbox' : 'tasks-project'"
                     (taskReordered)="onTaskReordered($event)"
                     emptyMessage="No open tasks."
                     (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"

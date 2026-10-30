@@ -130,7 +130,7 @@ export class TasksPage {
 
             await this.tasksStore.updateTaskPosition(
                 task,
-                'planned_position',
+                field,
                 newPosition,
             );
         } catch (error) {
