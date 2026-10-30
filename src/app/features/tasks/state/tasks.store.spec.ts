@@ -276,4 +276,152 @@ describe('TasksStore', () => {
         expect(store.mutating()).toBe(false);
         expect(store.error()).toBe('Project transfer failed');
     });
+
+    it('appends a task when its planned date changes', async () => {
+        const movingTask = createTask({
+            id: 'moving',
+            planned_date: '2026-10-29',
+            planned_position: 1000,
+        });
+
+        const destinationTask = createTask({
+            id: 'destination',
+            planned_date: '2026-10-30',
+            planned_position: 3000,
+        });
+
+        store.tasks.set([movingTask, destinationTask]);
+
+        single.mockResolvedValue({
+            data: {
+                ...movingTask,
+                planned_date: '2026-10-30',
+                planned_position: 4000,
+            },
+            error: null,
+        });
+
+        await store.updatePlannedDate(movingTask, '2026-10-30');
+
+        expect(update).toHaveBeenCalledExactlyOnceWith({
+            planned_date: '2026-10-30',
+            planned_position: 4000,
+        });
+
+        expect(store.tasks()[0].planned_position).toBe(4000);
+    });
+
+    it('falls back to the due-date context when planned date is cleared', async () => {
+        const movingTask = createTask({
+            id: 'moving',
+            planned_date: '2026-10-29',
+            due_date: '2026-10-31',
+            planned_position: 1000,
+        });
+
+        const destinationTask = createTask({
+            id: 'destination',
+            due_date: '2026-10-31',
+            planned_position: 2000,
+        });
+
+        store.tasks.set([movingTask, destinationTask]);
+
+        single.mockResolvedValue({
+            data: {
+                ...movingTask,
+                planned_date: null,
+                planned_position: 3000,
+            },
+            error: null,
+        });
+
+        await store.updatePlannedDate(movingTask, null);
+
+        expect(update).toHaveBeenCalledExactlyOnceWith({
+            planned_date: null,
+            planned_position: 3000,
+        });
+    });
+
+    it('preserves planning order when changing a due date on a planned task', async () => {
+        const task = createTask({
+            planned_date: '2026-10-29',
+            due_date: '2026-10-30',
+            planned_position: 2500,
+        });
+
+        store.tasks.set([task]);
+
+        single.mockResolvedValue({
+            data: {
+                ...task,
+                due_date: '2026-11-05',
+            },
+            error: null,
+        });
+
+        await store.updateDueDate(task, '2026-11-05');
+
+        expect(update).toHaveBeenCalledExactlyOnceWith({
+            due_date: '2026-11-05',
+            planned_position: 2500,
+        });
+    });
+
+    it('appends a task when its due date changes its planning context', async () => {
+        const movingTask = createTask({
+            id: 'moving',
+            planned_date: null,
+            due_date: '2026-10-29',
+            planned_position: 1000,
+        });
+
+        const destinationTask = createTask({
+            id: 'destination',
+            planned_date: null,
+            due_date: '2026-10-30',
+            planned_position: 3000,
+        });
+
+        store.tasks.set([movingTask, destinationTask]);
+
+        single.mockResolvedValue({
+            data: {
+                ...movingTask,
+                due_date: '2026-10-30',
+                planned_position: 4000,
+            },
+            error: null,
+        });
+
+        await store.updateDueDate(movingTask, '2026-10-30');
+
+        expect(update).toHaveBeenCalledExactlyOnceWith({
+            due_date: '2026-10-30',
+            planned_position: 4000,
+        });
+    });
+
+    it('restores planned date and position after a failed scheduling update', async () => {
+        const task = createTask({
+            planned_date: '2026-10-29',
+            planned_position: 1000,
+        });
+
+        store.tasks.set([task]);
+
+        single.mockResolvedValue({
+            data: null,
+            error: new Error('Scheduling failed'),
+        });
+
+        await expect(store.updatePlannedDate(task, '2026-10-30')).rejects.toThrow(
+            'Scheduling failed',
+        );
+
+        expect(store.tasks()[0].planned_date).toBe('2026-10-29');
+        expect(store.tasks()[0].planned_position).toBe(1000);
+        expect(store.mutating()).toBe(false);
+    });
 });
