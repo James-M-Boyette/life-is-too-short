@@ -37,6 +37,7 @@ export class TasksStore {
     readonly mutating = signal(false); // Are we performing a mutation (add, update, delete) on the server?
     private readonly pendingTaskIds = new Set<string>();
     private readonly taskMutationQueues = new Map<string, Promise<void>>();
+    private readonly tasksNeedingReconciliation = new Set<string>();
     readonly error = signal<string | null>(null); // Did fetching or mutating fail?
 
     readonly realtimeConnected = signal(false);
@@ -74,14 +75,19 @@ export class TasksStore {
 
             throw error;
         } finally {
-            // Only the last queued operation may clear this task's
-            // pending marker.
             if (this.taskMutationQueues.get(taskId) === settled) {
                 this.taskMutationQueues.delete(taskId);
                 this.pendingTaskIds.delete(taskId);
+
+                if (this.tasksNeedingReconciliation.delete(taskId)) {
+                    try {
+                        await this.reconcileTask(taskId);
+                    } catch (error) {
+                        console.error('Failed to reconcile task after Realtime update:', error);
+                    }
+                }
             }
 
-            // Other tasks may still be running.
             this.mutating.set(this.taskMutationQueues.size > 0);
         }
     }
@@ -153,6 +159,7 @@ export class TasksStore {
     private upsertFromRealtime(row: Task) {
         // Guard: Don't overwrite a task while a local mutation is pending.
         if (this.pendingTaskIds.has(row.id)) {
+            this.tasksNeedingReconciliation.add(row.id);
             return;
         }
 
@@ -410,33 +417,31 @@ export class TasksStore {
     }
 
     async updateTaskPosition(task: Task, field: TaskOrderField, position: number): Promise<void> {
-        // Don't make unnecessary database requests.
-        if (task[field] === position) {
-            return;
-        }
-
-        // Reject invalid positions before updating local state.
         if (!Number.isFinite(position)) {
             throw new Error('Invalid task position');
         }
 
         await this.runMutation(task.id, async () => {
-            const previousPosition = task[field];
+            const currentTask = this.tasks().find((current) => current.id === task.id);
+
+            if (!currentTask) {
+                throw new Error('Task no longer exists');
+            }
+
+            // Compare against the latest state, not the original argument.
+            if (currentTask[field] === position) {
+                return;
+            }
+
+            const previousPosition = currentTask[field];
+
+            this.tasks.update((tasks) =>
+                tasks.map((current) =>
+                    current.id === task.id ? { ...current, [field]: position } : current,
+                ),
+            );
 
             try {
-                // 1. Optimistically update the task in our signal.
-                this.tasks.update((tasks) =>
-                    tasks.map((current) =>
-                        current.id === task.id
-                            ? {
-                                  ...current,
-                                  [field]: position,
-                              }
-                            : current,
-                    ),
-                );
-
-                // 2. Persist the position to Supabase.
                 const { data, error } = await this.supabase
                     .from('tasks')
                     .update({ [field]: position })
@@ -445,23 +450,16 @@ export class TasksStore {
                     .select('*')
                     .single();
 
-                if (error) {
-                    throw error;
-                }
+                if (error) throw error;
 
-                // 3. Reconcile with the saved database record.
                 this.tasks.update((tasks) =>
                     tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
                 );
             } catch (error) {
-                // 4. Restore the previous position if persistence fails.
                 this.tasks.update((tasks) =>
                     tasks.map((current) =>
                         current.id === task.id
-                            ? {
-                                  ...current,
-                                  [field]: previousPosition,
-                              }
+                            ? { ...current, [field]: previousPosition }
                             : current,
                     ),
                 );
@@ -472,27 +470,33 @@ export class TasksStore {
     }
 
     async updateProject(task: Task, projectId: string | null): Promise<void> {
-        if (projectId === task.project_id) {
-            return;
-        }
-
         await this.runMutation(task.id, async () => {
-            const previousProjectId = task.project_id;
-            const previousPosition = task.project_position;
+            const currentTask = this.tasks().find((current) => current.id === task.id);
 
-            // Find the tasks already belonging to the destination project.
-            // A null project ID represents Inbox.
+            if (!currentTask) {
+                throw new Error('Task no longer exists');
+            }
+
+            // Check against the latest state, not the caller's snapshot.
+            if (currentTask.project_id === projectId) {
+                return;
+            }
+
+            const previousProjectId = currentTask.project_id;
+            const previousPosition = currentTask.project_position;
+
+            // Determine the next position in the destination project.
+            // A null projectId represents Inbox.
             const destinationTasks = this.tasks().filter(
                 (current) =>
                     current.id !== task.id &&
-                    current.user_id === task.user_id &&
+                    current.user_id === currentTask.user_id &&
                     current.project_id === projectId,
             );
 
-            // Append the transferred task after existing tasks.
             const position = getNextTaskPosition(destinationTasks, 'project_position');
 
-            // Optimistically update both related properties.
+            // Update both related fields together.
             this.tasks.update((tasks) =>
                 tasks.map((current) =>
                     current.id === task.id
@@ -513,19 +517,17 @@ export class TasksStore {
                         project_position: position,
                     })
                     .eq('id', task.id)
-                    .eq('user_id', task.user_id)
+                    .eq('user_id', currentTask.user_id)
                     .select('*')
                     .single();
 
-                if (error) {
-                    throw error;
-                }
+                if (error) throw error;
 
                 this.tasks.update((tasks) =>
                     tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
                 );
             } catch (error) {
-                // Restore both properties if the database request fails.
+                // Restore only the fields owned by this operation.
                 this.tasks.update((tasks) =>
                     tasks.map((current) =>
                         current.id === task.id
@@ -544,37 +546,36 @@ export class TasksStore {
     }
 
     async updatePlannedDate(task: Task, plannedDate: string | null): Promise<void> {
-        if (plannedDate === task.planned_date) {
-            return;
-        }
-
         await this.runMutation(task.id, async () => {
-            // Keep a snapshot of the task's previous scheduling state.
-            const previousDate = task.planned_date;
-            const previousPosition = task.planned_position;
+            const currentTask = this.tasks().find((current) => current.id === task.id);
 
-            // Determine the context the task will enter.
-            // If plannedDate is cleared, due_date may still determine
-            // its effective date (including an overdue date).
+            if (!currentTask) {
+                throw new Error('Task no longer exists');
+            }
+
+            if (currentTask.planned_date === plannedDate) {
+                return;
+            }
+
+            const previousDate = currentTask.planned_date;
+            const previousPosition = currentTask.planned_position;
+
             const destinationTask: Task = {
-                ...task,
+                ...currentTask,
                 planned_date: plannedDate,
             };
 
+            const currentContext = getTaskPlanningContext(currentTask);
             const destinationContext = getTaskPlanningContext(destinationTask);
 
-            const currentContext = getTaskPlanningContext(task);
-
-            // Only assign a new position when the effective
-            // planning context actually changes.
             const position =
                 destinationContext === currentContext && previousPosition !== null
                     ? previousPosition
                     : getNextTaskPosition(
                           this.tasks().filter(
                               (current) =>
-                                  current.id !== task.id &&
-                                  current.user_id === task.user_id &&
+                                  current.id !== currentTask.id &&
+                                  current.user_id === currentTask.user_id &&
                                   getTaskPlanningContext(current) === destinationContext,
                           ),
                           'planned_position',
@@ -634,35 +635,36 @@ export class TasksStore {
     }
 
     async updateDueDate(task: Task, dueDate: string | null): Promise<void> {
-        if (dueDate === task.due_date) {
-            return;
-        }
-
         await this.runMutation(task.id, async () => {
-            const previousDate = task.due_date;
-            const previousPosition = task.planned_position;
+            const currentTask = this.tasks().find((current) => current.id === task.id);
 
-            // Preview the task after its due date changes.
+            if (!currentTask) {
+                throw new Error('Task no longer exists');
+            }
+
+            if (currentTask.due_date === dueDate) {
+                return;
+            }
+
+            const previousDate = currentTask.due_date;
+            const previousPosition = currentTask.planned_position;
+
             const destinationTask: Task = {
-                ...task,
+                ...currentTask,
                 due_date: dueDate,
             };
 
-            // A planned date takes precedence over the due date.
-            const currentContext = getTaskPlanningContext(task);
+            const currentContext = getTaskPlanningContext(currentTask);
             const destinationContext = getTaskPlanningContext(destinationTask);
 
-            // Preserve the existing position if the task stays
-            // in the same planning context.
-            // Otherwise, append it to the destination context.
             const position =
                 currentContext === destinationContext && previousPosition !== null
                     ? previousPosition
                     : getNextTaskPosition(
                           this.tasks().filter(
                               (current) =>
-                                  current.id !== task.id &&
-                                  current.user_id === task.user_id &&
+                                  current.id !== currentTask.id &&
+                                  current.user_id === currentTask.user_id &&
                                   getTaskPlanningContext(current) === destinationContext,
                           ),
                           'planned_position',
@@ -770,6 +772,32 @@ export class TasksStore {
                 throw error;
             }
         });
+    }
+
+    private async reconcileTask(taskId: string): Promise<void> {
+        const task = this.tasks().find((current) => current.id === taskId);
+
+        if (!task) return;
+
+        const { data, error } = await this.supabase
+            .from('tasks')
+            .select('*')
+            .eq('id', taskId)
+            .eq('user_id', task.user_id)
+            .single();
+
+        if (error) throw error;
+
+        // Another local mutation might have started while
+        // the reconciliation query was in progress.
+        if (this.pendingTaskIds.has(taskId)) {
+            this.tasksNeedingReconciliation.add(taskId);
+            return;
+        }
+
+        this.tasks.update((tasks) =>
+            tasks.map((current) => (current.id === taskId ? (data as Task) : current)),
+        );
     }
 
     async remove(taskId: string) {

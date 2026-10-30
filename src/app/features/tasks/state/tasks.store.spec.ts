@@ -642,4 +642,215 @@ describe('TasksStore', () => {
         expect(store.tasks()[0].status).toBe('done');
         expect(store.tasks()[0].planned_position).toBe(2500);
     });
+
+    it('restores the latest saved position when a queued reorder fails', async () => {
+        const task = createTask({
+            planned_position: 1000,
+        });
+
+        store.tasks.set([task]);
+
+        // First drag succeeds.
+        single.mockResolvedValueOnce({
+            data: {
+                ...task,
+                planned_position: 2500,
+            },
+            error: null,
+        });
+
+        // Second drag fails.
+        single.mockResolvedValueOnce({
+            data: null,
+            error: new Error('Second reorder failed'),
+        });
+
+        const firstMutation = store.updateTaskPosition(task, 'planned_position', 2500);
+
+        const secondMutation = store.updateTaskPosition(task, 'planned_position', 3500);
+
+        await firstMutation;
+
+        await expect(secondMutation).rejects.toThrow('Second reorder failed');
+
+        // Restore the result of the first successful drag,
+        // not the stale position from the original argument.
+        expect(store.tasks()[0].planned_position).toBe(2500);
+
+        expect(update).toHaveBeenCalledTimes(2);
+        expect(store.mutating()).toBe(false);
+    });
+
+    it('restores the latest project when a queued transfer fails', async () => {
+        const task = createTask({
+            project_id: 'project-a',
+            project_position: 1000,
+        });
+
+        const destinationTask = createTask({
+            id: 'existing-task',
+            project_id: 'project-b',
+            project_position: 3000,
+        });
+
+        store.tasks.set([task, destinationTask]);
+
+        single.mockResolvedValueOnce({
+            data: {
+                ...task,
+                project_id: 'project-b',
+                project_position: 4000,
+            },
+            error: null,
+        });
+
+        single.mockResolvedValueOnce({
+            data: null,
+            error: new Error('Second transfer failed'),
+        });
+
+        const firstMutation = store.updateProject(task, 'project-b');
+        const secondMutation = store.updateProject(task, null);
+
+        await firstMutation;
+
+        await expect(secondMutation).rejects.toThrow('Second transfer failed');
+
+        const result = store.tasks().find((current) => current.id === task.id);
+
+        expect(result?.project_id).toBe('project-b');
+        expect(result?.project_position).toBe(4000);
+
+        expect(update).toHaveBeenCalledTimes(2);
+        expect(store.mutating()).toBe(false);
+    });
+
+    it('restores the latest planned date when a queued scheduling update fails', async () => {
+        const task = createTask({
+            planned_date: '2026-10-29',
+            planned_position: 1000,
+        });
+
+        store.tasks.set([task]);
+
+        single
+            .mockResolvedValueOnce({
+                data: {
+                    ...task,
+                    planned_date: '2026-10-30',
+                    planned_position: 1000,
+                },
+                error: null,
+            })
+            .mockResolvedValueOnce({
+                data: null,
+                error: new Error('Second scheduling update failed'),
+            });
+
+        const firstMutation = store.updatePlannedDate(task, '2026-10-30');
+        const secondMutation = store.updatePlannedDate(task, '2026-10-31');
+
+        await firstMutation;
+
+        await expect(secondMutation).rejects.toThrow('Second scheduling update failed');
+
+        const result = store.tasks()[0];
+
+        expect(result.planned_date).toBe('2026-10-30');
+        expect(result.planned_position).toBe(1000);
+        expect(update).toHaveBeenCalledTimes(2);
+    });
+
+    it('restores the latest due date when a queued deadline update fails', async () => {
+        const task = createTask({
+            planned_date: null,
+            due_date: '2026-10-29',
+            planned_position: 1000,
+        });
+
+        store.tasks.set([task]);
+
+        single
+            .mockResolvedValueOnce({
+                data: {
+                    ...task,
+                    due_date: '2026-10-30',
+                    planned_position: 1000,
+                },
+                error: null,
+            })
+            .mockResolvedValueOnce({
+                data: null,
+                error: new Error('Second deadline update failed'),
+            });
+
+        const firstMutation = store.updateDueDate(task, '2026-10-30');
+        const secondMutation = store.updateDueDate(task, '2026-10-31');
+
+        await firstMutation;
+
+        await expect(secondMutation).rejects.toThrow('Second deadline update failed');
+
+        const result = store.tasks()[0];
+
+        expect(result.due_date).toBe('2026-10-30');
+        expect(result.planned_position).toBe(1000);
+        expect(update).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not apply a remote update while a local mutation is pending', async () => {
+        const task = createTask({
+            title: 'Original title',
+            due_date: '2026-10-29',
+        });
+
+        store.tasks.set([task]);
+
+        let resolveRequest!: (result: { data: Task; error: null }) => void;
+
+        single
+            .mockReturnValueOnce(
+                new Promise((resolve) => {
+                    resolveRequest = resolve;
+                }),
+            )
+            .mockResolvedValueOnce({
+                data: {
+                    ...task,
+                    title: 'Updated title',
+                    due_date: '2026-10-30',
+                },
+                error: null,
+            });
+
+        const mutation = store.updateTitle(task, 'Updated title');
+
+        await vi.waitFor(() => {
+            expect(single).toHaveBeenCalledOnce();
+        });
+
+        // Simulate a remote change to a different field.
+        store['upsertFromRealtime']({
+            ...task,
+            due_date: '2026-10-30',
+        });
+
+        // The local optimistic title remains protected.
+        expect(store.tasks()[0].title).toBe('Updated title');
+
+        resolveRequest({
+            data: {
+                ...task,
+                title: 'Updated title',
+            },
+            error: null,
+        });
+
+        await mutation;
+
+        // This currently fails: the remote due-date change was dropped.
+        expect(single).toHaveBeenCalledTimes(2);
+        expect(store.tasks()[0].title).toBe('Updated title');
+        expect(store.tasks()[0].due_date).toBe('2026-10-30');
+    });
 });
