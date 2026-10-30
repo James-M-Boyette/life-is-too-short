@@ -289,69 +289,123 @@ export class TasksStore {
         }
     }
 
-    async updateTitle(task: Task, title: string) {
+    async updateTitle(task: Task, title: string): Promise<void> {
         const nextTitle = title.trim();
-        if (!nextTitle || nextTitle === task.title) return;
+
+        if (!nextTitle) {
+            return;
+        }
 
         await this.runMutation(task.id, async () => {
-            const next: Task = {
-                ...task,
-                title: nextTitle,
-                updated_at: new Date().toISOString(), // optimistic; DB will overwrite
-            };
+            // Read the latest state when this queued operation begins,
+            // rather than using the snapshot supplied by the component.
+            const currentTask = this.tasks().find((current) => current.id === task.id);
 
-            // optimistic
-            this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? next : t)));
-
-            const { data, error } = await this.supabase
-                .from('tasks')
-                .update({ title: nextTitle })
-                .eq('id', task.id)
-                .select('*')
-                .single();
-
-            if (error) {
-                // revert
-                this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? task : t)));
-                throw error;
+            if (!currentTask) {
+                throw new Error('Task no longer exists');
             }
 
-            // reconcile with DB row (true updated_at)
-            this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? (data as Task) : t)));
+            if (currentTask.title === nextTitle) {
+                return;
+            }
+
+            const previousTitle = currentTask.title;
+
+            // Change only the properties owned by this mutation.
+            this.tasks.update((tasks) =>
+                tasks.map((current) =>
+                    current.id === task.id
+                        ? {
+                              ...current,
+                              title: nextTitle,
+                          }
+                        : current,
+                ),
+            );
+
+            try {
+                const { data, error } = await this.supabase
+                    .from('tasks')
+                    .update({ title: nextTitle })
+                    .eq('id', task.id)
+                    .eq('user_id', task.user_id)
+                    .select('*')
+                    .single();
+
+                if (error) {
+                    throw error;
+                }
+
+                // Reconcile with the authoritative saved row.
+                this.tasks.update((tasks) =>
+                    tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
+                );
+            } catch (error) {
+                // Roll back only the field this mutation changed.
+                this.tasks.update((tasks) =>
+                    tasks.map((current) =>
+                        current.id === task.id
+                            ? {
+                                  ...current,
+                                  title: previousTitle,
+                              }
+                            : current,
+                    ),
+                );
+
+                throw error;
+            }
         });
     }
 
-    async updateDescription(task: Task, description: string | null) {
-        const nextDescription = (description ?? '').trim();
-        const normalized = nextDescription.length ? nextDescription : null;
-
-        if (normalized === task.description) return;
+    async updateDescription(task: Task, description: string | null): Promise<void> {
+        const trimmed = (description ?? '').trim();
+        const normalized = trimmed || null;
 
         await this.runMutation(task.id, async () => {
-            const next: Task = {
-                ...task,
-                description: normalized,
-                updated_at: new Date().toISOString(), // optimistic
-            };
+            const currentTask = this.tasks().find((current) => current.id === task.id);
 
-            // optimistic
-            this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? next : t)));
-
-            const { data, error } = await this.supabase
-                .from('tasks')
-                .update({ description: normalized })
-                .eq('id', task.id)
-                .select('*')
-                .single();
-
-            if (error) {
-                // revert
-                this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? task : t)));
-                throw error;
+            if (!currentTask) {
+                throw new Error('Task no longer exists');
             }
 
-            // reconcile
-            this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? (data as Task) : t)));
+            if (currentTask.description === normalized) {
+                return;
+            }
+
+            const previousDescription = currentTask.description;
+
+            this.tasks.update((tasks) =>
+                tasks.map((current) =>
+                    current.id === task.id ? { ...current, description: normalized } : current,
+                ),
+            );
+
+            try {
+                const { data, error } = await this.supabase
+                    .from('tasks')
+                    .update({ description: normalized })
+                    .eq('id', task.id)
+                    .eq('user_id', task.user_id)
+                    .select('*')
+                    .single();
+
+                if (error) throw error;
+
+                this.tasks.update((tasks) =>
+                    tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
+                );
+            } catch (error) {
+                this.tasks.update((tasks) =>
+                    tasks.map((current) =>
+                        current.id === task.id
+                            ? { ...current, description: previousDescription }
+                            : current,
+                    ),
+                );
+
+                throw error;
+            }
         });
     }
 
@@ -666,35 +720,55 @@ export class TasksStore {
         });
     }
 
-    async toggleDone(task: Task) {
+    async toggleDone(task: Task): Promise<void> {
         await this.runMutation(task.id, async () => {
-            const isDone = !task.is_done;
-            const next: Task = {
-                ...task,
-                is_done: isDone,
-                status: isDone ? 'done' : 'todo',
-                // updated_at will be set by DB; we can set optimistic too
-                updated_at: new Date().toISOString(),
-            };
+            const currentTask = this.tasks().find((current) => current.id === task.id);
 
-            // optimistic update
-            this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? next : t)));
-
-            const { data, error } = await this.supabase
-                .from('tasks')
-                .update({ is_done: next.is_done, status: next.status })
-                .eq('id', task.id)
-                .select('*')
-                .single();
-
-            if (error) {
-                // revert
-                this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? task : t)));
-                throw error;
+            if (!currentTask) {
+                throw new Error('Task no longer exists');
             }
 
-            // reconcile with DB row (real updated_at)
-            this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? (data as Task) : t)));
+            const previousIsDone = currentTask.is_done;
+            const previousStatus = currentTask.status;
+
+            const isDone = !currentTask.is_done;
+            const status = isDone ? 'done' : 'todo';
+
+            this.tasks.update((tasks) =>
+                tasks.map((current) =>
+                    current.id === task.id ? { ...current, is_done: isDone, status } : current,
+                ),
+            );
+
+            try {
+                const { data, error } = await this.supabase
+                    .from('tasks')
+                    .update({ is_done: isDone, status })
+                    .eq('id', task.id)
+                    .eq('user_id', task.user_id)
+                    .select('*')
+                    .single();
+
+                if (error) throw error;
+
+                this.tasks.update((tasks) =>
+                    tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
+                );
+            } catch (error) {
+                this.tasks.update((tasks) =>
+                    tasks.map((current) =>
+                        current.id === task.id
+                            ? {
+                                  ...current,
+                                  is_done: previousIsDone,
+                                  status: previousStatus,
+                              }
+                            : current,
+                    ),
+                );
+
+                throw error;
+            }
         });
     }
 

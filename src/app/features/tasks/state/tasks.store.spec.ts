@@ -74,6 +74,10 @@ describe('TasksStore', () => {
         });
 
         store = TestBed.inject(TasksStore);
+
+        // Run the constructor effect before individual tests populate the task signal. Our mocked user is unauthenticated, so the effect will clear the initially empty task list ...
+        TestBed.tick();
+        store = TestBed.inject(TasksStore);
     });
 
     it('updates project_position without changing planned_position', async () => {
@@ -524,6 +528,10 @@ describe('TasksStore', () => {
             expect(single).toHaveBeenCalledTimes(1);
         });
 
+        // The title update must preserve the position saved
+        // by the preceding mutation.
+        expect(store.tasks()[0].planned_position).toBe(2500);
+
         // Finish the position update.
         resolvePosition({
             data: {
@@ -568,6 +576,70 @@ describe('TasksStore', () => {
         // Everything has finished.
         expect(store.mutating()).toBe(false);
         expect(store.tasks()[0].title).toBe('Updated title');
+        expect(store.tasks()[0].planned_position).toBe(2500);
+    });
+
+    it('preserves task position when updating a stale description snapshot', async () => {
+        const staleTask = createTask({
+            description: 'Old description',
+            planned_position: 1000,
+        });
+
+        store.tasks.set([
+            {
+                ...staleTask,
+                planned_position: 2500,
+            },
+        ]);
+
+        single.mockResolvedValue({
+            data: {
+                ...staleTask,
+                description: 'New description',
+                planned_position: 2500,
+            },
+            error: null,
+        });
+
+        await store.updateDescription(staleTask, 'New description');
+
+        expect(store.tasks()[0].description).toBe('New description');
+        expect(store.tasks()[0].planned_position).toBe(2500);
+    });
+
+    it('preserves task position when toggling a stale task snapshot', async () => {
+        const staleTask = createTask({
+            is_done: false,
+            status: 'todo',
+            planned_position: 1000,
+        });
+
+        store.tasks.set([
+            {
+                ...staleTask,
+                planned_position: 2500,
+            },
+        ]);
+
+        single.mockResolvedValue({
+            data: {
+                ...staleTask,
+                is_done: true,
+                status: 'done',
+                planned_position: 2500,
+            },
+            error: null,
+        });
+
+        await store.toggleDone(staleTask);
+
+        expect(update).toHaveBeenCalledWith({
+            is_done: true,
+            status: 'done',
+        });
+
+        expect(store.tasks()[0].is_done).toBe(true);
+        expect(store.tasks()[0].status).toBe('done');
         expect(store.tasks()[0].planned_position).toBe(2500);
     });
 });
