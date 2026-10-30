@@ -390,39 +390,85 @@ export class TasksStore {
         });
     }
 
-    async updateProject(task: Task, projectId: string | null) {
+    async updateProject(
+        task: Task,
+        projectId: string | null,
+        ): Promise<void> {
         if (projectId === task.project_id) {
             return;
         }
 
         await this.runMutation(async () => {
-            const next: Task = {
-                ...task,
-                project_id: projectId,
-                updated_at: new Date().toISOString(),
-            };
+            const previousProjectId = task.project_id;
+            const previousPosition = task.project_position;
 
-            // Optimistic update
-            this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? next : t)));
+            // Find the tasks already belonging to the destination project.
+            // A null project ID represents Inbox.
+            const destinationTasks = this.tasks().filter(
+                (current) =>
+                    current.id !== task.id &&
+                    current.user_id === task.user_id &&
+                    current.project_id === projectId,
+            );
 
-            const { data, error } = await supabase
-                .from('tasks')
-                .update({
-                    project_id: projectId,
-                })
-                .eq('id', task.id)
-                .select('*')
-                .single();
+            // Append the transferred task after existing tasks.
+            const position = getNextTaskPosition(
+                destinationTasks,
+                'project_position',
+            );
 
-            if (error) {
-                // Roll back
-                this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? task : t)));
+            // Optimistically update both related properties.
+            this.tasks.update((tasks) =>
+                tasks.map((current) =>
+                    current.id === task.id
+                        ? {
+                            ...current,
+                            project_id: projectId,
+                            project_position: position,
+                        }
+                        : current,
+                ),
+            );
+
+            try {
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .update({
+                        project_id: projectId,
+                        project_position: position,
+                    })
+                    .eq('id', task.id)
+                    .eq('user_id', task.user_id)
+                    .select('*')
+                    .single();
+
+                if (error) {
+                    throw error;
+                }
+
+                this.tasks.update((tasks) =>
+                    tasks.map((current) =>
+                        current.id === task.id
+                            ? (data as Task)
+                            : current,
+                    ),
+                );
+            } catch (error) {
+                // Restore both properties if the database request fails.
+                this.tasks.update((tasks) =>
+                    tasks.map((current) =>
+                        current.id === task.id
+                            ? {
+                                ...current,
+                                project_id: previousProjectId,
+                                project_position: previousPosition,
+                            }
+                            : current,
+                    ),
+                );
 
                 throw error;
             }
-
-            // Reconcile with DB
-            this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? (data as Task) : t)));
         });
     }
 
