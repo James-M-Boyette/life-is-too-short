@@ -70,3 +70,60 @@ section.tasks-page {
         }
     }
 }
+
+.today-board,
+.upcoming-board {
+    display: grid;
+    gap: 1rem;
+    align-items: start;
+}
+
+.upcoming-board,
+.today-board--planning {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.today-board--focus {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 720px) minmax(0, 1fr);
+}
+
+.today-board--focus > .today-board__column {
+    grid-column: 2;
+}
+
+.today-board__prompt {
+    grid-column: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 3rem 1rem;
+    text-align: center;
+}
+
+.today-board__prompt p {
+    max-width: 16rem;
+    color: var(--text-secondary);
+}
+
+.today-layout-controls {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+@media (max-width: 900px) {
+    .today-board--focus {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .today-board--focus > .today-board__column,
+    .today-board__prompt {
+        grid-column: 1;
+    }
+
+    .today-board--planning {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

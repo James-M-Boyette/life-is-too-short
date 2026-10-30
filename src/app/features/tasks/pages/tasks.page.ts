@@ -2,7 +2,7 @@
     [x] Extract 'TaskView'
 
  */
-import { Component, signal, inject, computed, input } from '@angular/core';
+import { Component, signal, inject, computed, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { TasksStore } from '@/features/tasks/state/tasks.store';
@@ -71,6 +71,13 @@ export class TasksPage {
             return 'Tasks';
         }
     });
+    protected readonly todayLayout = signal<'focus' | 'planning'>('focus');
+
+    protected readonly isTodayPlanning = computed(() => this.todayLayout() === 'planning');
+
+    protected setTodayLayout(layout: 'focus' | 'planning'): void {
+        this.todayLayout.set(layout);
+    }
     readonly projectId = input<string | undefined>();
     protected readonly openTasks = computed(() =>
         this.visibleTasks().filter((task) => !task.is_done),
@@ -128,11 +135,7 @@ export class TasksPage {
                 nextTask?.[field] ?? null,
             );
 
-            await this.tasksStore.updateTaskPosition(
-            task,
-            field,
-            newPosition,
-        );
+            await this.tasksStore.updateTaskPosition(task, field, newPosition);
         } catch (error) {
             console.error('Could not reorder task:', error);
             // Store errors are recorded by TasksStore; calculation errors
@@ -168,7 +171,7 @@ export class TasksPage {
 
         switch (view) {
             case 'inbox':
-                 return sortTasksByPosition(
+                return sortTasksByPosition(
                     tasks.filter((task) => task.project_id === null),
                     'project_position',
                 );
@@ -180,7 +183,7 @@ export class TasksPage {
                     return [];
                 }
 
-                 return sortTasksByPosition(
+                return sortTasksByPosition(
                     tasks.filter((task) => task.project_id === projectId),
                     'project_position',
                 );
@@ -194,28 +197,26 @@ export class TasksPage {
 
     protected readonly todayTasks = computed(() =>
         sortTasksByPosition(
-            this.tasksStore.tasks().filter(
-                (task) =>
-                    !task.is_done &&
-                    getTaskDateGroup(
-                        task,
-                        this.calendarClock.today(),
-                    ) === 'today',
-            ),
+            this.tasksStore
+                .tasks()
+                .filter(
+                    (task) =>
+                        !task.is_done &&
+                        getTaskDateGroup(task, this.calendarClock.today()) === 'today',
+                ),
             'planned_position',
         ),
     );
 
     protected readonly unscheduledTasks = computed(() =>
         sortTasksByPosition(
-            this.tasksStore.tasks().filter(
-                (task) =>
-                    !task.is_done &&
-                    getTaskDateGroup(
-                        task,
-                        this.calendarClock.today(),
-                    ) === 'unscheduled',
-            ),
+            this.tasksStore
+                .tasks()
+                .filter(
+                    (task) =>
+                        !task.is_done &&
+                        getTaskDateGroup(task, this.calendarClock.today()) === 'unscheduled',
+                ),
             'planned_position',
         ),
     );
@@ -232,8 +233,7 @@ export class TasksPage {
 
     protected readonly upcomingDays = computed(() => {
         const today = this.calendarClock.today();
-        const tasks = this.tasksStore.tasks().
-            filter((task) => !task.is_done);
+        const tasks = this.tasksStore.tasks().filter((task) => !task.is_done);
 
         return [
             { label: 'Today', date: today },
@@ -243,9 +243,7 @@ export class TasksPage {
             ...day,
             displayDate: parseLocalDate(day.date),
             tasks: sortTasksByPosition(
-                tasks.filter(
-                    (task) => getTaskDisplayDate(task) === day.date,
-                ),
+                tasks.filter((task) => getTaskDisplayDate(task) === day.date),
                 'planned_position',
             ),
         }));

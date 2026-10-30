@@ -16,10 +16,33 @@
     />
 
     @if (view() === 'today') {
-        <section class="today-board" aria-label="Today's task board">
-            <section
-                class="today-board__column"
-                aria-labelledby="today-heading">
+        <div class="today-layout-controls">
+            <button
+                type="button"
+                [class.is-active]="!isTodayPlanning()"
+                [attr.aria-pressed]="!isTodayPlanning()"
+                (click)="setTodayLayout('focus')"
+            >
+                Focus
+            </button>
+
+            <button
+                type="button"
+                [class.is-active]="isTodayPlanning()"
+                [attr.aria-pressed]="isTodayPlanning()"
+                (click)="setTodayLayout('planning')"
+            >
+                Plan
+            </button>
+        </div>
+
+        <section
+            class="today-board"
+            [class.today-board--focus]="!isTodayPlanning()"
+            [class.today-board--planning]="isTodayPlanning()"
+            aria-label="Today's task board"
+        >
+            <section class="today-board__column" aria-labelledby="today-heading">
                 <h2 id="today-heading">Today ({{ todayTasks().length }})</h2>
 
                 <app-task-list
@@ -35,68 +58,97 @@
                     (taskDropped)="onTaskDropped($event)"
                     emptyMessage="Nothing planned for today."
                     (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
-                    (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
+                    (plannedDateChange)="
+                        tasksStore.updatePlannedDate($event.task, $event.plannedDate)
+                    "
                     (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
                     (toggleDone)="tasksStore.toggleDone($event)"
                     (remove)="confirmDeleteTask($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
-                    (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
+                    (editDescription)="
+                        tasksStore.updateDescription($event.task, $event.description)
+                    "
                 />
             </section>
 
-            <section
-                class="today-board__column"
-                aria-labelledby="unscheduled-heading">
-                <h2 id="unscheduled-heading">
-                    Unscheduled ({{ unscheduledTasks().length }})
-                </h2>
+            @if (!isTodayPlanning()) {
+                <aside class="today-board__prompt">
+                    <i class="pi pi-calendar" aria-hidden="true"></i>
 
-                <app-task-list
-                    [tasks]="unscheduledTasks()"
-                    [projects]="projectsStore.projectTree()"
-                    [disabled]="tasksStore.mutating()"
-                    [draggable]="true"
-                    dropListId="board-unscheduled"
-                    [connectedDropLists]="todayDropLists"
-                    [destinationDate]="null"
-                    (taskDropped)="onTaskDropped($event)"
-                    [sortable]="true"
-                    (taskReordered)="onTaskReordered($event)"
-                    emptyMessage="No unscheduled tasks."
-                    (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
-                    (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
-                    (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
-                    (toggleDone)="tasksStore.toggleDone($event)"
-                    (remove)="confirmDeleteTask($event)"
-                    (rename)="tasksStore.updateTitle($event.task, $event.title)"
-                    (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
-                />
-            </section>
+                    <h2>Need to reorganize?</h2>
 
-            <section
-                class="today-board__column"
-                aria-labelledby="overdue-heading">
-                <h2 id="overdue-heading">Overdue ({{ overdueTasks().length }})</h2>
+                    <p>
+                        Review unscheduled and overdue tasks, and decide what belongs on today's
+                        list.
+                    </p>
 
-                <app-task-list
-                    [tasks]="overdueTasks()"
-                    [projects]="projectsStore.projectTree()"
-                    [disabled]="tasksStore.mutating()"
-                    [draggable]="true"
-                    dropListId="board-overdue"
-                    [connectedDropLists]="todayDropLists"
-                    [acceptsDrops]="false"
-                    (taskDropped)="onTaskDropped($event)"
-                    emptyMessage="Nothing overdue."
-                    (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
-                    (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
-                    (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
-                    (toggleDone)="tasksStore.toggleDone($event)"
-                    (remove)="confirmDeleteTask($event)"
-                    (rename)="tasksStore.updateTitle($event.task, $event.title)"
-                    (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
-                />
-            </section>
+                    <button
+                        type="button"
+                        class="today-board__plan-button"
+                        (click)="setTodayLayout('planning')"
+                    >
+                        Plan my day
+                    </button>
+                </aside>
+            }
+
+            @if (isTodayPlanning()) {
+                <section class="today-board__column" aria-labelledby="unscheduled-heading">
+                    <h2 id="unscheduled-heading">Unscheduled ({{ unscheduledTasks().length }})</h2>
+
+                    <app-task-list
+                        [tasks]="unscheduledTasks()"
+                        [projects]="projectsStore.projectTree()"
+                        [disabled]="tasksStore.mutating()"
+                        [draggable]="true"
+                        dropListId="board-unscheduled"
+                        [connectedDropLists]="todayDropLists"
+                        [destinationDate]="null"
+                        (taskDropped)="onTaskDropped($event)"
+                        [sortable]="true"
+                        (taskReordered)="onTaskReordered($event)"
+                        emptyMessage="No unscheduled tasks."
+                        (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
+                        (plannedDateChange)="
+                            tasksStore.updatePlannedDate($event.task, $event.plannedDate)
+                        "
+                        (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
+                        (toggleDone)="tasksStore.toggleDone($event)"
+                        (remove)="confirmDeleteTask($event)"
+                        (rename)="tasksStore.updateTitle($event.task, $event.title)"
+                        (editDescription)="
+                            tasksStore.updateDescription($event.task, $event.description)
+                        "
+                    />
+                </section>
+
+                <section class="today-board__column" aria-labelledby="overdue-heading">
+                    <h2 id="overdue-heading">Overdue ({{ overdueTasks().length }})</h2>
+
+                    <app-task-list
+                        [tasks]="overdueTasks()"
+                        [projects]="projectsStore.projectTree()"
+                        [disabled]="tasksStore.mutating()"
+                        [draggable]="true"
+                        dropListId="board-overdue"
+                        [connectedDropLists]="todayDropLists"
+                        [acceptsDrops]="false"
+                        (taskDropped)="onTaskDropped($event)"
+                        emptyMessage="Nothing overdue."
+                        (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
+                        (plannedDateChange)="
+                            tasksStore.updatePlannedDate($event.task, $event.plannedDate)
+                        "
+                        (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
+                        (toggleDone)="tasksStore.toggleDone($event)"
+                        (remove)="confirmDeleteTask($event)"
+                        (rename)="tasksStore.updateTitle($event.task, $event.title)"
+                        (editDescription)="
+                            tasksStore.updateDescription($event.task, $event.description)
+                        "
+                    />
+                </section>
+            }
         </section>
     } @else if (view() === 'upcoming') {
         <section class="upcoming-board" aria-label="Upcoming task board">
@@ -104,7 +156,7 @@
                 <section
                     class="upcoming-board__column"
                     [attr.aria-labelledby]="'upcoming-' + day.date"
-                    >
+                >
                     <h2 [id]="'upcoming-' + day.date">
                         @if (day.label === 'Today' || day.label === 'Tomorrow') {
                             {{ day.label }} —
@@ -127,12 +179,16 @@
                         (taskDropped)="onTaskDropped($event)"
                         emptyMessage="No tasks scheduled."
                         (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
-                        (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
+                        (plannedDateChange)="
+                            tasksStore.updatePlannedDate($event.task, $event.plannedDate)
+                        "
                         (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
                         (toggleDone)="tasksStore.toggleDone($event)"
                         (remove)="confirmDeleteTask($event)"
                         (rename)="tasksStore.updateTitle($event.task, $event.title)"
-                        (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
+                        (editDescription)="
+                            tasksStore.updateDescription($event.task, $event.description)
+                        "
                     />
                 </section>
             }
@@ -155,12 +211,16 @@
                     (taskReordered)="onTaskReordered($event)"
                     emptyMessage="No open tasks."
                     (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
-                    (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
+                    (plannedDateChange)="
+                        tasksStore.updatePlannedDate($event.task, $event.plannedDate)
+                    "
                     (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
                     (toggleDone)="tasksStore.toggleDone($event)"
                     (remove)="confirmDeleteTask($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
-                    (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
+                    (editDescription)="
+                        tasksStore.updateDescription($event.task, $event.description)
+                    "
                 />
             }
         </section>
@@ -174,7 +234,7 @@
                 [attr.aria-expanded]="showCompleted()"
                 aria-controls="completed-task-list"
                 (click)="showCompleted.set(!showCompleted())"
-                >
+            >
                 <i
                     [class]="showCompleted() ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
                     aria-hidden="true"
@@ -184,11 +244,7 @@
             </button>
         </h2>
 
-        <div
-            id="completed-task-list"
-            role="region"
-            aria-label="Completed tasks"
-            >
+        <div id="completed-task-list" role="region" aria-label="Completed tasks">
             @if (showCompleted()) {
                 <app-task-list
                     [tasks]="completedTasks()"
@@ -196,12 +252,16 @@
                     [disabled]="tasksStore.mutating()"
                     emptyMessage="No completed tasks."
                     (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
-                    (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"
+                    (plannedDateChange)="
+                        tasksStore.updatePlannedDate($event.task, $event.plannedDate)
+                    "
                     (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
                     (toggleDone)="tasksStore.toggleDone($event)"
                     (remove)="confirmDeleteTask($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
-                    (editDescription)="tasksStore.updateDescription($event.task, $event.description)"
+                    (editDescription)="
+                        tasksStore.updateDescription($event.task, $event.description)
+                    "
                 />
             }
         </div>
