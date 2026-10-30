@@ -21,6 +21,9 @@ export type Task = {
     due_date: string | null;
     due_at: string | null;
 
+    project_position: number | null;
+    planned_position: number | null;
+
     status: TaskStatus;
 
     created_at: string;

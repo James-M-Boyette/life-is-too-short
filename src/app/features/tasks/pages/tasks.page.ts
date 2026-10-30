@@ -24,6 +24,12 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { TaskListComponent } from '@/features/tasks/components/task-list/task-list.component';
 import type { TaskScheduleDrop } from '@/features/tasks/models/task-schedule-drop.model';
+import type { TaskReorder } from '@/features/tasks/models/task-reorder.model';
+
+import {
+    calculateTaskPosition,
+    sortTasksByPosition,
+} from '@/features/tasks/utils/task-ordering.util';
 
 @Component({
     standalone: true,
@@ -95,6 +101,45 @@ export class TasksPage {
         }
     }
 
+    protected async onTaskReordered(event: TaskReorder): Promise<void> {
+        const { task, previousIndex, currentIndex, tasks, field } = event;
+
+        // Work on a copy. Never mutate a signal-derived input array.
+        const reordered = [...tasks];
+
+        const [movedTask] = reordered.splice(previousIndex, 1);
+        reordered.splice(currentIndex, 0, movedTask);
+
+        const previousTask = reordered[currentIndex - 1] ?? null;
+        const nextTask = reordered[currentIndex + 1] ?? null;
+
+        try {
+            // A missing position is not a valid neighbor boundary.
+            // We'll handle new-task position initialization separately.
+            if (
+                (previousTask && previousTask[field] === null) ||
+                (nextTask && nextTask[field] === null)
+            ) {
+                throw new Error('Cannot reorder tasks with uninitialized positions');
+            }
+
+            const newPosition = calculateTaskPosition(
+                previousTask?.[field] ?? null,
+                nextTask?.[field] ?? null,
+            );
+
+            await this.tasksStore.updateTaskPosition(
+            task,
+            field,
+            newPosition,
+        );
+        } catch (error) {
+            console.error('Could not reorder task:', error);
+            // Store errors are recorded by TasksStore; calculation errors
+            // also need a user-visible message before this is production-ready.
+        }
+    }
+
     protected readonly showCompleted = signal(false);
 
     readonly view = input<TaskView>('all');
@@ -123,7 +168,10 @@ export class TasksPage {
 
         switch (view) {
             case 'inbox':
-                return tasks.filter((task) => task.project_id === null);
+                 return sortTasksByPosition(
+                    tasks.filter((task) => task.project_id === null),
+                    'project_position',
+                );
 
             case 'project': {
                 const projectId = this.projectId();
@@ -132,7 +180,10 @@ export class TasksPage {
                     return [];
                 }
 
-                return tasks.filter((task) => task.project_id === projectId);
+                 return sortTasksByPosition(
+                    tasks.filter((task) => task.project_id === projectId),
+                    'project_position',
+                );
             }
 
             case 'all':
@@ -142,22 +193,31 @@ export class TasksPage {
     });
 
     protected readonly todayTasks = computed(() =>
-        this.tasksStore
-            .tasks()
-            .filter(
+        sortTasksByPosition(
+            this.tasksStore.tasks().filter(
                 (task) =>
-                    !task.is_done && getTaskDateGroup(task, this.calendarClock.today()) === 'today',
+                    !task.is_done &&
+                    getTaskDateGroup(
+                        task,
+                        this.calendarClock.today(),
+                    ) === 'today',
             ),
+            'planned_position',
+        ),
     );
 
     protected readonly unscheduledTasks = computed(() =>
-        this.tasksStore
-            .tasks()
-            .filter(
+        sortTasksByPosition(
+            this.tasksStore.tasks().filter(
                 (task) =>
                     !task.is_done &&
-                    getTaskDateGroup(task, this.calendarClock.today()) === 'unscheduled',
+                    getTaskDateGroup(
+                        task,
+                        this.calendarClock.today(),
+                    ) === 'unscheduled',
             ),
+            'planned_position',
+        ),
     );
 
     protected readonly overdueTasks = computed(() =>
@@ -172,7 +232,8 @@ export class TasksPage {
 
     protected readonly upcomingDays = computed(() => {
         const today = this.calendarClock.today();
-        const tasks = this.tasksStore.tasks().filter((task) => !task.is_done);
+        const tasks = this.tasksStore.tasks().
+            filter((task) => !task.is_done);
 
         return [
             { label: 'Today', date: today },
@@ -181,7 +242,12 @@ export class TasksPage {
         ].map((day) => ({
             ...day,
             displayDate: parseLocalDate(day.date),
-            tasks: tasks.filter((task) => getTaskDisplayDate(task) === day.date),
+            tasks: sortTasksByPosition(
+                tasks.filter(
+                    (task) => getTaskDisplayDate(task) === day.date,
+                ),
+                'planned_position',
+            ),
         }));
     });
 

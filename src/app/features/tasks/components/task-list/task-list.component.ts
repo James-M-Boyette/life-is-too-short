@@ -9,6 +9,8 @@ import { TaskRowComponent } from '@/features/tasks/components/task-row/task-row.
 import { CdkDropList, CdkDragDrop } from '@angular/cdk/drag-drop';
 
 import type { TaskScheduleDrop } from '@/features/tasks/models/task-schedule-drop.model';
+import type { TaskReorder } from '@/features/tasks/models/task-reorder.model';
+import { TaskOrderField } from '@/features/tasks/utils/task-ordering.util'
 
 @Component({
     selector: 'app-task-list',
@@ -36,17 +38,35 @@ export class TaskListComponent {
     readonly acceptsDrops = input(true);
 
     readonly taskDropped = output<TaskScheduleDrop>();
+    readonly sortable = input(false);
+    readonly orderField = input<TaskOrderField>('planned_position');
+
+    readonly taskReordered = output<TaskReorder>();
 
     protected readonly canEnter = () => this.acceptsDrops();
 
     protected onDrop(event: CdkDragDrop<Task[]>): void {
-        // Vertical ordering is a separate feature.
+        const task = event.item.data as Task;
+
+        // A drop within the same list changes manual ordering.
         if (event.previousContainer === event.container) {
+            if (!this.sortable() || event.previousIndex === event.currentIndex) {
+                return;
+            }
+
+            this.taskReordered.emit({
+                task,
+                previousIndex: event.previousIndex,
+                currentIndex: event.currentIndex,
+                tasks: event.container.data,
+                field: this.orderField(),
+            });
+
             return;
         }
 
-        const task = event.item.data as Task;
-
+        // A drop into another column changes scheduling.
+        // Preserve our existing horizontal drag-and-drop behavior.
         this.taskDropped.emit({
             task,
             plannedDate: this.destinationDate(),
