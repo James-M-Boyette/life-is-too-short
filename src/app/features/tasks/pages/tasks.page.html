@@ -16,24 +16,44 @@
     />
 
     @if (view() === 'today') {
-        <div class="today-layout-controls">
-            <button
-                type="button"
-                [class.is-active]="!isTodayPlanning()"
-                [attr.aria-pressed]="!isTodayPlanning()"
-                (click)="setTodayLayout('focus')"
-            >
-                Focus
-            </button>
+        <div class="today-toolbar">
+            <div class="today-toolbar__description">
+                @if (isTodayPlanning()) {
+                    <span class="today-toolbar__title">Plan your day</span>
+                    <span class="today-toolbar__subtitle">
+                        Move tasks between Today, Unscheduled and Overdue.
+                    </span>
+                } @else {
+                    <span class="today-toolbar__title">Today's priorities</span>
+                    <span class="today-toolbar__subtitle">
+                        Stay focused on what matters today.
+                    </span>
+                }
+            </div>
 
-            <button
-                type="button"
-                [class.is-active]="isTodayPlanning()"
-                [attr.aria-pressed]="isTodayPlanning()"
-                (click)="setTodayLayout('planning')"
-            >
-                Plan
-            </button>
+            <div class="today-toolbar__modes" role="group" aria-label="Today layout">
+                <button
+                    type="button"
+                    class="today-toolbar__mode"
+                    [class.today-toolbar__mode--active]="!isTodayPlanning()"
+                    [attr.aria-pressed]="!isTodayPlanning()"
+                    (click)="setTodayLayout('focus')"
+                >
+                    <i class="pi pi-list-check" aria-hidden="true"></i>
+                    Focus
+                </button>
+
+                <button
+                    type="button"
+                    class="today-toolbar__mode"
+                    [class.today-toolbar__mode--active]="isTodayPlanning()"
+                    [attr.aria-pressed]="isTodayPlanning()"
+                    (click)="setTodayLayout('planning')"
+                >
+                    <i class="pi pi-th-large" aria-hidden="true"></i>
+                    Plan
+                </button>
+            </div>
         </div>
 
         <section
