@@ -1,16 +1,11 @@
 import type { Task } from '@/features/tasks/models/tasks.model';
 import { getTaskDisplayDate } from './task-scheduling.util';
 
-export type TaskOrderField =
-    | 'project_position'
-    | 'planned_position';
+export type TaskOrderField = 'project_position' | 'planned_position';
 
 const POSITION_STEP = 1000;
 
-export function sortTasksByPosition(
-    tasks: Task[],
-    field: TaskOrderField,
-): Task[] {
+export function sortTasksByPosition(tasks: Task[], field: TaskOrderField): Task[] {
     return [...tasks].sort((a, b) => {
         const aPosition = a[field];
         const bPosition = b[field];
@@ -26,17 +21,11 @@ export function sortTasksByPosition(
         }
 
         // Deterministic fallback.
-        return (
-            b.created_at.localeCompare(a.created_at) ||
-            a.id.localeCompare(b.id)
-        );
+        return b.created_at.localeCompare(a.created_at) || a.id.localeCompare(b.id);
     });
 }
 
-export function calculateTaskPosition(
-    previous: number | null,
-    next: number | null,
-): number {
+export function calculateTaskPosition(previous: number | null, next: number | null): number {
     if (previous === null && next === null) {
         return POSITION_STEP;
     }
@@ -66,10 +55,7 @@ export function getTaskPlanningContext(task: Task): string {
     return getTaskDisplayDate(task) ?? 'unscheduled';
 }
 
-export function getNextTaskPosition(
-    tasks: Task[],
-    field: TaskOrderField,
-): number {
+export function getNextTaskPosition(tasks: Task[], field: TaskOrderField): number {
     const positions = tasks
         .map((task) => task[field])
         .filter((position): position is number => position !== null);

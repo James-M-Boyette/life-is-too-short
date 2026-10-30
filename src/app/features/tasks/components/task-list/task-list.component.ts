@@ -10,6 +10,7 @@ import { CdkDropList, CdkDragDrop } from '@angular/cdk/drag-drop';
 
 import type { TaskScheduleDrop } from '@/features/tasks/models/task-schedule-drop.model';
 import type { TaskReorder } from '@/features/tasks/models/task-reorder.model';
+import { TaskOrderField } from '@/features/tasks/utils/task-ordering.util'
 
 @Component({
     selector: 'app-task-list',
@@ -38,6 +39,7 @@ export class TaskListComponent {
 
     readonly taskDropped = output<TaskScheduleDrop>();
     readonly sortable = input(false);
+    readonly orderField = input<TaskOrderField>('planned_position');
 
     readonly taskReordered = output<TaskReorder>();
 
@@ -57,6 +59,7 @@ export class TaskListComponent {
                 previousIndex: event.previousIndex,
                 currentIndex: event.currentIndex,
                 tasks: event.container.data,
+                field: this.orderField(),
             });
 
             return;

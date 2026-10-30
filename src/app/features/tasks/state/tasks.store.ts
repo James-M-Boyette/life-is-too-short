@@ -91,10 +91,10 @@ export class TasksStore {
                 .subscribe((status, error) => {
                     this.realtimeConnected.set(status === 'SUBSCRIBED');
 
-                    console.log('[Tasks Realtime]', {
-                        status,
-                        errorMessage: error?.message ?? null,
-                    });
+                    // console.log('[Tasks Realtime]', {
+                    //     status,
+                    //     errorMessage: error?.message ?? null,
+                    // });
                 });
 
             onCleanup(() => this.teardownRealtime());

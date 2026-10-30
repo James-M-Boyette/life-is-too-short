@@ -102,7 +102,7 @@ export class TasksPage {
     }
 
     protected async onTaskReordered(event: TaskReorder): Promise<void> {
-        const { task, previousIndex, currentIndex, tasks } = event;
+        const { task, previousIndex, currentIndex, tasks, field } = event;
 
         // Work on a copy. Never mutate a signal-derived input array.
         const reordered = [...tasks];
@@ -117,15 +117,15 @@ export class TasksPage {
             // A missing position is not a valid neighbor boundary.
             // We'll handle new-task position initialization separately.
             if (
-                (previousTask && previousTask.planned_position === null) ||
-                (nextTask && nextTask.planned_position === null)
+                (previousTask && previousTask[field] === null) ||
+                (nextTask && nextTask[field] === null)
             ) {
                 throw new Error('Cannot reorder tasks with uninitialized positions');
             }
 
             const newPosition = calculateTaskPosition(
-                previousTask?.planned_position ?? null,
-                nextTask?.planned_position ?? null,
+                previousTask?.[field] ?? null,
+                nextTask?.[field] ?? null,
             );
 
             await this.tasksStore.updateTaskPosition(
@@ -168,7 +168,10 @@ export class TasksPage {
 
         switch (view) {
             case 'inbox':
-                return tasks.filter((task) => task.project_id === null);
+                 return sortTasksByPosition(
+                    tasks.filter((task) => task.project_id === null),
+                    'project_position',
+                );
 
             case 'project': {
                 const projectId = this.projectId();
@@ -177,7 +180,10 @@ export class TasksPage {
                     return [];
                 }
 
-                return tasks.filter((task) => task.project_id === projectId);
+                 return sortTasksByPosition(
+                    tasks.filter((task) => task.project_id === projectId),
+                    'project_position',
+                );
             }
 
             case 'all':
