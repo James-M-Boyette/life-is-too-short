@@ -11,12 +11,7 @@ import { TooltipModule } from 'primeng/tooltip';
 @Component({
     selector: 'app-sidebar',
     standalone: true,
-    imports: [
-        RouterLink,
-        RouterLinkActive,
-        TreeModule,
-        TooltipModule
-    ],
+    imports: [RouterLink, RouterLinkActive, TreeModule, TooltipModule],
     templateUrl: './app-sidebar.component.html',
     styleUrl: './app-sidebar.component.scss',
 })
@@ -30,6 +25,8 @@ export class AppSidebarComponent {
     protected readonly projectNodes = computed(() =>
         toProjectTreeNodes(this.projects(), this.expandedProjectIds()),
     );
+
+    readonly createTask = output<void>();
 
     readonly createProject = output<void>();
     readonly editProject = output<string>();
@@ -101,7 +98,7 @@ export class AppSidebarComponent {
 
             if (!request) return;
 
-            this.expandedProjectIds.update(ids => {
+            this.expandedProjectIds.update((ids) => {
                 const next = new Set(ids);
                 next.add(request.projectId);
                 return next;

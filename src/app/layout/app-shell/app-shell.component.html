@@ -15,22 +15,15 @@
 -->
 <div class="app-shell">
     <!-- App Header -->
-    <app-top-bar
-        [userEmail]="userEmail()"
-        (signOut)="signOut()"
-    />
+    <app-top-bar [userEmail]="userEmail()" (signOut)="signOut()" />
 
-    <div
-        class="app-body"
-        [style.grid-template-columns]="
-            sidebarWidth() + 'px 6px minmax(0, 1fr)'
-        "
-        >
+    <div class="app-body" [style.grid-template-columns]="sidebarWidth() + 'px 6px minmax(0, 1fr)'">
         <!-- App Sidebar -->
         <aside class="app-sidebar">
             <app-sidebar
                 [projects]="projectsStore.projectTree()"
                 [expandProjectRequest]="expandProjectRequest()"
+                (createTask)="openTaskDialog()"
                 (createProject)="openCreateProjectDialog()"
                 (editProject)="openEditProjectDialog($event)"
                 (deleteProject)="openDeleteProjectDialog($event)"
@@ -61,8 +54,38 @@
             <router-outlet />
         </main>
     </div>
-
 </div>
+
+<p-dialog
+    header="Add Task"
+    [modal]="true"
+    [visible]="taskDialogVisible()"
+    (visibleChange)="!$event && closeTaskDialog()"
+    [closable]="!creatingTask()"
+    [closeOnEscape]="!creatingTask()"
+    [dismissableMask]="false"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: '36rem', maxWidth: '95vw' }"
+    appendTo="body"
+>
+    @if (taskDialogVisible()) {
+        <app-task-create
+            [projects]="projectsStore.projectTree()"
+            [defaultProjectId]="null"
+            [defaultPlannedDate]="null"
+            [disabled]="creatingTask()"
+            (create)="createTask($event)"
+            (cancel)="closeTaskDialog()"
+        />
+
+        @if (taskCreateError(); as error) {
+            <p class="task-create-error" role="alert">
+                {{ error }}
+            </p>
+        }
+    }
+</p-dialog>
 
 <p-dialog
     [header]="projectDialogTitle()"
@@ -108,12 +131,11 @@
     @if (projectToDelete(); as project) {
         <p>
             Are you sure you want to delete
-            <strong>{{ project.name }}</strong>?
+            <strong>{{ project.name }}</strong
+            >?
         </p>
 
-        <p>
-            This will delete the project itself, but preserve its contents:
-        </p>
+        <p>This will delete the project itself, but preserve its contents:</p>
 
         <ul>
             <li>
@@ -122,8 +144,8 @@
             </li>
             <li>
                 {{ directChildCount() }}
-                immediate child project(s) will become top-level projects.
-                Their descendants and tasks will remain intact.
+                immediate child project(s) will become top-level projects. Their descendants and
+                tasks will remain intact.
             </li>
         </ul>
 
