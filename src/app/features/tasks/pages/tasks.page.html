@@ -60,6 +60,8 @@
                     [connectedDropLists]="todayDropLists"
                     [destinationDate]="null"
                     (taskDropped)="onTaskDropped($event)"
+                    [sortable]="true"
+                    (taskReordered)="onTaskReordered($event)"
                     emptyMessage="No unscheduled tasks."
                     (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
                     (plannedDateChange)="tasksStore.updatePlannedDate($event.task, $event.plannedDate)"

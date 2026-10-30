@@ -129,10 +129,10 @@ export class TasksPage {
             );
 
             await this.tasksStore.updateTaskPosition(
-                task,
-                field,
-                newPosition,
-            );
+            task,
+            field,
+            newPosition,
+        );
         } catch (error) {
             console.error('Could not reorder task:', error);
             // Store errors are recorded by TasksStore; calculation errors
@@ -207,13 +207,17 @@ export class TasksPage {
     );
 
     protected readonly unscheduledTasks = computed(() =>
-        this.tasksStore
-            .tasks()
-            .filter(
+        sortTasksByPosition(
+            this.tasksStore.tasks().filter(
                 (task) =>
                     !task.is_done &&
-                    getTaskDateGroup(task, this.calendarClock.today()) === 'unscheduled',
+                    getTaskDateGroup(
+                        task,
+                        this.calendarClock.today(),
+                    ) === 'unscheduled',
             ),
+            'planned_position',
+        ),
     );
 
     protected readonly overdueTasks = computed(() =>
