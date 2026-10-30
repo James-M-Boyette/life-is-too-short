@@ -39,6 +39,7 @@ export class TasksStore {
     private readonly taskMutationQueues = new Map<string, Promise<void>>();
     private readonly tasksNeedingReconciliation = new Set<string>();
     private readonly taskRevisions = new Map<string, number>();
+    private sessionGeneration = 0;
     readonly error = signal<string | null>(null); // Did fetching or mutating fail?
 
     readonly realtimeConnected = signal(false);
@@ -98,6 +99,9 @@ export class TasksStore {
         // Baseline refresh + realtime subscription lifecycle
         effect((onCleanup) => {
             const userId = this.auth.userId();
+
+            // Invalidate requests started under the previous session.
+            this.sessionGeneration;
 
             // Always tear down prior subscription when user changes/logs out
             this.teardownRealtime();
@@ -203,6 +207,8 @@ export class TasksStore {
     }
 
     async refreshTasks(): Promise<void> {
+        const generationAtStart = this.sessionGeneration;
+
         // Snapshot the revisions when this particular query starts.
         const revisionsAtStart = new Map(this.taskRevisions);
 
@@ -217,6 +223,12 @@ export class TasksStore {
                 .order('id', { ascending: true });
 
             if (error) throw error;
+
+            // The user signed out or switched accounts while this
+            // request was pending. Discard the response.
+            if (generationAtStart !== this.sessionGeneration) {
+                return;
+            }
 
             const fetchedTasks = (data ?? []) as Task[];
 

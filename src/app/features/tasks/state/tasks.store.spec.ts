@@ -44,6 +44,14 @@ describe('TasksStore', () => {
         single = vi.fn();
         userId = signal<string | null>(null);
 
+        const channel = {
+            on: vi.fn(),
+            subscribe: vi.fn(),
+        };
+
+        channel.on.mockReturnValue(channel);
+        channel.subscribe.mockReturnValue(channel);
+
         const query = {
             update,
             eq,
@@ -68,6 +76,8 @@ describe('TasksStore', () => {
                     provide: SUPABASE_CLIENT,
                     useValue: {
                         from,
+                        channel: vi.fn().mockReturnValue(channel),
+                        removeChannel: vi.fn().mockResolvedValue(undefined),
                     },
                 },
             ],
@@ -1112,5 +1122,58 @@ describe('TasksStore', () => {
         expect(store.tasks().some((task) => task.id === 'saved-task')).toBe(true);
 
         expect(store.tasks().some((task) => task.id === optimisticTask?.id)).toBe(false);
+    });
+
+    it('does not restore tasks when an old refresh finishes after logout', async () => {
+        const task = createTask({
+            user_id: 'user-1',
+        });
+
+        let resolveRefresh!: (result: { data: Task[]; error: null }) => void;
+
+        const refreshRequest = new Promise<{
+            data: Task[];
+            error: null;
+        }>((resolve) => {
+            resolveRefresh = resolve;
+        });
+
+        // Mock the query:
+        // from('tasks').select('*').order(...).order(...)
+        const secondOrder = vi.fn().mockReturnValue(refreshRequest);
+
+        const firstOrder = vi.fn().mockReturnValue({
+            order: secondOrder,
+        });
+
+        select.mockReturnValue({
+            order: firstOrder,
+        });
+
+        // Sign in as User A.
+        // The constructor effect starts an initial refresh.
+        userId.set('user-1');
+        TestBed.tick();
+
+        expect(from).toHaveBeenCalledWith('tasks');
+
+        // Sign out before the query completes.
+        userId.set(null);
+        TestBed.tick();
+
+        expect(store.tasks()).toEqual([]);
+
+        // Supabase returns the old user's tasks after logout.
+        resolveRefresh({
+            data: [task],
+            error: null,
+        });
+
+        await vi.waitFor(() => {
+            expect(store.loading()).toBe(false);
+        });
+
+        // The old user's tasks must not reappear.
+        expect(store.tasks()).toEqual([]);
     });
 });
