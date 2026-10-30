@@ -42,15 +42,19 @@ export class TasksStore {
 
     private channel: RealtimeChannel | null = null;
 
-    private async runMutation<T>(fn: () => Promise<T>): Promise<T> {
+    private async runMutation<T>(taskId: string, fn: () => Promise<T>): Promise<T> {
         this.error.set(null);
         this.mutating.set(true);
+        this.pendingTaskIds.add(taskId);
+
         try {
             return await fn();
-        } catch (e: unknown) {
-            this.error.set(e instanceof Error ? e.message : 'Failed to load tasks');
-            throw e;
+        } catch (error: unknown) {
+            this.error.set(error instanceof Error ? error.message : 'Failed to update task');
+
+            throw error;
         } finally {
+            this.pendingTaskIds.delete(taskId);
             this.mutating.set(false);
         }
     }
@@ -120,7 +124,7 @@ export class TasksStore {
     }
 
     private upsertFromRealtime(row: Task) {
-         // Guard: Don't overwrite a task while a local mutation is pending.
+        // Guard: Don't overwrite a task while a local mutation is pending.
         if (this.pendingTaskIds.has(row.id)) {
             return;
         }
@@ -262,7 +266,7 @@ export class TasksStore {
         const nextTitle = title.trim();
         if (!nextTitle || nextTitle === task.title) return;
 
-        await this.runMutation(async () => {
+        await this.runMutation(task.id, async () => {
             const next: Task = {
                 ...task,
                 title: nextTitle,
@@ -296,7 +300,7 @@ export class TasksStore {
 
         if (normalized === task.description) return;
 
-        await this.runMutation(async () => {
+        await this.runMutation(task.id, async () => {
             const next: Task = {
                 ...task,
                 description: normalized,
@@ -335,11 +339,8 @@ export class TasksStore {
             throw new Error('Invalid task position');
         }
 
-        await this.runMutation(async () => {
+        await this.runMutation(task.id, async () => {
             const previousPosition = task[field];
-
-            // Mark this task as having an active local mutation.
-            this.pendingTaskIds.add(task.id);
 
             try {
                 // 1. Optimistically update the task in our signal.
@@ -347,9 +348,9 @@ export class TasksStore {
                     tasks.map((current) =>
                         current.id === task.id
                             ? {
-                                ...current,
-                                [field]: position,
-                            }
+                                  ...current,
+                                  [field]: position,
+                              }
                             : current,
                     ),
                 );
@@ -369,11 +370,7 @@ export class TasksStore {
 
                 // 3. Reconcile with the saved database record.
                 this.tasks.update((tasks) =>
-                    tasks.map((current) =>
-                        current.id === task.id
-                            ? (data as Task)
-                            : current,
-                    ),
+                    tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
                 );
             } catch (error) {
                 // 4. Restore the previous position if persistence fails.
@@ -389,9 +386,6 @@ export class TasksStore {
                 );
 
                 throw error;
-            } finally {
-                // This runs after success AND failure.
-                this.pendingTaskIds.delete(task.id);
             }
         });
     }
@@ -401,7 +395,7 @@ export class TasksStore {
             return;
         }
 
-        await this.runMutation(async () => {
+        await this.runMutation(task.id, async () => {
             const previousProjectId = task.project_id;
             const previousPosition = task.project_position;
 
@@ -473,7 +467,7 @@ export class TasksStore {
             return;
         }
 
-        await this.runMutation(async () => {
+        await this.runMutation(task.id, async () => {
             // Keep a snapshot of the task's previous scheduling state.
             const previousDate = task.planned_date;
             const previousPosition = task.planned_position;
@@ -563,7 +557,7 @@ export class TasksStore {
             return;
         }
 
-        await this.runMutation(async () => {
+        await this.runMutation(task.id, async () => {
             const previousDate = task.due_date;
             const previousPosition = task.planned_position;
 
@@ -608,7 +602,7 @@ export class TasksStore {
 
             try {
                 // Save both properties in one database request.
-                const { data, error } =  await this.supabase
+                const { data, error } = await this.supabase
                     .from('tasks')
                     .update({
                         due_date: dueDate,
@@ -646,7 +640,7 @@ export class TasksStore {
     }
 
     async toggleDone(task: Task) {
-        await this.runMutation(async () => {
+        await this.runMutation(task.id, async () => {
             const isDone = !task.is_done;
             const next: Task = {
                 ...task,
@@ -678,7 +672,7 @@ export class TasksStore {
     }
 
     async remove(taskId: string) {
-        await this.runMutation(async () => {
+        await this.runMutation(taskId, async () => {
             const prev = this.tasks();
             this.tasks.update((list) => list.filter((t) => t.id !== taskId));
 
