@@ -84,6 +84,10 @@ export class AppShellComponent {
     }
 
     protected openTaskDialog(): void {
+        if (this.taskDialogVisible() || this.creatingTask()) {
+            return;
+        }
+
         this.taskCreateError.set(null);
         this.taskCreateDialog.open(this.getCurrentTaskContext());
     }
