@@ -1318,4 +1318,69 @@ describe('TasksStore', () => {
         expect(store.tasks()).toEqual([userBTask]);
         expect(store.error()).toBeNull();
     });
+
+    it('restores only the deleted task when deletion fails', async () => {
+        const taskA = createTask({
+            id: 'task-a',
+            title: 'Buy groceries',
+        });
+
+        const taskB = createTask({
+            id: 'task-b',
+            title: 'Book flights',
+        });
+
+        store.tasks.set([taskA, taskB]);
+
+        // Hold the Supabase deletion request open.
+        let resolveDelete!: (result: { error: Error }) => void;
+
+        const deleteRequest = new Promise<{ error: Error }>((resolve) => {
+            resolveDelete = resolve;
+        });
+
+        const deleteQuery = {
+            eq: vi.fn(),
+            then: (
+                resolve: (value: { error: Error }) => unknown,
+                reject?: (reason: unknown) => unknown,
+            ) => deleteRequest.then(resolve, reject),
+        };
+
+        deleteQuery.eq.mockReturnValue(deleteQuery);
+
+        const deleteMock = vi.fn().mockReturnValue(deleteQuery);
+
+        from.mockReturnValue({
+            delete: deleteMock,
+        });
+
+        // Start deleting Task A.
+        const deletion = store.remove(taskA.id);
+
+        // Wait until the optimistic deletion has happened.
+        await vi.waitFor(() => {
+            expect(store.tasks().map((task) => task.id)).toEqual(['task-b']);
+        });
+
+        // Another operation updates Task B while deletion is pending.
+        const updatedTaskB = {
+            ...taskB,
+            title: 'Book flights to Athens',
+        };
+
+        store.tasks.update((tasks) =>
+            tasks.map((task) => (task.id === taskB.id ? updatedTaskB : task)),
+        );
+
+        // Supabase rejects the deletion.
+        resolveDelete({
+            error: new Error('Delete failed'),
+        });
+
+        await expect(deletion).rejects.toThrow('Delete failed');
+
+        // Task A should return, but Task B's newer title must survive.
+        expect(store.tasks()).toEqual([taskA, updatedTaskB]);
+    });
 });

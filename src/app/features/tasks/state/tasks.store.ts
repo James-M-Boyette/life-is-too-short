@@ -922,15 +922,51 @@ export class TasksStore {
         );
     }
 
-    async remove(taskId: string) {
-        await this.runMutation(taskId, async () => {
-            const prev = this.tasks();
-            this.tasks.update((list) => list.filter((t) => t.id !== taskId));
+    async remove(taskId: string): Promise<void> {
+        await this.runMutation(taskId, async (isCurrentSession) => {
+            const tasks = this.tasks();
+            const originalIndex = tasks.findIndex((task) => task.id === taskId);
 
-            const { error } = await this.supabase.from('tasks').delete().eq('id', taskId);
+            if (originalIndex === -1) {
+                throw new Error('Task no longer exists');
+            }
 
-            if (error) {
-                this.tasks.set(prev);
+            const deletedTask = tasks[originalIndex];
+
+            // Optimistically remove only the requested task.
+            this.tasks.update((current) => current.filter((task) => task.id !== taskId));
+
+            try {
+                const { error } = await this.supabase
+                    .from('tasks')
+                    .delete()
+                    .eq('id', taskId)
+                    .eq('user_id', deletedTask.user_id);
+
+                if (error) {
+                    throw error;
+                }
+            } catch (error) {
+                // Never restore an old user's task after a session change.
+                if (isCurrentSession()) {
+                    this.tasks.update((current) => {
+                        // Avoid duplicates if the task was already restored.
+                        if (current.some((task) => task.id === taskId)) {
+                            return current;
+                        }
+
+                        const restored = [...current];
+
+                        // Restore the task to its approximate original position
+                        // without overwriting changes to other tasks.
+                        const insertionIndex = Math.min(originalIndex, restored.length);
+
+                        restored.splice(insertionIndex, 0, deletedTask);
+
+                        return restored;
+                    });
+                }
+
                 throw error;
             }
         });
