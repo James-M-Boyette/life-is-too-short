@@ -9,13 +9,14 @@
         "build:prod": "ng build --configuration production",
         "watch": "ng build --watch --configuration development",
         "test": "ng test",
+        "testNoWatch": "ng test --watch=false",
         "backup:prod": "powershell -NoProfile -File ./scripts/backup-prod.ps1",
         "git:add": "git add .",
         "git:commit": "git diff --cached --quiet || git commit -m\"Routine build of app\"",
         "git:commit_prod": "git diff --cached --quiet || git commit -m\"Routine build of app for prod\"",
         "git:push": "git push",
         "push": "pnpm run build && pnpm run git:add && pnpm run git:commit && pnpm run git:push",
-        "push_prod": "pnpm  build:prod && pnpm git:add && pnpm git:commit_prod && pnpm git:push"
+        "push_prod": "pnpm testNoWatch && pnpm build:prod && pnpm git:add && pnpm git:commit_prod && pnpm git:push"
     },
     "prettier": {
         "printWidth": 100,

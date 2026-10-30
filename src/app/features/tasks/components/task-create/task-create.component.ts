@@ -9,21 +9,23 @@ import { ButtonModule } from 'primeng/button';
 import { TreeSelectModule } from 'primeng/treeselect';
 import type { ProjectNode } from '@/features/projects/models/project.model';
 import { TreeNode } from 'primeng/api';
-import {
-    ReactiveFormsModule,
-    Validators,
-    NonNullableFormBuilder,
-} from '@angular/forms';
+import { ReactiveFormsModule, Validators, NonNullableFormBuilder } from '@angular/forms';
 import { noWhitespaceValidator } from '@/shared/validators/no-whitespace-validator';
 import {
     toProjectTreeNodes,
     findTreeNodeByKey,
 } from '@/features/projects/utils/project-tree-node.util';
+import { DatePickerModule } from 'primeng/datepicker';
+import {
+    parseLocalDate,
+    formatLocalDate,
+} from '@/shared/utils/date.util';
 
 export type CreateTaskPayload = {
     title: string;
     description: string | null;
-    projectId: string | null; // placeholder for later
+    projectId: string | null;
+    plannedDate: string | null;
 };
 
 @Component({
@@ -35,6 +37,7 @@ export type CreateTaskPayload = {
         TextareaModule,
         // SelectModule,
         TreeSelectModule,
+        DatePickerModule,
         ButtonModule,
         ReactiveFormsModule,
     ],
@@ -46,6 +49,7 @@ export class TaskCreateComponent {
     readonly projects = input<ProjectNode[]>([]);
 
     readonly defaultProjectId = input<string | null>(null);
+    readonly defaultPlannedDate = input<string | null>(null);
 
     private readonly fb = inject(NonNullableFormBuilder);
 
@@ -53,18 +57,23 @@ export class TaskCreateComponent {
         title: ['', [Validators.required, noWhitespaceValidator]],
         description: [''],
         project: this.fb.control<TreeNode | null>(null),
+        plannedDate: this.fb.control<Date | null>(null),
     });
 
     protected readonly projectOptions = computed<TreeNode[]>(() =>
-        toProjectTreeNodes(this.projects())
+        toProjectTreeNodes(this.projects()),
     );
 
     private readonly defaultProjectNode = computed(() => {
         const projectId = this.defaultProjectId();
 
-        return projectId
-            ? findTreeNodeByKey(this.projectOptions(), projectId)
-            : null;
+        return projectId ? findTreeNodeByKey(this.projectOptions(), projectId) : null;
+    });
+
+    private readonly syncDefaultPlannedDate = effect(() => {
+        const plannedDate = this.defaultPlannedDate();
+
+        this.form.controls.plannedDate.setValue(parseLocalDate(plannedDate), { emitEvent: false });
     });
 
     private lastDefaultProjectId: string | null = null;
@@ -73,9 +82,6 @@ export class TaskCreateComponent {
     private readonly syncDefaultProject = effect(() => {
         const projectId = this.defaultProjectId();
         const selectedNode = this.defaultProjectNode();
-
-        console.log('Default project ID:', projectId);
-        console.log('Matching project node:', selectedNode);
 
         if (projectId !== this.lastDefaultProjectId) {
             this.lastDefaultProjectId = projectId;
@@ -95,29 +101,34 @@ export class TaskCreateComponent {
         }
     });
 
-    // Keep this as string for now so it plugs into TasksStore.add(title).
-    // Later we'll upgrade this to emit { title, description, projectId }.
+    readonly disabled = input(false);
+
     readonly create = output<CreateTaskPayload>();
+    readonly cancel = output<void>();
 
-    protected onSubmit() {
-        if ( this.form.invalid ) return;
+    protected onSubmit(): void {
+        if (this.form.invalid || this.disabled()) {
+            return;
+        }
 
-        const { title, description, project } = this.form.getRawValue();
+        const { title, description, project, plannedDate } = this.form.getRawValue();
 
         this.create.emit({
             title: title.trim(),
             description: description.trim() || null,
             projectId: project?.key ?? null,
+            plannedDate: formatLocalDate(plannedDate),
         });
 
-        this.form.reset({
-            title: '',
-            description: '',
-            project: project,
-        });
+        // Do not reset here.
+        // The parent decides whether creation succeeded.
     }
 
-    protected onCancelCreateTask() {
-        this.form.reset();
+    protected onCancelCreateTask(): void {
+        if (this.disabled()) {
+            return;
+        }
+
+        this.cancel.emit();
     }
 }

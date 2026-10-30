@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     calculateTaskPosition,
+    getFirstTaskPosition,
     getNextTaskPosition,
     getTaskPlanningContext,
     sortTasksByPosition,
@@ -132,6 +133,39 @@ describe('sortTasksByPosition', () => {
             sortTasksByPosition(tasks, 'planned_position')
                 .map((task) => task.id),
         ).toEqual(['newer', 'older']);
+    });
+});
+
+describe('getFirstTaskPosition', () => {
+    it('places new tasks before existing tasks', () => {
+        const tasks = [
+            createTask({ id: 'a', project_position: 1000 }),
+            createTask({ id: 'b', project_position: 2000 }),
+        ];
+
+        expect(getFirstTaskPosition(tasks, 'project_position')).toBe(0);
+    });
+
+    it('supports existing negative positions', () => {
+        const tasks = [
+            createTask({ id: 'a', planned_position: -1000 }),
+            createTask({ id: 'b', planned_position: 1000 }),
+        ];
+
+        expect(getFirstTaskPosition(tasks, 'planned_position')).toBe(-2000);
+    });
+
+    it('returns the initial position for an empty list', () => {
+        expect(getFirstTaskPosition([], 'project_position')).toBe(1000);
+    });
+
+    it('ignores null positions', () => {
+        const tasks = [
+            createTask({ id: 'a', project_position: null }),
+            createTask({ id: 'b', project_position: 2000 }),
+        ];
+
+        expect(getFirstTaskPosition(tasks, 'project_position')).toBe(1000);
     });
 });
 

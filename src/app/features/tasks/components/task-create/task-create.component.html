@@ -1,15 +1,11 @@
-<form
-    id="create-task-form"
-    class="create-new-task-form"
-    [formGroup]="form"
-    (ngSubmit)="onSubmit()"
-    >
+<form id="create-task-form" class="create-new-task-form" [formGroup]="form" (ngSubmit)="onSubmit()">
     <div class="task-content">
         <input
             type="text"
             name="task-title"
             placeholder="Add a task …"
             formControlName="title"
+            [disabled]="disabled()"
         />
 
         <textarea
@@ -19,6 +15,7 @@
             [autoResize]="false"
             placeholder="Enter a description for this task ..."
             formControlName="description"
+            [disabled]="disabled()"
         ></textarea>
     </div>
 
@@ -29,23 +26,28 @@
             placeholder="Select a Project"
             formControlName="project"
             [showClear]="true"
+            [disabled]="disabled()"
+            appendTo="body"
+        />
+
+        <p-datepicker
+            formControlName="plannedDate"
+            [showIcon]="true"
+            iconDisplay="input"
+            [showClear]="true"
+            [disabled]="disabled()"
+            appendTo="body"
+            dateFormat="M d, yy"
+            placeholder="Planned date"
         />
 
         <div class="action-buttons-container">
-            <button
-                pButton
-                type="button"
-                (click)="onCancelCreateTask()"
-            >
+            <button pButton type="button" (click)="onCancelCreateTask()" [disabled]="disabled()">
                 <i class="pi pi-times" pButtonIcon></i>
                 <span pButtonLabel>Cancel</span>
             </button>
 
-            <button
-                pButton
-                type="submit"
-                [disabled]="form.invalid"
-            >
+            <button pButton type="submit" [disabled]="form.invalid || disabled()">
                 <i class="pi pi-plus" pButtonIcon></i>
                 <span pButtonLabel>Add Task</span>
             </button>

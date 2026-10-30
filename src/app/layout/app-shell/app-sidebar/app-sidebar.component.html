@@ -4,8 +4,8 @@
 -->
 <nav class="sidebar-navigation">
     <section class="focus-navigation">
-        <button type="button">
-            <i class="pi pi-plus"></i>
+        <button type="button" (click)="createTask.emit()">
+            <i class="pi pi-plus" aria-hidden="true"></i>
             Add Task
         </button>
 
@@ -27,19 +27,9 @@
             Inbox
         </a>
 
-        <a
-            routerLink="/tasks/today"
-            routerLinkActive="active"
-        >
-            Today
-        </a>
+        <a routerLink="/tasks/today" routerLinkActive="active"> Today </a>
 
-        <a
-            routerLink="/tasks/upcoming"
-            routerLinkActive="active"
-        >
-            Upcoming
-        </a>
+        <a routerLink="/tasks/upcoming" routerLinkActive="active"> Upcoming </a>
     </section>
 
     <section class="project-navigation">
@@ -60,19 +50,9 @@
         </header>
 
         <div class="project-tree-actions">
-            <button
-                type="button"
-                (click)="expandAll()"
-            >
-                Expand all
-            </button>
+            <button type="button" (click)="expandAll()">Expand all</button>
 
-            <button
-                type="button"
-                (click)="collapseAll()"
-            >
-                Collapse all
-            </button>
+            <button type="button" (click)="collapseAll()">Collapse all</button>
         </div>
 
         <p-tree
@@ -82,10 +62,7 @@
         >
             <ng-template pTemplate="default" let-node>
                 <div class="project-tree-item">
-                    <a
-                        [routerLink]="['/tasks/project', node.key]"
-                        routerLinkActive="active"
-                    >
+                    <a [routerLink]="['/tasks/project', node.key]" routerLinkActive="active">
                         {{ node.label }}
                     </a>
 

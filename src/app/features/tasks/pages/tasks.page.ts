@@ -2,16 +2,12 @@
     [x] Extract 'TaskView'
 
  */
-import { Component, signal, inject, computed, input } from '@angular/core';
+import { Component, signal, inject, computed, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { TasksStore } from '@/features/tasks/state/tasks.store';
 import { Router } from '@angular/router';
 import { TasksHeaderComponent } from '@/features/tasks/components/tasks-header/tasks-header.component';
-import {
-    TaskCreateComponent,
-    CreateTaskPayload,
-} from '@/features/tasks/components/task-create/task-create.component';
 import { ProjectsStore } from '@/features/projects/state/projects.store';
 import { ButtonModule } from 'primeng/button';
 
@@ -25,11 +21,14 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TaskListComponent } from '@/features/tasks/components/task-list/task-list.component';
 import type { TaskScheduleDrop } from '@/features/tasks/models/task-schedule-drop.model';
 import type { TaskReorder } from '@/features/tasks/models/task-reorder.model';
+import type { TaskCreateContext } from '../models/task-create-context.model';
 
 import {
     calculateTaskPosition,
     sortTasksByPosition,
 } from '@/features/tasks/utils/task-ordering.util';
+
+import { TaskCreateDialogService } from '@/features/tasks/services/task-create-dialog.service';
 
 @Component({
     standalone: true,
@@ -37,7 +36,6 @@ import {
         CommonModule,
         ButtonModule,
         TasksHeaderComponent,
-        TaskCreateComponent,
         TaskListComponent,
         ConfirmDialogModule,
     ],
@@ -49,10 +47,16 @@ export class TasksPage {
     protected readonly auth = inject(AuthStore);
     protected readonly tasksStore = inject(TasksStore);
     protected readonly projectsStore = inject(ProjectsStore);
-    readonly error = signal<string | null>(null); // Did creating a Task fail?
+    readonly error = signal<string | null>(null);
     protected readonly calendarClock = inject(CalendarClockService);
 
     private readonly confirmationService = inject(ConfirmationService);
+
+    private readonly taskCreateDialog = inject(TaskCreateDialogService);
+
+    protected openTaskDialog(context: TaskCreateContext): void {
+        this.taskCreateDialog.open(context);
+    }
 
     readonly pageHeader = computed(() => {
         if (this.view() === 'all') {
@@ -71,6 +75,13 @@ export class TasksPage {
             return 'Tasks';
         }
     });
+    protected readonly todayLayout = signal<'focus' | 'planning'>('focus');
+
+    protected readonly isTodayPlanning = computed(() => this.todayLayout() === 'planning');
+
+    protected setTodayLayout(layout: 'focus' | 'planning'): void {
+        this.todayLayout.set(layout);
+    }
     readonly projectId = input<string | undefined>();
     protected readonly openTasks = computed(() =>
         this.visibleTasks().filter((task) => !task.is_done),
@@ -128,11 +139,7 @@ export class TasksPage {
                 nextTask?.[field] ?? null,
             );
 
-            await this.tasksStore.updateTaskPosition(
-            task,
-            field,
-            newPosition,
-        );
+            await this.tasksStore.updateTaskPosition(task, field, newPosition);
         } catch (error) {
             console.error('Could not reorder task:', error);
             // Store errors are recorded by TasksStore; calculation errors
@@ -150,25 +157,13 @@ export class TasksPage {
         await this.router.navigateByUrl('/login');
     }
 
-    protected async createTask(payload: CreateTaskPayload) {
-        try {
-            await this.tasksStore.addTask(payload);
-        } catch (e: unknown) {
-            this.error.set(e instanceof Error ? e.message : 'Failed to load tasks');
-            console.log(
-                `🚨 Error creating the task: ${e instanceof Error ? e.message : 'Unknown error'}`,
-            );
-            throw e;
-        }
-    }
-
     protected readonly visibleTasks = computed(() => {
         const tasks = this.tasksStore.tasks();
         const view = this.view();
 
         switch (view) {
             case 'inbox':
-                 return sortTasksByPosition(
+                return sortTasksByPosition(
                     tasks.filter((task) => task.project_id === null),
                     'project_position',
                 );
@@ -180,7 +175,7 @@ export class TasksPage {
                     return [];
                 }
 
-                 return sortTasksByPosition(
+                return sortTasksByPosition(
                     tasks.filter((task) => task.project_id === projectId),
                     'project_position',
                 );
@@ -194,28 +189,26 @@ export class TasksPage {
 
     protected readonly todayTasks = computed(() =>
         sortTasksByPosition(
-            this.tasksStore.tasks().filter(
-                (task) =>
-                    !task.is_done &&
-                    getTaskDateGroup(
-                        task,
-                        this.calendarClock.today(),
-                    ) === 'today',
-            ),
+            this.tasksStore
+                .tasks()
+                .filter(
+                    (task) =>
+                        !task.is_done &&
+                        getTaskDateGroup(task, this.calendarClock.today()) === 'today',
+                ),
             'planned_position',
         ),
     );
 
     protected readonly unscheduledTasks = computed(() =>
         sortTasksByPosition(
-            this.tasksStore.tasks().filter(
-                (task) =>
-                    !task.is_done &&
-                    getTaskDateGroup(
-                        task,
-                        this.calendarClock.today(),
-                    ) === 'unscheduled',
-            ),
+            this.tasksStore
+                .tasks()
+                .filter(
+                    (task) =>
+                        !task.is_done &&
+                        getTaskDateGroup(task, this.calendarClock.today()) === 'unscheduled',
+                ),
             'planned_position',
         ),
     );
@@ -232,8 +225,7 @@ export class TasksPage {
 
     protected readonly upcomingDays = computed(() => {
         const today = this.calendarClock.today();
-        const tasks = this.tasksStore.tasks().
-            filter((task) => !task.is_done);
+        const tasks = this.tasksStore.tasks().filter((task) => !task.is_done);
 
         return [
             { label: 'Today', date: today },
@@ -243,9 +235,7 @@ export class TasksPage {
             ...day,
             displayDate: parseLocalDate(day.date),
             tasks: sortTasksByPosition(
-                tasks.filter(
-                    (task) => getTaskDisplayDate(task) === day.date,
-                ),
+                tasks.filter((task) => getTaskDisplayDate(task) === day.date),
                 'planned_position',
             ),
         }));
