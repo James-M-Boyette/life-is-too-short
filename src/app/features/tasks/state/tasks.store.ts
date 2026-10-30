@@ -38,6 +38,7 @@ export class TasksStore {
     private readonly pendingTaskIds = new Set<string>();
     private readonly taskMutationQueues = new Map<string, Promise<void>>();
     private readonly tasksNeedingReconciliation = new Set<string>();
+    private readonly taskRevisions = new Map<string, number>();
     readonly error = signal<string | null>(null); // Did fetching or mutating fail?
 
     readonly realtimeConnected = signal(false);
@@ -53,6 +54,7 @@ export class TasksStore {
             .catch(() => undefined)
             .then(async () => {
                 this.error.set(null);
+                this.markTaskChanged(taskId);
 
                 return fn();
             });
@@ -156,30 +158,39 @@ export class TasksStore {
         }
     }
 
-    private upsertFromRealtime(row: Task) {
-        // Guard: Don't overwrite a task while a local mutation is pending.
+    private markTaskChanged(taskId: string): void {
+        const currentRevision = this.taskRevisions.get(taskId) ?? 0;
+        this.taskRevisions.set(taskId, currentRevision + 1);
+    }
+
+    private upsertFromRealtime(row: Task): void {
+        // Record that we've observed another Realtime event.
+        const revision = this.markTaskChanged(row.id);
+
+        // Protect optimistic mutations from incoming updates.
         if (this.pendingTaskIds.has(row.id)) {
             this.tasksNeedingReconciliation.add(row.id);
             return;
         }
 
-        this.tasks.update((prev) => {
-            const idx = prev.findIndex((t) => t.id === row.id);
+        this.tasks.update((tasks) => {
+            const index = tasks.findIndex((current) => current.id === row.id);
 
-            // Replace existing
-            if (idx >= 0) {
-                const next = [...prev];
-                next[idx] = row;
+            if (index >= 0) {
+                const next = [...tasks];
+                next[index] = row;
+
                 return this.sortDesc(next);
             }
 
-            // Insert new
-            return this.sortDesc([row, ...prev]);
+            return this.sortDesc([...tasks, row]);
         });
     }
 
-    private removeFromRealtime(id: string) {
-        this.tasks.update((prev) => prev.filter((t) => t.id !== id));
+    private removeFromRealtime(id: string): void {
+        this.markTaskChanged(id);
+
+        this.tasks.update((tasks) => tasks.filter((task) => task.id !== id));
     }
 
     private sortDesc(list: Task[]) {
@@ -191,9 +202,13 @@ export class TasksStore {
         );
     }
 
-    async refreshTasks() {
+    async refreshTasks(): Promise<void> {
+        // Snapshot the revisions when this particular query starts.
+        const revisionsAtStart = new Map(this.taskRevisions);
+
         this.loading.set(true);
         this.error.set(null);
+
         try {
             const { data, error } = await this.supabase
                 .from('tasks')
@@ -203,7 +218,53 @@ export class TasksStore {
 
             if (error) throw error;
 
-            this.tasks.set((data ?? []) as Task[]); // Set tasks from DB (or empty array if null)
+            const fetchedTasks = (data ?? []) as Task[];
+
+            this.tasks.update((currentTasks) => {
+                const currentById = new Map(currentTasks.map((task) => [task.id, task]));
+
+                const merged = new Map<string, Task>();
+
+                for (const fetched of fetchedTasks) {
+                    const previousRevision = revisionsAtStart.get(fetched.id) ?? 0;
+
+                    const currentRevision = this.taskRevisions.get(fetched.id) ?? 0;
+
+                    const changedDuringRefresh = previousRevision !== currentRevision;
+
+                    const isPending = this.pendingTaskIds.has(fetched.id);
+
+                    if (changedDuringRefresh || isPending) {
+                        // A newer change occurred. Keep its current state,
+                        // or leave it deleted if no current row exists.
+                        const current = currentById.get(fetched.id);
+
+                        if (current) {
+                            merged.set(fetched.id, current);
+                        }
+
+                        continue;
+                    }
+
+                    merged.set(fetched.id, fetched);
+                }
+
+                // Preserve tasks added or modified locally after the
+                // refresh started, even if they weren't in its response.
+                for (const current of currentTasks) {
+                    if (merged.has(current.id)) continue;
+
+                    const changedDuringRefresh =
+                        (this.taskRevisions.get(current.id) ?? 0) !==
+                        (revisionsAtStart.get(current.id) ?? 0);
+
+                    if (changedDuringRefresh || this.pendingTaskIds.has(current.id)) {
+                        merged.set(current.id, current);
+                    }
+                }
+
+                return this.sortDesc([...merged.values()]);
+            });
         } catch (error: unknown) {
             this.error.set(error instanceof Error ? error.message : 'Failed to load tasks');
 
@@ -779,6 +840,9 @@ export class TasksStore {
 
         if (!task) return;
 
+        // Remember the revision when this query begins.
+        const revisionAtStart = this.taskRevisions.get(taskId) ?? 0;
+
         const { data, error } = await this.supabase
             .from('tasks')
             .select('*')
@@ -788,10 +852,17 @@ export class TasksStore {
 
         if (error) throw error;
 
-        // Another local mutation might have started while
-        // the reconciliation query was in progress.
+        // If another local mutation started, don't overwrite it.
         if (this.pendingTaskIds.has(taskId)) {
             this.tasksNeedingReconciliation.add(taskId);
+            return;
+        }
+
+        // If Realtime delivered another update during this query,
+        // the response might represent an older database snapshot.
+        const currentRevision = this.taskRevisions.get(taskId) ?? 0;
+
+        if (currentRevision !== revisionAtStart) {
             return;
         }
 

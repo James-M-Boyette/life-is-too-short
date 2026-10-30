@@ -853,4 +853,134 @@ describe('TasksStore', () => {
         expect(store.tasks()[0].title).toBe('Updated title');
         expect(store.tasks()[0].due_date).toBe('2026-10-30');
     });
+
+    it('does not overwrite newer Realtime data with a stale reconciliation result', async () => {
+        const task = createTask({
+            title: 'Original title',
+            due_date: '2026-10-29',
+        });
+
+        store.tasks.set([task]);
+
+        let resolveMutation!: (result: { data: Task; error: null }) => void;
+
+        let resolveReconciliation!: (result: { data: Task; error: null }) => void;
+
+        const mutationRequest = new Promise<{
+            data: Task;
+            error: null;
+        }>((resolve) => {
+            resolveMutation = resolve;
+        });
+
+        const reconciliationRequest = new Promise<{
+            data: Task;
+            error: null;
+        }>((resolve) => {
+            resolveReconciliation = resolve;
+        });
+
+        single.mockReturnValueOnce(mutationRequest).mockReturnValueOnce(reconciliationRequest);
+
+        const mutation = store.updateTitle(task, 'Updated title');
+
+        await vi.waitFor(() => {
+            expect(single).toHaveBeenCalledTimes(1);
+        });
+
+        // This event is skipped because the title mutation is pending.
+        // It causes reconciliation to be scheduled.
+        store['upsertFromRealtime']({
+            ...task,
+            due_date: '2026-10-30',
+        });
+
+        resolveMutation({
+            data: {
+                ...task,
+                title: 'Updated title',
+            },
+            error: null,
+        });
+
+        // The title save finishes and reconciliation starts.
+        await vi.waitFor(() => {
+            expect(single).toHaveBeenCalledTimes(2);
+        });
+
+        // A newer Realtime event arrives while reconciliation is pending.
+        store['upsertFromRealtime']({
+            ...task,
+            title: 'Updated title',
+            due_date: '2026-10-31',
+        });
+
+        expect(store.tasks()[0].due_date).toBe('2026-10-31');
+
+        // The reconciliation request finishes with an older snapshot.
+        resolveReconciliation({
+            data: {
+                ...task,
+                title: 'Updated title',
+                due_date: '2026-10-30',
+            },
+            error: null,
+        });
+
+        await mutation;
+
+        // The older query result must not overwrite newer Realtime state.
+        expect(store.tasks()[0].due_date).toBe('2026-10-31');
+    });
+    it('does not overwrite a newer Realtime update with an older refresh result', async () => {
+        const task = createTask({
+            title: 'Original title',
+        });
+
+        store.tasks.set([task]);
+
+        // Control when the refresh query finishes.
+        let resolveRefresh!: (result: { data: Task[]; error: null }) => void;
+
+        const refreshRequest = new Promise<{
+            data: Task[];
+            error: null;
+        }>((resolve) => {
+            resolveRefresh = resolve;
+        });
+
+        // refreshTasks() uses:
+        // .select('*').order(...).order(...)
+        const order = vi.fn();
+
+        order.mockReturnValueOnce({
+            order: vi.fn().mockReturnValue(refreshRequest),
+        });
+
+        select.mockReturnValueOnce({ order });
+
+        // Begin fetching, but leave the database response pending.
+        const refresh = store.refreshTasks();
+
+        expect(from).toHaveBeenCalledWith('tasks');
+
+        // Realtime delivers a newer version of the task.
+        store['upsertFromRealtime']({
+            ...task,
+            title: 'Updated from another browser',
+        });
+
+        expect(store.tasks()[0].title).toBe('Updated from another browser');
+
+        // The earlier refresh finally returns its stale snapshot.
+        resolveRefresh({
+            data: [task],
+            error: null,
+        });
+
+        await refresh;
+
+        // The stale refresh must not undo the newer Realtime update.
+        expect(store.tasks()[0].title).toBe('Updated from another browser');
+    });
 });
