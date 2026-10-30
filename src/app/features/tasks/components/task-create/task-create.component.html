@@ -1,9 +1,4 @@
-<form
-    id="create-task-form"
-    class="create-new-task-form"
-    [formGroup]="form"
-    (ngSubmit)="onSubmit()"
-    >
+<form id="create-task-form" class="create-new-task-form" [formGroup]="form" (ngSubmit)="onSubmit()">
     <div class="task-content">
         <input
             type="text"
@@ -35,22 +30,24 @@
             appendTo="body"
         />
 
+        <p-datepicker
+            formControlName="plannedDate"
+            [showIcon]="true"
+            iconDisplay="input"
+            [showClear]="true"
+            [disabled]="disabled()"
+            appendTo="body"
+            dateFormat="M d, yy"
+            placeholder="Plan date"
+        />
+
         <div class="action-buttons-container">
-            <button
-                pButton
-                type="button"
-                (click)="onCancelCreateTask()"
-                [disabled]="disabled()"
-            >
+            <button pButton type="button" (click)="onCancelCreateTask()" [disabled]="disabled()">
                 <i class="pi pi-times" pButtonIcon></i>
                 <span pButtonLabel>Cancel</span>
             </button>
 
-            <button
-                pButton
-                type="submit"
-                [disabled]="form.invalid || disabled()"
-            >
+            <button pButton type="submit" [disabled]="form.invalid || disabled()">
                 <i class="pi pi-plus" pButtonIcon></i>
                 <span pButtonLabel>Add Task</span>
             </button>

@@ -15,11 +15,13 @@ import {
     toProjectTreeNodes,
     findTreeNodeByKey,
 } from '@/features/projects/utils/project-tree-node.util';
+import { DatePickerModule } from 'primeng/datepicker';
 
 export type CreateTaskPayload = {
     title: string;
     description: string | null;
-    projectId: string | null; // placeholder for later
+    projectId: string | null;
+    plannedDate: string | null;
 };
 
 @Component({
@@ -31,6 +33,7 @@ export type CreateTaskPayload = {
         TextareaModule,
         // SelectModule,
         TreeSelectModule,
+        DatePickerModule,
         ButtonModule,
         ReactiveFormsModule,
     ],
@@ -49,6 +52,7 @@ export class TaskCreateComponent {
         title: ['', [Validators.required, noWhitespaceValidator]],
         description: [''],
         project: this.fb.control<TreeNode | null>(null),
+        plannedDate: this.fb.control<Date | null>(null),
     });
 
     protected readonly projectOptions = computed<TreeNode[]>(() =>
@@ -86,8 +90,6 @@ export class TaskCreateComponent {
         }
     });
 
-    // Keep this as string for now so it plugs into TasksStore.add(title).
-    // Later we'll upgrade this to emit { title, description, projectId }.
     readonly disabled = input(false);
 
     readonly create = output<CreateTaskPayload>();
@@ -98,12 +100,19 @@ export class TaskCreateComponent {
             return;
         }
 
-        const { title, description, project } = this.form.getRawValue();
+        const { title, description, project, plannedDate } = this.form.getRawValue();
 
         this.create.emit({
             title: title.trim(),
             description: description.trim() || null,
             projectId: project?.key ?? null,
+            plannedDate: plannedDate
+            ? [
+                  plannedDate.getFullYear(),
+                  String(plannedDate.getMonth() + 1).padStart(2, '0'),
+                  String(plannedDate.getDate()).padStart(2, '0'),
+              ].join('-')
+            : null,
         });
 
         // Do not reset here.

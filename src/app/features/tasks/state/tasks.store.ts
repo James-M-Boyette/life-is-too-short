@@ -21,11 +21,11 @@ type NewTaskInsert = {
     title: string;
 };
 
-// ?
 type AddTaskInput = {
     title: string;
     description: string | null;
-    projectId: string | null; // not used yet
+    projectId: string | null;
+    plannedDate?: string | null;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -347,13 +347,20 @@ export class TasksStore {
 
         const projectPosition = getNextTaskPosition(projectTasks, 'project_position');
 
-        // New tasks currently have no planned_date or due_date.
-        // Therefore, they enter the Unscheduled planning context.
-        const unscheduledTasks = existingTasks.filter(
-            (task) => getTaskPlanningContext(task) === 'unscheduled',
+        const plannedDate = input.plannedDate ?? null;
+
+        const destinationTask = {
+            planned_date: plannedDate,
+            due_date: null,
+        } as Task;
+
+        const destinationContext = getTaskPlanningContext(destinationTask);
+
+        const destinationTasks = existingTasks.filter(
+            (task) => getTaskPlanningContext(task) === destinationContext,
         );
 
-        const plannedPosition = getNextTaskPosition(unscheduledTasks, 'planned_position');
+        const plannedPosition = getNextTaskPosition(destinationTasks, 'planned_position');
 
         this.error.set(null);
         this.creating.set(true);
@@ -370,7 +377,7 @@ export class TasksStore {
 
             description: input.description,
 
-            planned_date: null,
+            planned_date: plannedDate,
             due_date: null,
             due_at: null,
 
@@ -398,6 +405,7 @@ export class TasksStore {
                     title: input.title,
                     description: input.description,
                     project_id: input.projectId,
+                    planned_date: plannedDate,
                     project_position: projectPosition,
                     planned_position: plannedPosition,
                 })
