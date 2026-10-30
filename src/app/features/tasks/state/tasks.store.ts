@@ -317,6 +317,11 @@ export class TasksStore {
 
         if (!userId) throw new Error(`✋⛔ User not authenticated`);
 
+        const generationAtStart = this.sessionGeneration;
+
+        const isCurrentSession = () =>
+            generationAtStart === this.sessionGeneration && this.auth.userId() === userId;
+
         const existingTasks = this.tasks().filter((task) => task.user_id === userId);
 
         // Find tasks belonging to the same project.
@@ -386,18 +391,27 @@ export class TasksStore {
                 throw error;
             }
 
+            if (!isCurrentSession()) {
+                return;
+            }
+
             this.tasks.update((prev) =>
                 prev.map((task) => (task.id === tempId ? (data as Task) : task)),
             );
         } catch (e: unknown) {
-            this.tasks.update((prev) => prev.filter((task) => task.id !== tempId));
+            if (isCurrentSession()) {
+                // Remove the failed optimistic task.
+                this.tasks.update((prev) => prev.filter((task) => task.id !== tempId));
 
-            this.error.set(e instanceof Error ? e.message : 'Failed to create task');
+                this.error.set(e instanceof Error ? e.message : 'Failed to create task');
+            }
 
             throw e;
         } finally {
-            this.pendingTaskIds.delete(tempId);
-            this.creating.set(false);
+            if (isCurrentSession()) {
+                this.pendingTaskIds.delete(tempId);
+                this.creating.set(false);
+            }
         }
     }
 
@@ -475,7 +489,7 @@ export class TasksStore {
         const trimmed = (description ?? '').trim();
         const normalized = trimmed || null;
 
-        await this.runMutation(task.id, async () => {
+        await this.runMutation(task.id, async (isCurrentSession) => {
             const currentTask = this.tasks().find((current) => current.id === task.id);
 
             if (!currentTask) {
@@ -505,17 +519,23 @@ export class TasksStore {
 
                 if (error) throw error;
 
+                if (!isCurrentSession()) {
+                    return;
+                }
+
                 this.tasks.update((tasks) =>
                     tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
                 );
             } catch (error) {
-                this.tasks.update((tasks) =>
-                    tasks.map((current) =>
-                        current.id === task.id
-                            ? { ...current, description: previousDescription }
-                            : current,
-                    ),
-                );
+                if (isCurrentSession()) {
+                    this.tasks.update((tasks) =>
+                        tasks.map((current) =>
+                            current.id === task.id
+                                ? { ...current, description: previousDescription }
+                                : current,
+                        ),
+                    );
+                }
 
                 throw error;
             }
@@ -582,7 +602,7 @@ export class TasksStore {
     }
 
     async updateProject(task: Task, projectId: string | null): Promise<void> {
-        await this.runMutation(task.id, async () => {
+        await this.runMutation(task.id, async (isCurrentSession) => {
             const currentTask = this.tasks().find((current) => current.id === task.id);
 
             if (!currentTask) {
@@ -635,22 +655,28 @@ export class TasksStore {
 
                 if (error) throw error;
 
+                if (!isCurrentSession()) {
+                    return;
+                }
+
                 this.tasks.update((tasks) =>
                     tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
                 );
             } catch (error) {
-                // Restore only the fields owned by this operation.
-                this.tasks.update((tasks) =>
-                    tasks.map((current) =>
-                        current.id === task.id
-                            ? {
-                                  ...current,
-                                  project_id: previousProjectId,
-                                  project_position: previousPosition,
-                              }
-                            : current,
-                    ),
-                );
+                if (isCurrentSession()) {
+                    // Restore only the fields owned by this operation.
+                    this.tasks.update((tasks) =>
+                        tasks.map((current) =>
+                            current.id === task.id
+                                ? {
+                                      ...current,
+                                      project_id: previousProjectId,
+                                      project_position: previousPosition,
+                                  }
+                                : current,
+                        ),
+                    );
+                }
 
                 throw error;
             }
@@ -658,7 +684,7 @@ export class TasksStore {
     }
 
     async updatePlannedDate(task: Task, plannedDate: string | null): Promise<void> {
-        await this.runMutation(task.id, async () => {
+        await this.runMutation(task.id, async (isCurrentSession) => {
             const currentTask = this.tasks().find((current) => current.id === task.id);
 
             if (!currentTask) {
@@ -719,8 +745,10 @@ export class TasksStore {
                     .select('*')
                     .single();
 
-                if (error) {
-                    throw error;
+                if (error) throw error;
+
+                if (!isCurrentSession()) {
+                    return;
                 }
 
                 // Reconcile with the saved row.
@@ -728,18 +756,20 @@ export class TasksStore {
                     tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
                 );
             } catch (error) {
-                // Restore both properties on failure.
-                this.tasks.update((tasks) =>
-                    tasks.map((current) =>
-                        current.id === task.id
-                            ? {
-                                  ...current,
-                                  planned_date: previousDate,
-                                  planned_position: previousPosition,
-                              }
-                            : current,
-                    ),
-                );
+                if (isCurrentSession()) {
+                    // Restore both properties on failure.
+                    this.tasks.update((tasks) =>
+                        tasks.map((current) =>
+                            current.id === task.id
+                                ? {
+                                      ...current,
+                                      planned_date: previousDate,
+                                      planned_position: previousPosition,
+                                  }
+                                : current,
+                        ),
+                    );
+                }
 
                 throw error;
             }
@@ -747,7 +777,7 @@ export class TasksStore {
     }
 
     async updateDueDate(task: Task, dueDate: string | null): Promise<void> {
-        await this.runMutation(task.id, async () => {
+        await this.runMutation(task.id, async (isCurrentSession) => {
             const currentTask = this.tasks().find((current) => current.id === task.id);
 
             if (!currentTask) {
@@ -808,26 +838,30 @@ export class TasksStore {
                     .select('*')
                     .single();
 
-                if (error) {
-                    throw error;
+                if (error) throw error;
+
+                if (!isCurrentSession()) {
+                    return;
                 }
 
                 this.tasks.update((tasks) =>
                     tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
                 );
             } catch (error) {
-                // Restore the scheduling properties if saving fails.
-                this.tasks.update((tasks) =>
-                    tasks.map((current) =>
-                        current.id === task.id
-                            ? {
-                                  ...current,
-                                  due_date: previousDate,
-                                  planned_position: previousPosition,
-                              }
-                            : current,
-                    ),
-                );
+                if (isCurrentSession()) {
+                    // Restore the scheduling properties if saving fails.
+                    this.tasks.update((tasks) =>
+                        tasks.map((current) =>
+                            current.id === task.id
+                                ? {
+                                      ...current,
+                                      due_date: previousDate,
+                                      planned_position: previousPosition,
+                                  }
+                                : current,
+                        ),
+                    );
+                }
 
                 throw error;
             }
@@ -835,7 +869,7 @@ export class TasksStore {
     }
 
     async toggleDone(task: Task): Promise<void> {
-        await this.runMutation(task.id, async () => {
+        await this.runMutation(task.id, async (isCurrentSession) => {
             const currentTask = this.tasks().find((current) => current.id === task.id);
 
             if (!currentTask) {
@@ -865,21 +899,27 @@ export class TasksStore {
 
                 if (error) throw error;
 
+                if (!isCurrentSession()) {
+                    return;
+                }
+
                 this.tasks.update((tasks) =>
                     tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
                 );
             } catch (error) {
-                this.tasks.update((tasks) =>
-                    tasks.map((current) =>
-                        current.id === task.id
-                            ? {
-                                  ...current,
-                                  is_done: previousIsDone,
-                                  status: previousStatus,
-                              }
-                            : current,
-                    ),
-                );
+                if (isCurrentSession()) {
+                    this.tasks.update((tasks) =>
+                        tasks.map((current) =>
+                            current.id === task.id
+                                ? {
+                                      ...current,
+                                      is_done: previousIsDone,
+                                      status: previousStatus,
+                                  }
+                                : current,
+                        ),
+                    );
+                }
 
                 throw error;
             }

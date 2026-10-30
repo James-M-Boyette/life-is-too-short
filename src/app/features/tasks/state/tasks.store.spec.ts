@@ -1383,4 +1383,237 @@ describe('TasksStore', () => {
         // Task A should return, but Task B's newer title must survive.
         expect(store.tasks()).toEqual([taskA, updatedTaskB]);
     });
+
+    it('does not restore a deleted task when deletion fails after logout', async () => {
+        const task = createTask({
+            id: 'task-a',
+            user_id: 'user-1',
+            title: 'Buy groceries',
+        });
+
+        // Mock the initial refresh triggered by authentication.
+        const secondOrder = vi.fn().mockResolvedValue({
+            data: [task],
+            error: null,
+        });
+
+        const firstOrder = vi.fn().mockReturnValue({
+            order: secondOrder,
+        });
+
+        select.mockReturnValue({
+            order: firstOrder,
+        });
+
+        // Sign in as User A.
+        userId.set('user-1');
+        TestBed.tick();
+
+        await vi.waitFor(() => {
+            expect(store.loading()).toBe(false);
+        });
+
+        store.tasks.set([task]);
+
+        // Keep the database deletion pending.
+        let resolveDelete!: (result: { error: Error }) => void;
+
+        const deleteRequest = new Promise<{ error: Error }>((resolve) => {
+            resolveDelete = resolve;
+        });
+
+        // Supabase's query builder supports chained .eq() calls
+        // and executes when awaited.
+        const deleteQuery = {
+            eq: vi.fn(),
+            then: (
+                resolve: (value: { error: Error }) => unknown,
+                reject?: (reason: unknown) => unknown,
+            ) => deleteRequest.then(resolve, reject),
+        };
+
+        deleteQuery.eq.mockReturnValue(deleteQuery);
+
+        const deleteMock = vi.fn().mockReturnValue(deleteQuery);
+
+        from.mockReturnValue({
+            delete: deleteMock,
+        });
+
+        // Begin the deletion while authenticated.
+        const deletion = store.remove(task.id);
+
+        await vi.waitFor(() => {
+            expect(deleteMock).toHaveBeenCalledOnce();
+        });
+
+        // The optimistic deletion should already be visible.
+        expect(store.tasks()).toEqual([]);
+
+        // Log out before Supabase responds.
+        userId.set(null);
+        TestBed.tick();
+
+        expect(store.tasks()).toEqual([]);
+        expect(store.error()).toBeNull();
+
+        // The request belonging to User A fails after logout.
+        resolveDelete({
+            error: new Error('Delete failed'),
+        });
+
+        await expect(deletion).rejects.toThrow('Delete failed');
+
+        // User A's task must not reappear.
+        expect(store.tasks()).toEqual([]);
+
+        // An old request must not set an error in the new session.
+        expect(store.error()).toBeNull();
+    });
+
+    it('does not report a task creation error after logout', async () => {
+        // Mock the initial refresh triggered when User A signs in.
+        const secondOrder = vi.fn().mockResolvedValue({
+            data: [],
+            error: null,
+        });
+
+        const firstOrder = vi.fn().mockReturnValue({
+            order: secondOrder,
+        });
+
+        select.mockReturnValue({
+            order: firstOrder,
+        });
+
+        userId.set('user-1');
+        TestBed.tick();
+
+        await vi.waitFor(() => {
+            expect(store.loading()).toBe(false);
+        });
+
+        // Keep the insert request pending.
+        let resolveInsert!: (result: { data: null; error: Error }) => void;
+
+        const insertRequest = new Promise<{
+            data: null;
+            error: Error;
+        }>((resolve) => {
+            resolveInsert = resolve;
+        });
+
+        const insert = vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+                single: vi.fn().mockReturnValue(insertRequest),
+            }),
+        });
+
+        from.mockReturnValue({ insert });
+
+        // Begin creating a task as User A.
+        const creation = store.addTask({
+            title: 'Buy groceries',
+            description: null,
+            projectId: null,
+        });
+
+        // Optimistic creation should appear immediately.
+        expect(store.tasks().some((task) => task.title === 'Buy groceries')).toBe(true);
+
+        expect(store.creating()).toBe(true);
+
+        // Log out while the insert is still pending.
+        userId.set(null);
+        TestBed.tick();
+
+        expect(store.tasks()).toEqual([]);
+        expect(store.error()).toBeNull();
+        expect(store.creating()).toBe(false);
+
+        // The old insert now fails.
+        resolveInsert({
+            data: null,
+            error: new Error('Insert failed'),
+        });
+
+        await expect(creation).rejects.toThrow('Insert failed');
+
+        // The old session must not modify the logged-out store.
+        expect(store.tasks()).toEqual([]);
+        expect(store.error()).toBeNull();
+        expect(store.creating()).toBe(false);
+    });
+
+    it('ignores Realtime events from a previous session after logout', async () => {
+        const task = createTask({
+            id: 'user-a-task',
+            user_id: 'user-a',
+            title: 'User A private task',
+        });
+
+        // Mock the initial task refresh when User A signs in.
+        const secondOrder = vi.fn().mockResolvedValue({
+            data: [],
+            error: null,
+        });
+
+        const firstOrder = vi.fn().mockReturnValue({
+            order: secondOrder,
+        });
+
+        select.mockReturnValue({
+            order: firstOrder,
+        });
+
+        // Capture the callback registered with Supabase Realtime.
+        let realtimeCallback!: (payload: unknown) => void;
+
+        const channel = {
+            on: vi.fn(),
+            subscribe: vi.fn(),
+        };
+
+        channel.on.mockImplementation(
+            (_event: string, _filter: unknown, callback: (payload: unknown) => void) => {
+                realtimeCallback = callback;
+                return channel;
+            },
+        );
+
+        channel.subscribe.mockReturnValue(channel);
+
+        // Override the channel factory before signing in.
+        const supabase = store['supabase'];
+
+        vi.spyOn(supabase, 'channel').mockReturnValue(
+            channel as ReturnType<typeof supabase.channel>,
+        );
+
+        // Sign in as User A.
+        userId.set('user-a');
+        TestBed.tick();
+
+        await vi.waitFor(() => {
+            expect(store.loading()).toBe(false);
+        });
+
+        expect(channel.on).toHaveBeenCalledOnce();
+        expect(realtimeCallback).toBeDefined();
+
+        // Sign out, which tears down the subscription.
+        userId.set(null);
+        TestBed.tick();
+
+        expect(store.tasks()).toEqual([]);
+
+        // Simulate an event already queued on the old channel.
+        realtimeCallback({
+            eventType: 'INSERT',
+            new: task,
+        });
+
+        // The expired subscription must not reinsert User A's task.
+        expect(store.tasks()).toEqual([]);
+    });
 });
