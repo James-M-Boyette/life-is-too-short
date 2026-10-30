@@ -27,7 +27,7 @@ function createTask(overrides: Partial<Task> = {}): Task {
     };
 }
 
-describe('TasksStore.updateTaskPosition', () => {
+describe('TasksStore', () => {
     let store: TasksStore;
     let single: ReturnType<typeof vi.fn>;
     let from: ReturnType<typeof vi.fn>;
@@ -92,11 +92,7 @@ describe('TasksStore.updateTaskPosition', () => {
             error: null,
         });
 
-        await store.updateTaskPosition(
-            task,
-            'project_position',
-            1500,
-        );
+        await store.updateTaskPosition(task, 'project_position', 1500);
 
         expect(update).toHaveBeenCalledExactlyOnceWith({
             project_position: 1500,
@@ -142,11 +138,7 @@ describe('TasksStore.updateTaskPosition', () => {
 
         store.tasks.set([task]);
 
-        await store.updateTaskPosition(
-            task,
-            'planned_position',
-            1000,
-        );
+        await store.updateTaskPosition(task, 'planned_position', 1000);
 
         expect(from).not.toHaveBeenCalled();
         expect(update).not.toHaveBeenCalled();
@@ -170,5 +162,118 @@ describe('TasksStore.updateTaskPosition', () => {
         expect(store.tasks()[0].planned_position).toBe(1000);
         expect(store.mutating()).toBe(false);
         expect(store.error()).toBe('Database update failed');
+    });
+
+    it('appends a transferred task to the destination project', async () => {
+        const movingTask = createTask({
+            id: 'moving-task',
+            project_id: 'project-a',
+            project_position: 1000,
+            planned_position: 2500,
+        });
+
+        const destinationTask = createTask({
+            id: 'destination-task',
+            project_id: 'project-b',
+            project_position: 3000,
+        });
+
+        store.tasks.set([movingTask, destinationTask]);
+
+        const savedTask: Task = {
+            ...movingTask,
+            project_id: 'project-b',
+            project_position: 4000,
+        };
+
+        single.mockResolvedValue({
+            data: savedTask,
+            error: null,
+        });
+
+        await store.updateProject(movingTask, 'project-b');
+
+        expect(update).toHaveBeenCalledExactlyOnceWith({
+            project_id: 'project-b',
+            project_position: 4000,
+        });
+
+        const result = store.tasks().find((task) => task.id === movingTask.id);
+
+        expect(result?.project_id).toBe('project-b');
+        expect(result?.project_position).toBe(4000);
+
+        // Moving between projects shouldn't change scheduling order.
+        expect(result?.planned_position).toBe(2500);
+    });
+
+    it('appends a task to Inbox when its project is cleared', async () => {
+        const movingTask = createTask({
+            id: 'moving-task',
+            project_id: 'project-a',
+            project_position: 2000,
+        });
+
+        const inboxTask = createTask({
+            id: 'inbox-task',
+            project_id: null,
+            project_position: 5000,
+        });
+
+        store.tasks.set([movingTask, inboxTask]);
+
+        single.mockResolvedValue({
+            data: {
+                ...movingTask,
+                project_id: null,
+                project_position: 6000,
+            },
+            error: null,
+        });
+
+        await store.updateProject(movingTask, null);
+
+        expect(update).toHaveBeenCalledExactlyOnceWith({
+            project_id: null,
+            project_position: 6000,
+        });
+
+        const result = store.tasks().find((task) => task.id === movingTask.id);
+
+        expect(result?.project_id).toBeNull();
+        expect(result?.project_position).toBe(6000);
+    });
+
+    it('restores project and position when a transfer fails', async () => {
+        const movingTask = createTask({
+            id: 'moving-task',
+            project_id: 'project-a',
+            project_position: 2000,
+        });
+
+        const destinationTask = createTask({
+            id: 'destination-task',
+            project_id: 'project-b',
+            project_position: 3000,
+        });
+
+        store.tasks.set([movingTask, destinationTask]);
+
+        single.mockResolvedValue({
+            data: null,
+            error: new Error('Project transfer failed'),
+        });
+
+        await expect(store.updateProject(movingTask, 'project-b')).rejects.toThrow(
+            'Project transfer failed',
+        );
+
+        const result = store.tasks().find((task) => task.id === movingTask.id);
+
+        expect(result?.project_id).toBe('project-a');
+        expect(result?.project_position).toBe(2000);
+
+        expect(store.mutating()).toBe(false);
+        expect(store.error()).toBe('Project transfer failed');
     });
 });
