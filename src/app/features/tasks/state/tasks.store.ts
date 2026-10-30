@@ -1,9 +1,10 @@
 /** ToDo:
     [] Split repository/data-access concerns from application state
 */
-import { Injectable, effect, signal } from '@angular/core';
+import { Injectable, effect, inject, signal } from '@angular/core';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { supabase } from '@/shared/supabase/supabase.client';
+// import { supabase } from '@/shared/supabase/supabase.client';
+import { SUPABASE_CLIENT } from '@/shared/supabase/supabase.client';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import type { TaskStatus, Task } from '@/features/tasks/models/tasks.model';
 
@@ -30,6 +31,7 @@ type AddTaskInput = {
 @Injectable({ providedIn: 'root' })
 export class TasksStore {
     readonly tasks = signal<Task[]>([]); // What Tasks are currently available?
+    private readonly supabase = inject(SUPABASE_CLIENT);
     readonly loading = signal(false); // Are we fetching them?
     readonly creating = signal(false); // Are we in the process of creating a new task (showing the form)?
     readonly mutating = signal(false); // Are we performing a mutation (add, update, delete) on the server?
@@ -676,7 +678,7 @@ export class TasksStore {
             const prev = this.tasks();
             this.tasks.update((list) => list.filter((t) => t.id !== taskId));
 
-            const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+            const { error } = await this.supabase.from('tasks').delete().eq('id', taskId);
 
             if (error) {
                 this.tasks.set(prev);
