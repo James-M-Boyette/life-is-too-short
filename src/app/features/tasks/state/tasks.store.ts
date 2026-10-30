@@ -69,11 +69,6 @@ export class TasksStore {
                 return;
             }
 
-            // Load current state once
-            void this.refreshTasks().catch(() => {
-                // refreshTasks() has already recorded the error in this.error.
-            });
-
             // Start realtime subscription scoped to this user
             this.channel = this.supabase
                 .channel(`tasks:${userId}`)
@@ -87,16 +82,8 @@ export class TasksStore {
                     },
                     (payload) => this.onTasksChange(payload),
                 )
-                // .subscribe((status) => {
-                //     this.realtimeConnected.set(status === 'SUBSCRIBED');
-                // });
                 .subscribe((status, error) => {
                     this.realtimeConnected.set(status === 'SUBSCRIBED');
-
-                    // console.log('[Tasks Realtime]', {
-                    //     status,
-                    //     errorMessage: error?.message ?? null,
-                    // });
                 });
 
             onCleanup(() => this.teardownRealtime());
@@ -159,10 +146,6 @@ export class TasksStore {
         this.loading.set(true);
         this.error.set(null);
         try {
-            // const { data, error } = await this.supabase
-            //     .from('tasks')
-            //     .select('*')
-            //     .order('created_at', { ascending: false });
             const { data, error } = await this.supabase
                 .from('tasks')
                 .select('*')

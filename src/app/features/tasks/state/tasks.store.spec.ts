@@ -76,6 +76,36 @@ describe('TasksStore.updateTaskPosition', () => {
         store = TestBed.inject(TasksStore);
     });
 
+    it('updates project_position without changing planned_position', async () => {
+        const task = createTask({
+            project_position: 1000,
+            planned_position: 2500,
+        });
+
+        store.tasks.set([task]);
+
+        single.mockResolvedValue({
+            data: {
+                ...task,
+                project_position: 1500,
+            },
+            error: null,
+        });
+
+        await store.updateTaskPosition(
+            task,
+            'project_position',
+            1500,
+        );
+
+        expect(update).toHaveBeenCalledExactlyOnceWith({
+            project_position: 1500,
+        });
+
+        expect(store.tasks()[0].project_position).toBe(1500);
+        expect(store.tasks()[0].planned_position).toBe(2500);
+    });
+
     it('persists a new planned position', async () => {
         const task = createTask();
 
@@ -93,8 +123,34 @@ describe('TasksStore.updateTaskPosition', () => {
 
         await store.updateTaskPosition(task, 'planned_position', 1500);
 
+        expect(update).toHaveBeenCalledExactlyOnceWith({
+            planned_position: 1500,
+        });
+
+        expect(eq).toHaveBeenCalledWith('id', task.id);
+        expect(eq).toHaveBeenCalledWith('user_id', task.user_id);
+        expect(single).toHaveBeenCalledOnce();
+
         expect(store.tasks()[0].planned_position).toBe(1500);
         expect(from).toHaveBeenCalledWith('tasks');
+    });
+
+    it('does not persist when the position is unchanged', async () => {
+        const task = createTask({
+            planned_position: 1000,
+        });
+
+        store.tasks.set([task]);
+
+        await store.updateTaskPosition(
+            task,
+            'planned_position',
+            1000,
+        );
+
+        expect(from).not.toHaveBeenCalled();
+        expect(update).not.toHaveBeenCalled();
+        expect(store.tasks()[0].planned_position).toBe(1000);
     });
 
     it('restores the previous position if Supabase fails', async () => {
