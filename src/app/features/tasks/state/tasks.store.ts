@@ -75,7 +75,7 @@ export class TasksStore {
             });
 
             // Start realtime subscription scoped to this user
-            this.channel = supabase
+            this.channel = this.supabase
                 .channel(`tasks:${userId}`)
                 .on(
                     'postgres_changes',
@@ -105,7 +105,7 @@ export class TasksStore {
 
     private teardownRealtime() {
         if (this.channel) {
-            void supabase.removeChannel(this.channel);
+            void this.supabase.removeChannel(this.channel);
             this.channel = null;
         }
     }
@@ -159,11 +159,11 @@ export class TasksStore {
         this.loading.set(true);
         this.error.set(null);
         try {
-            // const { data, error } = await supabase
+            // const { data, error } = await this.supabase
             //     .from('tasks')
             //     .select('*')
             //     .order('created_at', { ascending: false });
-            const { data, error } = await supabase
+            const { data, error } = await this.supabase
                 .from('tasks')
                 .select('*')
                 .order('created_at', { ascending: false })
@@ -233,7 +233,7 @@ export class TasksStore {
         this.tasks.update((prev) => [optimistic, ...prev]);
 
         try {
-            const { data, error } = await supabase
+            const { data, error } = await this.supabase
                 .from('tasks')
                 .insert({
                     user_id: userId,
@@ -278,7 +278,7 @@ export class TasksStore {
             // optimistic
             this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? next : t)));
 
-            const { data, error } = await supabase
+            const { data, error } = await this.supabase
                 .from('tasks')
                 .update({ title: nextTitle })
                 .eq('id', task.id)
@@ -312,7 +312,7 @@ export class TasksStore {
             // optimistic
             this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? next : t)));
 
-            const { data, error } = await supabase
+            const { data, error } = await this.supabase
                 .from('tasks')
                 .update({ description: normalized })
                 .eq('id', task.id)
@@ -358,7 +358,7 @@ export class TasksStore {
 
             try {
                 // 2. Persist the position to Supabase.
-                const { data, error } = await supabase
+                const { data, error } = await this.supabase
                     .from('tasks')
                     .update({ [field]: position })
                     .eq('id', task.id)
@@ -427,7 +427,7 @@ export class TasksStore {
             );
 
             try {
-                const { data, error } = await supabase
+                const { data, error } = await this.supabase
                     .from('tasks')
                     .update({
                         project_id: projectId,
@@ -516,7 +516,7 @@ export class TasksStore {
 
             try {
                 // Persist the scheduling change atomically.
-                const { data, error } = await supabase
+                const { data, error } = await this.supabase
                     .from('tasks')
                     .update({
                         planned_date: plannedDate,
@@ -604,7 +604,7 @@ export class TasksStore {
 
             try {
                 // Save both properties in one database request.
-                const { data, error } = await supabase
+                const { data, error } =  await this.supabase
                     .from('tasks')
                     .update({
                         due_date: dueDate,
@@ -655,7 +655,7 @@ export class TasksStore {
             // optimistic update
             this.tasks.update((prev) => prev.map((t) => (t.id === task.id ? next : t)));
 
-            const { data, error } = await supabase
+            const { data, error } = await this.supabase
                 .from('tasks')
                 .update({ is_done: next.is_done, status: next.status })
                 .eq('id', task.id)
