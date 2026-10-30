@@ -74,9 +74,6 @@ export class TaskCreateComponent {
         const projectId = this.defaultProjectId();
         const selectedNode = this.defaultProjectNode();
 
-        console.log('Default project ID:', projectId);
-        console.log('Matching project node:', selectedNode);
-
         if (projectId !== this.lastDefaultProjectId) {
             this.lastDefaultProjectId = projectId;
             this.defaultApplied = false;
