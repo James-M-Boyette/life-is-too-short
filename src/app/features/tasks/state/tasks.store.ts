@@ -165,7 +165,7 @@ export class TasksStore {
 
     private upsertFromRealtime(row: Task): void {
         // Record that we've observed another Realtime event.
-        const revision = this.markTaskChanged(row.id);
+        this.markTaskChanged(row.id);
 
         // Protect optimistic mutations from incoming updates.
         if (this.pendingTaskIds.has(row.id)) {
@@ -323,6 +323,11 @@ export class TasksStore {
             updated_at: new Date().toISOString(),
         };
 
+        // Protect this temporary task from refresh results
+        // until the insert has completed.
+        this.pendingTaskIds.add(tempId);
+        this.markTaskChanged(tempId);
+
         this.tasks.update((prev) => [optimistic, ...prev]);
 
         try {
@@ -353,6 +358,7 @@ export class TasksStore {
 
             throw e;
         } finally {
+            this.pendingTaskIds.delete(tempId);
             this.creating.set(false);
         }
     }

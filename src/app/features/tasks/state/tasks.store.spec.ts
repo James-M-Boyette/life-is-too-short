@@ -29,6 +29,7 @@ function createTask(overrides: Partial<Task> = {}): Task {
 
 describe('TasksStore', () => {
     let store: TasksStore;
+    let userId: ReturnType<typeof signal<string | null>>;
     let single: ReturnType<typeof vi.fn>;
     let from: ReturnType<typeof vi.fn>;
     let update: ReturnType<typeof vi.fn>;
@@ -41,6 +42,7 @@ describe('TasksStore', () => {
         eq = vi.fn();
         select = vi.fn();
         single = vi.fn();
+        userId = signal<string | null>(null);
 
         const query = {
             update,
@@ -60,9 +62,7 @@ describe('TasksStore', () => {
                 TasksStore,
                 {
                     provide: AuthStore,
-                    useValue: {
-                        userId: signal<string | null>(null),
-                    },
+                    useValue: { userId },
                 },
                 {
                     provide: SUPABASE_CLIENT,
@@ -77,7 +77,6 @@ describe('TasksStore', () => {
 
         // Run the constructor effect before individual tests populate the task signal. Our mocked user is unauthenticated, so the effect will clear the initially empty task list ...
         TestBed.tick();
-        store = TestBed.inject(TasksStore);
     });
 
     it('updates project_position without changing planned_position', async () => {
@@ -932,6 +931,7 @@ describe('TasksStore', () => {
         // The older query result must not overwrite newer Realtime state.
         expect(store.tasks()[0].due_date).toBe('2026-10-31');
     });
+
     it('does not overwrite a newer Realtime update with an older refresh result', async () => {
         const task = createTask({
             title: 'Original title',
@@ -982,5 +982,135 @@ describe('TasksStore', () => {
 
         // The stale refresh must not undo the newer Realtime update.
         expect(store.tasks()[0].title).toBe('Updated from another browser');
+    });
+
+    it('does not resurrect a task deleted by Realtime during refresh', async () => {
+        const task = createTask();
+
+        store.tasks.set([task]);
+
+        let resolveRefresh!: (result: { data: Task[]; error: null }) => void;
+
+        const refreshRequest = new Promise<{
+            data: Task[];
+            error: null;
+        }>((resolve) => {
+            resolveRefresh = resolve;
+        });
+
+        const order = vi.fn();
+
+        order.mockReturnValueOnce({
+            order: vi.fn().mockReturnValue(refreshRequest),
+        });
+
+        select.mockReturnValueOnce({ order });
+
+        // Start a refresh that will return stale data.
+        const refresh = store.refreshTasks();
+
+        // Another browser deletes the task.
+        store['removeFromRealtime'](task.id);
+
+        expect(store.tasks()).toHaveLength(0);
+
+        // The older refresh response still contains that task.
+        resolveRefresh({
+            data: [task],
+            error: null,
+        });
+
+        await refresh;
+
+        // The deleted task must remain absent.
+        expect(store.tasks()).toHaveLength(0);
+    });
+
+    it('preserves an optimistic task while an older refresh completes', async () => {
+        // Authenticate after the initial unauthenticated effect
+        // has already run in beforeEach().
+        userId.set('user-1');
+
+        const existingTask = createTask({
+            id: 'existing-task',
+        });
+
+        store.tasks.set([existingTask]);
+
+        let resolveRefresh!: (result: { data: Task[]; error: null }) => void;
+
+        let resolveInsert!: (result: { data: Task; error: null }) => void;
+
+        const refreshRequest = new Promise<{
+            data: Task[];
+            error: null;
+        }>((resolve) => {
+            resolveRefresh = resolve;
+        });
+
+        const insertRequest = new Promise<{
+            data: Task;
+            error: null;
+        }>((resolve) => {
+            resolveInsert = resolve;
+        });
+
+        const order = vi.fn().mockReturnValueOnce({
+            order: vi.fn().mockReturnValue(refreshRequest),
+        });
+
+        const insert = vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+                single: vi.fn().mockReturnValue(insertRequest),
+            }),
+        });
+
+        select.mockReturnValueOnce({ order });
+
+        from.mockImplementation(() => ({
+            select,
+            insert,
+        }));
+
+        const refresh = store.refreshTasks();
+
+        const creation = store.addTask({
+            title: 'New task',
+            description: null,
+            projectId: null,
+        });
+
+        // The temporary task should be visible immediately.
+        const optimisticTask = store.tasks().find((task) => task.title === 'New task');
+
+        expect(optimisticTask).toBeDefined();
+
+        // Finish the earlier refresh, which knows nothing
+        // about the new task.
+        resolveRefresh({
+            data: [existingTask],
+            error: null,
+        });
+
+        await refresh;
+
+        // The optimistic task must still be visible.
+        expect(store.tasks().some((task) => task.id === optimisticTask?.id)).toBe(true);
+
+        // Now complete the insert.
+        resolveInsert({
+            data: {
+                ...optimisticTask!,
+                id: 'saved-task',
+            },
+            error: null,
+        });
+
+        await creation;
+
+        // Temporary ID should be replaced by the persisted ID.
+        expect(store.tasks().some((task) => task.id === 'saved-task')).toBe(true);
+
+        expect(store.tasks().some((task) => task.id === optimisticTask?.id)).toBe(false);
     });
 });
