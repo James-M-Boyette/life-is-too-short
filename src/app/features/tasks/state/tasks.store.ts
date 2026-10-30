@@ -390,10 +390,7 @@ export class TasksStore {
         });
     }
 
-    async updateProject(
-        task: Task,
-        projectId: string | null,
-        ): Promise<void> {
+    async updateProject(task: Task, projectId: string | null): Promise<void> {
         if (projectId === task.project_id) {
             return;
         }
@@ -412,20 +409,17 @@ export class TasksStore {
             );
 
             // Append the transferred task after existing tasks.
-            const position = getNextTaskPosition(
-                destinationTasks,
-                'project_position',
-            );
+            const position = getNextTaskPosition(destinationTasks, 'project_position');
 
             // Optimistically update both related properties.
             this.tasks.update((tasks) =>
                 tasks.map((current) =>
                     current.id === task.id
                         ? {
-                            ...current,
-                            project_id: projectId,
-                            project_position: position,
-                        }
+                              ...current,
+                              project_id: projectId,
+                              project_position: position,
+                          }
                         : current,
                 ),
             );
@@ -447,11 +441,7 @@ export class TasksStore {
                 }
 
                 this.tasks.update((tasks) =>
-                    tasks.map((current) =>
-                        current.id === task.id
-                            ? (data as Task)
-                            : current,
-                    ),
+                    tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
                 );
             } catch (error) {
                 // Restore both properties if the database request fails.
@@ -459,10 +449,10 @@ export class TasksStore {
                     tasks.map((current) =>
                         current.id === task.id
                             ? {
-                                ...current,
-                                project_id: previousProjectId,
-                                project_position: previousPosition,
-                            }
+                                  ...current,
+                                  project_id: previousProjectId,
+                                  project_position: previousPosition,
+                              }
                             : current,
                     ),
                 );
@@ -563,37 +553,89 @@ export class TasksStore {
     }
 
     async updateDueDate(task: Task, dueDate: string | null): Promise<void> {
-        if (dueDate === task.due_date) return;
+        if (dueDate === task.due_date) {
+            return;
+        }
 
         await this.runMutation(async () => {
             const previousDate = task.due_date;
+            const previousPosition = task.planned_position;
 
+            // Preview the task after its due date changes.
+            const destinationTask: Task = {
+                ...task,
+                due_date: dueDate,
+            };
+
+            // A planned date takes precedence over the due date.
+            const currentContext = getTaskPlanningContext(task);
+            const destinationContext = getTaskPlanningContext(destinationTask);
+
+            // Preserve the existing position if the task stays
+            // in the same planning context.
+            // Otherwise, append it to the destination context.
+            const position =
+                currentContext === destinationContext && previousPosition !== null
+                    ? previousPosition
+                    : getNextTaskPosition(
+                          this.tasks().filter(
+                              (current) =>
+                                  current.id !== task.id &&
+                                  current.user_id === task.user_id &&
+                                  getTaskPlanningContext(current) === destinationContext,
+                          ),
+                          'planned_position',
+                      );
+
+            // Optimistically update both related properties.
             this.tasks.update((tasks) =>
                 tasks.map((current) =>
-                    current.id === task.id ? { ...current, due_date: dueDate } : current,
+                    current.id === task.id
+                        ? {
+                              ...current,
+                              due_date: dueDate,
+                              planned_position: position,
+                          }
+                        : current,
                 ),
             );
 
-            const { data, error } = await supabase
-                .from('tasks')
-                .update({ due_date: dueDate })
-                .eq('id', task.id)
-                .select('*')
-                .single();
+            try {
+                // Save both properties in one database request.
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .update({
+                        due_date: dueDate,
+                        planned_position: position,
+                    })
+                    .eq('id', task.id)
+                    .eq('user_id', task.user_id)
+                    .select('*')
+                    .single();
 
-            if (error) {
+                if (error) {
+                    throw error;
+                }
+
+                this.tasks.update((tasks) =>
+                    tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
+                );
+            } catch (error) {
+                // Restore the scheduling properties if saving fails.
                 this.tasks.update((tasks) =>
                     tasks.map((current) =>
-                        current.id === task.id ? { ...current, due_date: previousDate } : current,
+                        current.id === task.id
+                            ? {
+                                  ...current,
+                                  due_date: previousDate,
+                                  planned_position: previousPosition,
+                              }
+                            : current,
                     ),
                 );
 
                 throw error;
             }
-
-            this.tasks.update((tasks) =>
-                tasks.map((current) => (current.id === task.id ? (data as Task) : current)),
-            );
         });
     }
 
