@@ -113,13 +113,6 @@ section.tasks-page {
     }
 }
 
-/* Focus / Planning controls */
-.today-layout-controls {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-}
-
 /* Responsive behavior */
 @media (max-width: 1100px) {
     .today-board--focus {
@@ -218,4 +211,18 @@ section.tasks-page {
             outline-offset: 3px;
         }
     }
+}
+
+.today-header-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.task-create-error {
+    margin: 0.75rem 0 0;
+    color: var(--p-red-600);
+    font-size: 0.875rem;
+    line-height: 1.5;
 }

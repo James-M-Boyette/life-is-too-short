@@ -10,6 +10,7 @@
             name="task-title"
             placeholder="Add a task …"
             formControlName="title"
+            [disabled]="disabled()"
         />
 
         <textarea
@@ -19,6 +20,7 @@
             [autoResize]="false"
             placeholder="Enter a description for this task ..."
             formControlName="description"
+            [disabled]="disabled()"
         ></textarea>
     </div>
 
@@ -29,6 +31,8 @@
             placeholder="Select a Project"
             formControlName="project"
             [showClear]="true"
+            [disabled]="disabled()"
+            appendTo="body"
         />
 
         <div class="action-buttons-container">
@@ -36,6 +40,7 @@
                 pButton
                 type="button"
                 (click)="onCancelCreateTask()"
+                [disabled]="disabled()"
             >
                 <i class="pi pi-times" pButtonIcon></i>
                 <span pButtonLabel>Cancel</span>
@@ -44,7 +49,7 @@
             <button
                 pButton
                 type="submit"
-                [disabled]="form.invalid"
+                [disabled]="form.invalid || disabled()"
             >
                 <i class="pi pi-plus" pButtonIcon></i>
                 <span pButtonLabel>Add Task</span>

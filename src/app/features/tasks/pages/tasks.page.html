@@ -9,11 +9,12 @@
         (signOut)="signOut()"
     />
 
-    <app-task-create
+    <!-- Preserving this for now in case we want to return to it later -->
+    <!-- <app-task-create
         [projects]="projectsStore.projectTree()"
         [defaultProjectId]="view() === 'project' ? (projectId() ?? null) : null"
         (create)="createTask($event)"
-    />
+    /> -->
 
     @if (view() === 'today') {
         <div class="today-toolbar">
@@ -63,7 +64,14 @@
             aria-label="Today's task board"
         >
             <section class="today-board__column" aria-labelledby="today-heading">
-                <h2 id="today-heading">Today ({{ todayTasks().length }})</h2>
+                <div class="today-header-container">
+                    <h2 id="today-heading">Today ({{ todayTasks().length }})</h2>
+
+                    <button pButton type="button" (click)="openTaskDialog()" class="add-task-button">
+                        <i class="pi pi-plus" pButtonIcon></i>
+                        <span pButtonLabel>Add Task</span>
+                    </button>
+                </div>
 
                 <app-task-list
                     [tasks]="todayTasks()"
@@ -287,5 +295,37 @@
         </div>
     </section>
 </section>
+
+<p-dialog
+    header="Add Task"
+    [modal]="true"
+    [visible]="taskDialogVisible()"
+    (visibleChange)="!$event && closeTaskDialog()"
+    [closable]="!creatingTask()"
+    [closeOnEscape]="!creatingTask()"
+    [dismissableMask]="false"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: '36rem', maxWidth: '95vw' }"
+    appendTo="body"
+>
+    @if (taskDialogVisible()) {
+        <app-task-create
+            [projects]="projectsStore.projectTree()"
+            [defaultProjectId]="
+                view() === 'project' ? (projectId() ?? null) : null
+            "
+            [disabled]="creatingTask()"
+            (create)="createTask($event)"
+            (cancel)="closeTaskDialog()"
+        />
+
+        @if (taskCreateError(); as error) {
+            <p class="task-create-error" role="alert">
+                {{ error }}
+            </p>
+        }
+    }
+</p-dialog>
 
 <p-confirmDialog />

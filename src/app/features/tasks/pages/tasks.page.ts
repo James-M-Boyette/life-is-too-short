@@ -31,6 +31,8 @@ import {
     sortTasksByPosition,
 } from '@/features/tasks/utils/task-ordering.util';
 
+import { DialogModule } from 'primeng/dialog';
+
 @Component({
     standalone: true,
     imports: [
@@ -39,6 +41,7 @@ import {
         TasksHeaderComponent,
         TaskCreateComponent,
         TaskListComponent,
+        DialogModule,
         ConfirmDialogModule,
     ],
     providers: [ConfirmationService],
@@ -53,6 +56,24 @@ export class TasksPage {
     protected readonly calendarClock = inject(CalendarClockService);
 
     private readonly confirmationService = inject(ConfirmationService);
+
+    protected readonly taskDialogVisible = signal(false);
+    protected readonly creatingTask = signal(false);
+    protected readonly taskCreateError = signal<string | null>(null);
+
+    protected openTaskDialog(): void {
+        this.taskCreateError.set(null);
+        this.taskDialogVisible.set(true);
+    }
+
+    protected closeTaskDialog(): void {
+        if (this.creatingTask()) {
+            return;
+        }
+
+        this.taskDialogVisible.set(false);
+        this.taskCreateError.set(null);
+    }
 
     readonly pageHeader = computed(() => {
         if (this.view() === 'all') {
@@ -153,15 +174,27 @@ export class TasksPage {
         await this.router.navigateByUrl('/login');
     }
 
-    protected async createTask(payload: CreateTaskPayload) {
+    protected async createTask(payload: CreateTaskPayload): Promise<void> {
+        if (this.creatingTask()) {
+            return;
+        }
+
+        this.creatingTask.set(true);
+        this.taskCreateError.set(null);
+
         try {
             await this.tasksStore.addTask(payload);
-        } catch (e: unknown) {
-            this.error.set(e instanceof Error ? e.message : 'Failed to load tasks');
-            console.log(
-                `🚨 Error creating the task: ${e instanceof Error ? e.message : 'Unknown error'}`,
+
+            // Only close when Supabase confirms success.
+            this.taskDialogVisible.set(false);
+        } catch (error: unknown) {
+            // Leave the dialog and form mounted so the user
+            // can correct or retry without retyping everything.
+            this.taskCreateError.set(
+                error instanceof Error ? error.message : 'Could not create task. Please try again.',
             );
-            throw e;
+        } finally {
+            this.creatingTask.set(false);
         }
     }
 
