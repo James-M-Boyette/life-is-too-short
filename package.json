@@ -3,6 +3,11 @@
     "version": "0.0.0",
     "scripts": {
         "ng": "ng",
+        "dockerStart": "docker desktop start",
+        "supabaseStart": "pnpm exec supabase start",
+        "localStart": "dockerStart && supabaseStart",
+        "supabaseStop": "pnpm exec supabase stop",
+        "git:sync-branches": "node scripts/sync-branches.mjs",
         "start": "ng serve --port 4300 --host 127.0.0.1",
         "build": "ng build",
         "build:dev": "ng build --configuration development",
