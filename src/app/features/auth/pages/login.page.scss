@@ -14,7 +14,7 @@
     flex-direction: column;
 }
 
-label {
+.input-wrapper {
     display: grid;
     gap: 0.35rem;
 }
@@ -23,6 +23,11 @@ input {
     padding: 0.65rem 0.75rem;
     border-radius: 12px;
     border: 1px solid #ccc;
+}
+
+:host ::ng-deep p-password input {
+    width: 100%;
+    border-radius: 12px;
 }
 
 .actions {
