@@ -2,7 +2,7 @@
     <h1>Life is too short</h1>
     <p>Sign in to sync your tasks between devices.</p>
 
-    <form [formGroup]="form" (ngSubmit)="signIn()">
+    <form [formGroup]="form" (ngSubmit)="signIn()" class="login-form">
         <label>
             Email
             <input type="email" formControlName="email" autocomplete="email" />
