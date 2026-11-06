@@ -64,7 +64,23 @@
             aria-label="Today's task board"
         >
             <section class="today-board__column" aria-labelledby="today-heading">
-                <h2 id="today-heading">Today ({{ todayTasks().length }})</h2>
+                <div class="today-board__column-header">
+                    <h2 id="today-heading">Today ({{ todayTasks().length }})</h2>
+                    @if (isTodayPlanning()) {
+                        <p-button
+                            label="Clear Today's Schedule"
+                            icon="pi pi-calendar-minus"
+                            size="small"
+                            [text]="true"
+                            [loading]="clearingToday()"
+                            [disabled]="tasksStore.mutating() || bulkScheduleBusy() || clearableTodayTasks().length === 0"
+                            (onClick)="clearTodaySchedule()"
+                        />
+                    }
+                </div>
+                @if (isTodayPlanning() && clearTodayError(); as message) {
+                    <p role="alert">{{ message }}</p>
+                }
 
                 <button
                     pButton
@@ -134,10 +150,25 @@
 
             @if (isTodayPlanning()) {
                 <section class="today-board__column" aria-labelledby="unscheduled-heading">
-                    <h2 id="unscheduled-heading">Unscheduled ({{ unscheduledTasks().length }})</h2>
+                    <div class="today-board__column-header">
+                        <h2 id="unscheduled-heading">Unscheduled ({{ unscheduledTasks().length }})</h2>
+                        <p-button
+                            label="Reschedule for today"
+                            icon="pi pi-calendar"
+                            size="small"
+                            [text]="true"
+                            [loading]="reschedulingUnscheduled()"
+                            [disabled]="tasksStore.mutating() || bulkScheduleBusy() || unscheduledTasks().length === 0"
+                            (onClick)="rescheduleUnscheduledToToday()"
+                        />
+                    </div>
+                    @if (unscheduledRescheduleError(); as message) {
+                        <p role="alert">{{ message }}</p>
+                    }
 
                     <app-task-list
                         [tasks]="unscheduledTasks()"
+                        [defaultPlannedDateToToday]="true"
                         [projects]="projectsStore.projectTree()"
                         [disabled]="tasksStore.mutating()"
                         [draggable]="true"
@@ -163,10 +194,25 @@
                 </section>
 
                 <section class="today-board__column" aria-labelledby="overdue-heading">
-                    <h2 id="overdue-heading">Overdue ({{ overdueTasks().length }})</h2>
+                    <div class="today-board__column-header">
+                        <h2 id="overdue-heading">Overdue ({{ overdueTasks().length }})</h2>
+                        <p-button
+                            label="Reschedule for today"
+                            icon="pi pi-calendar"
+                            size="small"
+                            [text]="true"
+                            [loading]="reschedulingOverdue()"
+                            [disabled]="tasksStore.mutating() || bulkScheduleBusy() || overdueTasks().length === 0"
+                            (onClick)="rescheduleOverdueToToday()"
+                        />
+                    </div>
+                    @if (overdueRescheduleError(); as message) {
+                        <p role="alert">{{ message }}</p>
+                    }
 
                     <app-task-list
                         [tasks]="overdueTasks()"
+                        [defaultPlannedDateToToday]="true"
                         [projects]="projectsStore.projectTree()"
                         [disabled]="tasksStore.mutating()"
                         [draggable]="true"

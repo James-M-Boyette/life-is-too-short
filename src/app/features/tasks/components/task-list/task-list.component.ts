@@ -30,6 +30,7 @@ export class TaskListComponent {
     readonly rename = output<{ task: Task; title: string }>();
 
     readonly draggable = input(false);
+    readonly defaultPlannedDateToToday = input(false);
 
     readonly dropListId = input('');
     readonly connectedDropLists = input<string[]>([]);

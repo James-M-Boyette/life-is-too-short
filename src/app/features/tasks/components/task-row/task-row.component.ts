@@ -63,6 +63,7 @@ export class TaskRowComponent {
     protected readonly calendarClock = inject(CalendarClockService);
 
     readonly draggable = input(false);
+    readonly defaultPlannedDateToToday = input(false);
 
     protected readonly isDueOverdue = computed(() => {
         const task = this.task();
@@ -121,6 +122,12 @@ export class TaskRowComponent {
         parseLocalDate(this.task().planned_date),
     );
 
+    protected readonly plannedDateForPicker = computed(() =>
+        this.defaultPlannedDateToToday()
+            ? parseLocalDate(this.calendarClock.today())
+            : this.plannedDate(),
+    );
+
     protected readonly dueDate = computed(() =>
         parseLocalDate(this.task().due_date),
     );
@@ -136,6 +143,26 @@ export class TaskRowComponent {
             plannedDate: formatLocalDate(date),
         });
     };
+
+    protected commitSchedule(
+        event: Event,
+        plannedDate: Date | null,
+        dueDate: Date | null,
+    ): boolean {
+        event.preventDefault();
+        event.stopPropagation();
+        const keyboardEvent = event as KeyboardEvent;
+        if (this.disabled() || keyboardEvent.repeat || keyboardEvent.isComposing) return false;
+
+        const task = this.task();
+        if (formatLocalDate(plannedDate) !== task.planned_date) {
+            this.onPlannedDateChange(plannedDate);
+        }
+        if (formatLocalDate(dueDate) !== task.due_date) {
+            this.onDueDateChange(dueDate);
+        }
+        return true;
+    }
 
     readonly dueDateChange = output<{
         task: Task;

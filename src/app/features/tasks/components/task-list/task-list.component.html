@@ -17,6 +17,7 @@
             [projects]="projects()"
             [disabled]="disabled()"
             [draggable]="draggable()"
+            [defaultPlannedDateToToday]="defaultPlannedDateToToday()"
             (toggleDone)="toggleDone.emit($event)"
             (remove)="remove.emit($event)"
             (rename)="rename.emit($event)"

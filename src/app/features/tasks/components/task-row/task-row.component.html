@@ -178,8 +178,14 @@
 </li>
 
 <p-popover #schedulePopover>
-    <div class="schedule-popover">
+    <div
+        class="schedule-popover"
+        tabindex="-1"
+        autofocus
+        (keydown.enter)="commitSchedule($event, plannedPicker.value, duePicker.value) && schedulePopover.hide()"
+    >
         <h3>Schedule task</h3>
+        <!-- <p class="schedule-hint">Press Enter to save dates.</p> -->
 
         <div class="schedule-field">
             <label [for]="'planned-date-' + task().id">
@@ -187,8 +193,9 @@
             </label>
 
             <p-datepicker
+                #plannedPicker
                 [inputId]="'planned-date-' + task().id"
-                [ngModel]="plannedDate()"
+                [ngModel]="plannedDateForPicker()"
                 (ngModelChange)="onPlannedDateChange($event)"
                 placeholder="Choose planned date"
                 dateFormat="M d, yy"
@@ -205,6 +212,7 @@
             </label>
 
             <p-datepicker
+                #duePicker
                 [inputId]="'due-date-' + task().id"
                 [ngModel]="dueDate()"
                 (ngModelChange)="onDueDateChange($event)"
