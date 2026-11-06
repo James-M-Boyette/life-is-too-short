@@ -514,8 +514,8 @@ export class TasksStore {
     }
 
     async updateDescription(task: Task, description: string | null): Promise<void> {
-        const trimmed = (description ?? '').trim();
-        const normalized = trimmed || null;
+        const value = description ?? '';
+        const normalized = value.trim() ? value : null;
 
         await this.runMutation(task.id, async (isCurrentSession) => {
             const currentTask = this.tasks().find((current) => current.id === task.id);

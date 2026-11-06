@@ -13,10 +13,13 @@
             cols="30"
             pTextarea
             [autoResize]="false"
-            placeholder="Enter a description for this task ..."
+            placeholder="Description (Markdown supported)"
+            aria-label="Task description (Markdown)"
+            aria-describedby="create-description-help"
             formControlName="description"
             [disabled]="disabled()"
         ></textarea>
+        <small id="create-description-help">Use Markdown for lists, bold, italic, and links.</small>
     </div>
 
     <footer class="task-actions">

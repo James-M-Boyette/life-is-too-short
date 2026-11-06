@@ -3,8 +3,10 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        border: 1px solid #eee;
-        border-radius: 1rem;
+        background: var(--color-surface-card);
+        border: 1px solid var(--color-border-card);
+        box-shadow: 0 1px 2px #0000000A;
+        border-radius: var(--radius-lg);
         padding: 0.75rem;
 
         section.task-primary-section {
@@ -54,7 +56,7 @@
                     width: 1.35rem;
                     height: 1.35rem;
                     border-radius: 999px;
-                    border: 2px solid rgba(0, 0, 0, 0.25);
+                    border: 2px solid var(--color-text-muted);
                     background: transparent;
                     padding: 0;
                     display: grid;
@@ -65,7 +67,7 @@
 
                     // nice focus ring
                     &:focus-visible {
-                        outline: 3px solid rgba(0, 98, 128, 0.35); // matches your primary vibe
+                        outline: 3px solid color-mix(in srgb, var(--color-focus-ring) 35%, transparent);
                         outline-offset: 2px;
                     }
 
@@ -74,8 +76,8 @@
                         content: '';
                         width: 0.35rem;
                         height: 0.7rem;
-                        border-right: 2px solid rgba(0, 0, 0, 0.55);
-                        border-bottom: 2px solid rgba(0, 0, 0, 0.55);
+                        border-right: 2px solid var(--color-text-secondary);
+                        border-bottom: 2px solid var(--color-text-secondary);
                         transform: rotate(45deg);
                         opacity: 0; // hidden initially
                         transition: opacity 120ms ease;
@@ -88,13 +90,13 @@
 
                     // Completed state
                     &.done {
-                        border-color: var(--p-primary-color);
-                        background: rgba(0, 98, 128, 0.08);
+                        border-color: var(--color-action-primary);
+                        background: color-mix(in srgb, var(--color-action-primary) 9%, transparent);
 
                         &::after {
                             opacity: 1;
-                            border-right-color: var(--p-primary-color);
-                            border-bottom-color: var(--p-primary-color);
+                            border-right-color: var(--color-action-primary);
+                            border-bottom-color: var(--color-action-primary);
                         }
 
                         // Optional: don’t show ghost-on-hover because it’s already checked
@@ -155,6 +157,8 @@
                 margin-left: 1.9rem;
                 margin-top: 0.5rem;
                 display: flex;
+                flex-direction: column;
+                min-width: 0;
                 gap: 0.5rem;
             }
 
@@ -168,6 +172,39 @@
     }
 }
 
+.edit-description-form {
+    display: grid;
+    gap: var(--space-2);
+    min-width: 0;
+    font-size: 0.875rem;
+
+    textarea {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        resize: vertical;
+        padding: var(--space-2);
+        font: inherit;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+}
+.description-help { margin: 0; color: var(--text-secondary); font-size: 0.8rem; }
+.description-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.description-edit-button {
+    align-self: flex-start;
+    padding: var(--space-1) 0;
+    border: 0;
+    background: transparent;
+    color: var(--p-primary-color);
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+.description-edit-button:focus-visible,
+.edit-description-form button:focus-visible,
+.edit-description-form textarea:focus-visible { outline: 2px solid var(--p-primary-color); outline-offset: 2px; }
+
 .task-actions {
     display: flex;
     align-items: center;
@@ -175,12 +212,14 @@
     flex: 0 0 auto;
 
     button.delete-task-btn {
-        background-color: var(--surface-warning);
-        border-color: var(--surface-warning);
+        background-color: var(--color-status-danger-soft);
+        color: var(--color-status-danger);
+        border-color: var(--color-status-danger-border);
 
         &:hover {
-            background-color: var(--surface-warning-hover);
-            border-color: var(--surface-warning-hover);
+            background-color: var(--color-status-danger);
+            color: #FFFFFF;
+            border-color: var(--color-status-danger);
         }
     }
 }
@@ -211,7 +250,7 @@ div.meta {
     border-radius: 0.375rem;
 
     background: transparent;
-    color: var(--p-text-muted-color);
+    color: var(--color-text-muted);
     cursor: grab;
 
     &:active {
@@ -219,7 +258,7 @@ div.meta {
     }
 
     &:focus-visible {
-        outline: 2px solid var(--p-primary-color);
+        outline: 2px solid var(--color-focus-ring);
         outline-offset: 2px;
     }
 }

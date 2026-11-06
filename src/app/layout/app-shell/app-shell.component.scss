@@ -36,14 +36,14 @@
 
             &:hover,
             &.is-resizing {
-                background: var(--p-primary-color);
+                background: var(--color-action-primary);
                 // TODO: make this look nicer
                 width: 8px;
                 box-shadow: 2px 0px 5px var(--text-muted);
             }
 
             &:focus-visible {
-                outline: 2px solid var(--p-primary-color);
+                outline: 2px solid var(--color-focus-ring);
                 outline-offset: -2px;
             }
         }
@@ -54,6 +54,7 @@
             overflow: auto;
 
             padding: var(--space-4);
+            background: var(--color-surface-page);
         }
     }
 
@@ -65,6 +66,6 @@
     }
 
     .project-delete-error {
-        color: var(--p-red-600);
+        color: var(--color-status-danger);
     }
 }

@@ -139,13 +139,35 @@
                 <form
                     class="edit-description-form"
                     (submit)="onDescriptionSubmit($event)"
+                    (keydown.escape)="$event.stopPropagation(); cancelDescriptionEdit()"
                 >
-                    ...
+                    <label [for]="'description-source-' + task().id">Description (Markdown)</label>
+                    <textarea #descriptionTextarea [id]="'description-source-' + task().id"
+                        rows="6" [value]="draftDescription()" (input)="onDescriptionInput($event)"
+                        [disabled]="disabled() || !!descriptionFeedback()?.pending"
+                        [attr.aria-describedby]="'description-help-' + task().id"></textarea>
+                    <p class="description-help" [id]="'description-help-' + task().id">Use Markdown for lists, bold, italic, and links. Choose Save to apply changes.</p>
+                    <div class="description-actions">
+                        <button pButton size="small" type="submit" [disabled]="disabled() || !!descriptionFeedback()?.pending"><span pButtonLabel>Save description</span></button>
+                        <button pButton size="small" [text]="true" type="button" (click)="cancelDescriptionEdit()" [disabled]="!!descriptionFeedback()?.pending"><span pButtonLabel>Cancel</span></button>
+                        <button pButton size="small" [text]="true" type="button" (click)="draftDescription.set('')" [disabled]="disabled() || !!descriptionFeedback()?.pending"><span pButtonLabel>Clear description</span></button>
+                    </div>
+                    @if (descriptionFeedback()?.pending) {
+                        <p role="status">Saving description…</p>
+                    }
+                    @if (descriptionError(); as message) {
+                        <p role="alert">{{ message }} Your draft is still here; choose Save to retry.</p>
+                    }
                 </form>
-            } @else if (task().description) {
-                <p class="description-text">
-                    {{ task().description }}
-                </p>
+            } @else {
+                @if (task().description; as description) {
+                    <app-task-description [source]="description" [taskId]="task().id" />
+                }
+                <button #descriptionEditButton type="button" class="description-edit-button"
+                    [attr.aria-label]="(task().description ? 'Edit description: ' : 'Add description: ') + task().title"
+                    [disabled]="disabled()" (click)="startDescriptionEdit()">
+                    {{ task().description ? 'Edit description' : 'Add description' }}
+                </button>
             }
         </div>
         <div class="meta">

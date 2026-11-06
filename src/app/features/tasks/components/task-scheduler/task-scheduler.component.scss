@@ -15,17 +15,17 @@
     border: 0; border-radius: 0.5rem; background: transparent;
     color: inherit; font: inherit; text-align: left; cursor: pointer;
     > .pi:first-child { color: var(--text-secondary); }
-    &:hover:not(:disabled) { background: var(--p-content-hover-background); }
-    &:focus-visible { outline: 2px solid var(--p-primary-color); outline-offset: -2px; }
+    &:hover:not(:disabled) { background: var(--color-surface-hover); }
+    &:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: -2px; }
     &:disabled { opacity: 0.6; cursor: wait; }
     &__detail { margin-left: auto; color: var(--text-secondary); font-size: 0.8rem; }
     &__check { width: 1rem; font-size: 0.8rem; }
 }
-.calendar-section { border-top: 1px solid var(--p-content-border-color); padding-top: 1rem; }
+.calendar-section { border-top: 1px solid var(--color-border-subtle); padding-top: 1rem; }
 .calendar-container {
     display: flex;
     justify-content: center;
 }
 .current-date { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; font-size: 0.8rem; color: var(--text-secondary); strong { color: var(--text-primary); } }
 .feedback { min-height: 1.25rem; font-size: 0.85rem; color: var(--text-secondary); }
-.save-error { display: flex; align-items: center; gap: 0.5rem; color: var(--p-red-700); font-size: 0.85rem; }
+.save-error { display: flex; align-items: center; gap: 0.5rem; color: var(--color-status-danger); font-size: 0.85rem; }

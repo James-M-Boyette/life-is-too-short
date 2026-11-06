@@ -23,6 +23,7 @@
     <!-- Preserving this for now in case we want to return to it later -->
     <!-- <app-task-create
         [projects]="projectsStore.projectTree()"
+        [descriptionFeedback]="descriptionFeedback()"
         [defaultProjectId]="view() === 'project' ? (projectId() ?? null) : null"
         (create)="createTask($event)"
     /> -->
@@ -119,6 +120,7 @@
                         plannedDate: calendarClock.today()
                     }"
                     [projects]="projectsStore.projectTree()"
+                    [descriptionFeedback]="descriptionFeedback()"
                     [disabled]="tasksStore.mutating()"
                     [draggable]="true"
                     [sortable]="true"
@@ -134,7 +136,7 @@
                     (remove)="confirmDeleteTask($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
                     (editDescription)="
-                        tasksStore.updateDescription($event.task, $event.description)
+                        saveDescription($event)
                     "
                 />
             </section>
@@ -184,6 +186,7 @@
                     <app-task-list
                         [tasks]="unscheduledTasks()"
                         [projects]="projectsStore.projectTree()"
+                        [descriptionFeedback]="descriptionFeedback()"
                         [disabled]="tasksStore.mutating()"
                         [draggable]="true"
                         dropListId="board-unscheduled"
@@ -199,7 +202,7 @@
                         (remove)="confirmDeleteTask($event)"
                         (rename)="tasksStore.updateTitle($event.task, $event.title)"
                         (editDescription)="
-                            tasksStore.updateDescription($event.task, $event.description)
+                            saveDescription($event)
                         "
                     />
                 </section>
@@ -224,6 +227,7 @@
                     <app-task-list
                         [tasks]="overdueTasks()"
                         [projects]="projectsStore.projectTree()"
+                        [descriptionFeedback]="descriptionFeedback()"
                         [disabled]="tasksStore.mutating()"
                         [draggable]="true"
                         dropListId="board-overdue"
@@ -237,7 +241,7 @@
                         (remove)="confirmDeleteTask($event)"
                         (rename)="tasksStore.updateTitle($event.task, $event.title)"
                         (editDescription)="
-                            tasksStore.updateDescription($event.task, $event.description)
+                            saveDescription($event)
                         "
                     />
                 </section>
@@ -279,6 +283,7 @@
                     <app-task-list
                         [tasks]="day.tasks"
                         [projects]="projectsStore.projectTree()"
+                        [descriptionFeedback]="descriptionFeedback()"
                         [disabled]="tasksStore.mutating()"
                         [draggable]="true"
                         [sortable]="true"
@@ -294,7 +299,7 @@
                         (remove)="confirmDeleteTask($event)"
                         (rename)="tasksStore.updateTitle($event.task, $event.title)"
                         (editDescription)="
-                            tasksStore.updateDescription($event.task, $event.description)
+                            saveDescription($event)
                         "
                     />
                 </section>
@@ -329,6 +334,7 @@
                 <app-task-list
                     [tasks]="openTasks()"
                     [projects]="projectsStore.projectTree()"
+                    [descriptionFeedback]="descriptionFeedback()"
                     [disabled]="tasksStore.mutating()"
                     [draggable]="view() === 'inbox' || view() === 'project'"
                     [sortable]="view() === 'inbox' || view() === 'project'"
@@ -342,7 +348,7 @@
                     (remove)="confirmDeleteTask($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
                     (editDescription)="
-                        tasksStore.updateDescription($event.task, $event.description)
+                        saveDescription($event)
                     "
                 />
             }
@@ -372,6 +378,7 @@
                 <app-task-list
                     [tasks]="completedTasks()"
                     [projects]="projectsStore.projectTree()"
+                    [descriptionFeedback]="descriptionFeedback()"
                     [disabled]="tasksStore.mutating()"
                     emptyMessage="No completed tasks."
                     (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
@@ -380,7 +387,7 @@
                     (remove)="confirmDeleteTask($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
                     (editDescription)="
-                        tasksStore.updateDescription($event.task, $event.description)
+                        saveDescription($event)
                     "
                 />
             }
