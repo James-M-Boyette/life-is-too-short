@@ -6,12 +6,13 @@ import type { ProjectNode } from '@/features/projects/models/project.model';
 import { TaskRowComponent } from '@/features/tasks/components/task-row/task-row.component';
 
 // import { JsonPipe } from '@angular/common';
-import { CdkDropList, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { CdkDropList, CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 
 import type { TaskScheduleDrop } from '@/features/tasks/models/task-schedule-drop.model';
 import type { TaskReorder } from '@/features/tasks/models/task-reorder.model';
 import { TaskOrderField } from '@/features/tasks/utils/task-ordering.util'
 import type { TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
+import type { TaskListGroup } from '@/features/tasks/models/task-list-group.model';
 
 @Component({
     selector: 'app-task-list',
@@ -22,6 +23,24 @@ import type { TaskScheduleRequest } from '@/features/tasks/models/task-schedule.
 })
 export class TaskListComponent {
     readonly tasks = input.required<Task[]>();
+    readonly groups = input<TaskListGroup[]>([]);
+    protected readonly displayTasks = computed(() =>
+        this.groups().length ? this.groups().flatMap(group => group.tasks) : this.tasks(),
+    );
+    protected readonly groupByTask = computed(() => {
+        const result = new Map<string, TaskListGroup>();
+        for (const group of this.groups()) {
+            for (const task of group.tasks) result.set(task.id, group);
+        }
+        return result;
+    });
+    protected readonly groupHeaders = computed(() => {
+        const result = new Map<string, TaskListGroup>();
+        for (const group of this.groups()) {
+            if (group.tasks.length) result.set(group.tasks[0].id, group);
+        }
+        return result;
+    });
     readonly projects = input<ProjectNode[]>([]);
     readonly disabled = input(false);
     readonly emptyMessage = input('No tasks.');
@@ -47,6 +66,14 @@ export class TaskListComponent {
 
     protected readonly canEnter = () => this.acceptsDrops();
 
+    protected readonly canSort = (index: number, drag: CdkDrag<Task>, drop: CdkDropList<Task[]>): boolean => {
+        // Entering from another column still changes scheduling, not just manual order.
+        if (drag.dropContainer !== drop || !this.groups().length) return true;
+        const group = this.groupByTask().get(drag.data.id);
+        const target = this.displayTasks()[index];
+        return !!group && !!target && this.groupByTask().get(target.id) === group;
+    };
+
     protected onDrop(event: CdkDragDrop<Task[]>): void {
         const task = event.item.data as Task;
 
@@ -56,11 +83,25 @@ export class TaskListComponent {
                 return;
             }
 
+            let tasks = event.container.data;
+            let previousIndex = event.previousIndex;
+            let currentIndex = event.currentIndex;
+            if (this.groups().length) {
+                const group = this.groupByTask().get(task.id);
+                const target = tasks[currentIndex];
+                if (!group || !target || this.groupByTask().get(target.id) !== group) return;
+                // Neighbors in another visual section must not affect this section's positions.
+                tasks = tasks.filter(item => this.groupByTask().get(item.id) === group);
+                previousIndex = tasks.findIndex(item => item.id === task.id);
+                currentIndex = tasks.findIndex(item => item.id === target.id);
+                if (previousIndex < 0 || currentIndex < 0 || previousIndex === currentIndex) return;
+            }
+
             this.taskReordered.emit({
                 task,
-                previousIndex: event.previousIndex,
-                currentIndex: event.currentIndex,
-                tasks: event.container.data,
+                previousIndex,
+                currentIndex,
+                tasks,
                 field: this.orderField(),
             });
 

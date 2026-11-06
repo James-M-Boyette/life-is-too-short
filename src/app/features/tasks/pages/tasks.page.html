@@ -112,6 +112,7 @@
 
                 <app-task-list
                     [tasks]="todayTasks()"
+                    [groups]="todayTaskGroups()"
                     [projects]="projectsStore.projectTree()"
                     [disabled]="tasksStore.mutating()"
                     [draggable]="true"
@@ -121,7 +122,7 @@
                     [connectedDropLists]="todayDropLists"
                     [destinationDate]="calendarClock.today()"
                     (taskDropped)="onTaskDropped($event)"
-                    emptyMessage="Nothing planned for today."
+                    emptyMessage="Nothing for today."
                     (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
                     (scheduleRequested)="openSchedule($event)"
                     (toggleDone)="tasksStore.toggleDone($event)"

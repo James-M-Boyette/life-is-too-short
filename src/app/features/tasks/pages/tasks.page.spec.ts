@@ -12,6 +12,10 @@ import { CalendarClockService } from '@/shared/services/calendar-clock.service';
 import type { Task } from '@/features/tasks/models/tasks.model';
 import { Popover } from 'primeng/popover';
 import { TaskSchedulerComponent } from '@/features/tasks/components/task-scheduler/task-scheduler.component';
+import { TaskListComponent } from '@/features/tasks/components/task-list/task-list.component';
+import { TaskRowComponent } from '@/features/tasks/components/task-row/task-row.component';
+import { CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
+import type { TaskOrderField } from '@/features/tasks/utils/task-ordering.util';
 
 const task = (id: string, plannedDate: string | null, overrides: Partial<Task> = {}): Task => ({
     id, user_id: 'user-1', title: id, description: null, project_id: null,
@@ -26,6 +30,7 @@ describe('TasksPage', () => {
     const tasks = signal<Task[]>([]);
     const updatePlannedDate = vi.fn();
     const updateDueDate = vi.fn();
+    const updateTaskPosition = vi.fn();
     const userId = signal<string | null>('user-1');
 
     beforeEach(async () => {
@@ -46,6 +51,9 @@ describe('TasksPage', () => {
         updateDueDate.mockReset().mockImplementation(async (t: Task, date: string | null) => {
             tasks.update(items => items.map(item => item.id === t.id ? { ...item, due_date: date } : item));
         });
+        updateTaskPosition.mockReset().mockImplementation(async (t: Task, field: TaskOrderField, position: number) => {
+            tasks.update(items => items.map(item => item.id === t.id ? { ...item, [field]: position } : item));
+        });
         await TestBed.configureTestingModule({
             imports: [TasksPage],
             providers: [
@@ -55,7 +63,7 @@ describe('TasksPage', () => {
                 { provide: ProjectsStore, useValue: { projects: signal([]), projectTree: signal([]) } },
                 { provide: CalendarClockService, useValue: { today: signal('2026-11-05') } },
                 { provide: TasksStore, useValue: {
-                    tasks, updatePlannedDate, updateDueDate, mutating: signal(false), error: signal(null), loading: signal(false),
+                    tasks, updatePlannedDate, updateDueDate, updateTaskPosition, mutating: signal(false), error: signal(null), loading: signal(false),
                     realtimeConnected: signal(false),
                 } },
             ],
@@ -69,6 +77,115 @@ describe('TasksPage', () => {
 
     it('should create', () => {
         expect(component).toBeTruthy();
+    });
+
+    function todayList() {
+        return fixture.debugElement.queryAll(By.directive(TaskListComponent))
+            .find(el => el.componentInstance.dropListId() === 'board-today')!;
+    }
+
+    it.each(['focus', 'planning'] as const)('shows ordered Planned and Due subsections in %s without changing placement', layout => {
+        tasks.set([
+            task('planned-both', '2026-11-05', { due_date: '2026-11-05', planned_position: 30 }),
+            task('due-only', null, { due_date: '2026-11-05', planned_position: -100 }),
+            task('planned-only', '2026-11-05', { planned_position: 10 }),
+            task('planned-overdue', '2026-11-05', { due_date: '2026-11-04', planned_position: 20 }),
+            task('unplanned-overdue', null, { due_date: '2026-11-04' }),
+            task('future-overdue', '2026-11-06', { due_date: '2026-11-04' }),
+            task('completed', '2026-11-05', { is_done: true }),
+        ]);
+        component['setTodayLayout'](layout);
+        fixture.detectChanges();
+        const today = todayList();
+        expect(today.componentInstance.groups().map((group: { tasks: Task[] }) => group.tasks.map(t => t.id)))
+            .toEqual([['planned-only', 'planned-overdue', 'planned-both'], ['due-only']]);
+        expect(today.nativeElement.querySelectorAll('h3')).toHaveLength(2);
+        expect(today.nativeElement.textContent).toContain('Planned for today');
+        expect(today.nativeElement.textContent).toContain('Due today · Not planned');
+        expect(fixture.nativeElement.querySelector('#today-heading').textContent).toContain('Today (4)');
+        expect(today.queryAll(By.directive(CdkDropList))).toHaveLength(1);
+        const rows = today.queryAll(By.directive(TaskRowComponent));
+        expect(rows.map(row => row.componentInstance.task().id)).toEqual(['planned-only', 'planned-overdue', 'planned-both', 'due-only']);
+        const overdueRow = rows.find(row => row.componentInstance.task().id === 'planned-overdue')!;
+        expect(overdueRow.nativeElement.querySelector('.p-tag-danger')).toBeTruthy();
+        expect(component['overdueTasks']().map(t => t.id)).toEqual(['unplanned-overdue']);
+        expect(component['upcomingDays']()[1].tasks.map(t => t.id)).toEqual(['future-overdue']);
+        expect(fixture.nativeElement.querySelectorAll('.today-board__column')).toHaveLength(layout === 'planning' ? 3 : 1);
+    });
+
+    it.each(['planned', 'due', 'empty'])('handles the %s single-group or empty state without empty headings', state => {
+        tasks.set(state === 'planned' ? [task('one', '2026-11-05')] :
+            state === 'due' ? [task('one', null, { due_date: '2026-11-05' })] : []);
+        fixture.detectChanges();
+        const today = todayList();
+        expect(today.nativeElement.querySelectorAll('h3')).toHaveLength(state === 'empty' ? 0 : 1);
+        expect(today.nativeElement.textContent).toContain(state === 'planned' ? 'Planned for today' :
+            state === 'due' ? 'Due today · Not planned' : 'Nothing for today.');
+        expect(fixture.nativeElement.querySelector('#today-heading').textContent).toContain(state === 'empty' ? '(0)' : '(1)');
+    });
+
+    it('clearing Today moves a due-today task between subsections while removing a task with no deadline', async () => {
+        tasks.set([
+            task('planned-both', '2026-11-05', { due_date: '2026-11-05' }),
+            task('planned-only', '2026-11-05'),
+        ]);
+        component['setTodayLayout']('planning');
+        fixture.detectChanges();
+        const clear = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+            .find(button => button.textContent?.includes("Clear Today's Schedule"))!;
+        clear.click();
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(todayList().componentInstance.groups().map((group: { tasks: Task[] }) => group.tasks.map(t => t.id)))
+            .toEqual([[], ['planned-both']]);
+        expect(todayList().nativeElement.textContent).not.toContain('Planned for today');
+        expect(fixture.nativeElement.querySelector('#today-heading').textContent).toContain('(1)');
+        expect(component['unscheduledTasks']().map(t => t.id)).toEqual(['planned-only']);
+        expect(tasks().find(t => t.id === 'planned-both')?.due_date).toBe('2026-11-05');
+    });
+
+    it('reorders only against neighbors in the same Today subsection and preserves cross-column scheduling', async () => {
+        tasks.set([
+            task('p1', '2026-11-05', { planned_position: 5000, due_date: '2026-11-05' }),
+            task('p2', '2026-11-05', { planned_position: 6000 }),
+            task('d1', null, { due_date: '2026-11-05', planned_position: 1000 }),
+            task('d2', null, { due_date: '2026-11-05', planned_position: 2000 }),
+            task('unscheduled', null),
+        ]);
+        component['setTodayLayout']('planning');
+        fixture.detectChanges();
+        const today = todayList();
+        const dropElement = today.query(By.directive(CdkDropList));
+        const drop = dropElement.injector.get(CdkDropList<Task[]>);
+        const drag = today.queryAll(By.directive(CdkDrag)).find(el => el.injector.get(CdkDrag).data.id === 'd2')!
+            .injector.get(CdkDrag<Task>);
+        dropElement.triggerEventHandler('cdkDropListDropped', {
+            item: drag, previousContainer: drop, container: drop, previousIndex: 3, currentIndex: 2,
+        });
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(updateTaskPosition).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: 'd2' }), 'planned_position', 0);
+        const source = fixture.debugElement.queryAll(By.directive(TaskListComponent))
+            .find(el => el.componentInstance.dropListId() === 'board-unscheduled')!;
+        const sourceDrop = source.query(By.directive(CdkDropList)).injector.get(CdkDropList<Task[]>);
+        const external = source.query(By.directive(CdkDrag)).injector.get(CdkDrag<Task>);
+        dropElement.triggerEventHandler('cdkDropListDropped', {
+            item: external, previousContainer: sourceDrop, container: drop, previousIndex: 0, currentIndex: 3,
+        });
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(updatePlannedDate).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: 'unscheduled' }), '2026-11-05');
+        expect(todayList().componentInstance.groups()[0].tasks.map((t: Task) => t.id)).toContain('unscheduled');
+        const outgoing = todayList().queryAll(By.directive(CdkDrag))
+            .find(el => el.injector.get(CdkDrag).data.id === 'p1')!.injector.get(CdkDrag<Task>);
+        source.query(By.directive(CdkDropList)).triggerEventHandler('cdkDropListDropped', {
+            item: outgoing, previousContainer: drop, container: sourceDrop, previousIndex: 0, currentIndex: 0,
+        });
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(updatePlannedDate).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'p1' }), null);
+        expect(todayList().componentInstance.groups()[1].tasks.map((t: Task) => t.id)).toContain('p1');
+        expect(tasks().find(t => t.id === 'p1')?.due_date).toBe('2026-11-05');
     });
 
     async function openScheduler(id = 'unscheduled') {

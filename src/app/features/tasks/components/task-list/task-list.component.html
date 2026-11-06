@@ -4,14 +4,23 @@
     class="list"
     cdkDropList
     [id]="dropListId()"
-    [cdkDropListData]="tasks()"
+    [cdkDropListData]="displayTasks()"
     [cdkDropListConnectedTo]="connectedDropLists()"
     [cdkDropListDisabled]="!draggable()"
     [cdkDropListSortingDisabled]="!sortable()"
     [cdkDropListEnterPredicate]="canEnter"
+    [cdkDropListSortPredicate]="canSort"
     (cdkDropListDropped)="onDrop($event)"
     >
-    @for (task of tasks(); track task.id) {
+    @for (task of displayTasks(); track task.id) {
+        @if (groupHeaders().get(task.id); as group) {
+            <li class="list__group-heading" role="presentation">
+                <h3>
+                    {{ group.label }}
+                    <span class="list__group-count" [attr.aria-label]="group.tasks.length + ' tasks'">{{ group.tasks.length }}</span>
+                </h3>
+            </li>
+        }
         <app-task-row
             [task]="task"
             [projects]="projects()"

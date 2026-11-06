@@ -34,3 +34,32 @@
     padding: 0.75rem;
     color: var(--text-muted);
 }
+
+.list__group-heading {
+    padding-block: var(--space-1);
+
+    &:not(:first-child) {
+        margin-top: var(--space-3);
+        padding-top: var(--space-4);
+        border-top: 1px solid var(--border-subtle);
+    }
+
+    h3 {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--space-2);
+        margin: 0;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        line-height: 1.5;
+    }
+}
+
+.list__group-count {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 400;
+}

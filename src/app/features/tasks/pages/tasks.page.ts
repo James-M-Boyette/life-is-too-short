@@ -32,6 +32,7 @@ import { TaskCreateDialogService } from '@/features/tasks/services/task-create-d
 import { Popover, PopoverModule } from 'primeng/popover';
 import { TaskSchedulerComponent } from '@/features/tasks/components/task-scheduler/task-scheduler.component';
 import type { Task } from '@/features/tasks/models/tasks.model';
+import type { TaskListGroup } from '@/features/tasks/models/task-list-group.model';
 import type { TaskDateSelection, TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
 
 @Component({
@@ -452,6 +453,23 @@ export class TasksPage {
             'planned_position',
         ),
     );
+
+    protected readonly todayTaskGroups = computed<TaskListGroup[]>(() => {
+        const today = this.calendarClock.today();
+        const tasks = this.todayTasks();
+        return [
+            {
+                id: 'planned-today',
+                label: 'Planned for today',
+                tasks: tasks.filter(task => task.planned_date === today),
+            },
+            {
+                id: 'due-today-unplanned',
+                label: 'Due today · Not planned',
+                tasks: tasks.filter(task => task.planned_date === null && task.due_date === today),
+            },
+        ];
+    });
 
     protected readonly unscheduledTasks = computed(() =>
         sortTasksByPosition(
