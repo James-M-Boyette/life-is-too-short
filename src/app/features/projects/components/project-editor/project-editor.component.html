@@ -36,18 +36,22 @@
 
     <footer class="form-actions">
         <button
+            pButton
             type="button"
+            severity="secondary"
+            [outlined]="true"
             [disabled]="disabled()"
             (click)="cancel.emit()"
         >
-            Cancel
+            <span pButtonLabel>Cancel</span>
         </button>
 
         <button
+            pButton
             type="submit"
             [disabled]="form.invalid || disabled()"
         >
-            {{ isEditing() ? 'Save Changes' : 'Create Project' }}
+            <span pButtonLabel>{{ isEditing() ? 'Save Changes' : 'Create Project' }}</span>
         </button>
     </footer>
 </form>
