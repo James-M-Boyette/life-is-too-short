@@ -365,6 +365,15 @@ describe('TaskRowComponent More actions', () => {
         expect(trigger.getAttribute('aria-expanded')).toBe('true');
         const items = document.querySelectorAll('[role="menuitem"] a');
         expect(items[0].textContent).toContain('Edit task');
+        const destructive = items[1].closest('[role="menuitem"]') as HTMLElement;
+        expect(destructive.closest('app-task-row')).toBeNull();
+        expect(destructive.style.getPropertyValue('--p-menu-item-color')).toBe('var(--color-status-danger)');
+        expect(destructive.style.getPropertyValue('--p-menu-item-icon-color')).toBe('var(--color-status-danger)');
+        expect(destructive.style.getPropertyValue('--p-menu-item-focus-background')).toBe('var(--color-status-danger-soft)');
+        document.querySelector('[role="menu"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', code: 'End', bubbles: true }));
+        fixture.detectChanges();
+        expect(destructive.classList.contains('p-focus')).toBe(true);
+
         (items[1] as HTMLElement).click();
         fixture.detectChanges();
         await fixture.whenStable();
