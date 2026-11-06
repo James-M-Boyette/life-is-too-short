@@ -1,3 +1,5 @@
+import { By } from '@angular/platform-browser';
+import { CdkDrag } from '@angular/cdk/drag-drop';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
@@ -54,6 +56,7 @@ describe('Task card drag preview styling', () => {
             expect(card.display).toBe('flex');
             expect(card.flexDirection).toBe('column');
             expect(card.boxSizing).toBe('border-box');
+            expect(card.getPropertyValue('rotate')).toBe('1.5deg');
             expect(card.getPropertyValue('container').replace(/\s/g, '')).toBe('task-card/inline-size');
             expect(preview.querySelectorAll('.date-control')).toHaveLength(2);
             expect(preview.querySelector('.compact-project-link')).toBeTruthy();
@@ -64,6 +67,93 @@ describe('Task card drag preview styling', () => {
             expect(preview.textContent).toContain('Planned: Nov 5');
             expect(preview.textContent).toContain('Due: Nov 4');
         } finally { preview.remove(); }
+    });
+});
+
+describe('Card-surface drag initiation', () => {
+    function setup() {
+        TestBed.configureTestingModule({ providers: [provideRouter([]),
+            { provide: CalendarClockService, useValue: { today: signal('2026-11-06') } },
+        ] });
+        const fixture = TestBed.createComponent(TaskRowComponent);
+        fixture.componentRef.setInput('task', {
+            id: 'surface', title: 'Task', description: '**Selectable** [Link](https://example.com)',
+            project_id: null, planned_date: '2026-11-06', due_date: '2026-11-05', is_done: false,
+        } as Task);
+        fixture.componentRef.setInput('draggable', true);
+        fixture.detectChanges();
+        const root = fixture.nativeElement.querySelector('li.row') as HTMLElement;
+        const drag = fixture.debugElement.query(By.directive(CdkDrag)).injector.get(CdkDrag);
+        return { fixture, root, drag };
+    }
+
+    it('allows surface and wide-handle starts to reach CDK but shields controls and selectable descriptions', () => {
+        const { fixture, root, drag } = setup();
+        const starts = vi.fn();
+        root.addEventListener('mousedown', starts);
+        root.addEventListener('touchstart', starts);
+        for (const selector of ['.complete-toggle', '.title-btn', '.edit-task-btn', '.schedule-task-btn', '.more-actions-btn',
+            '.date-control', '.compact-project-link', 'p-treeselect', '.description-disclosure', '.markdown-content strong', '.markdown-content a', '.compact-description-excerpt']) {
+            const target = fixture.nativeElement.querySelector(selector);
+            for (const type of ['mousedown', 'touchstart']) {
+                const event = new Event(type, { bubbles: true, cancelable: true });
+                target.dispatchEvent(event);
+                expect(event.defaultPrevented).toBe(false);
+            }
+        }
+        expect(starts).not.toHaveBeenCalled();
+        // Deliberately stop at pointer-down: JSDOM cannot establish real threshold/drag/scroll behavior.
+        fixture.nativeElement.querySelector('.task-card-content').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        fixture.nativeElement.querySelector('.task-drag-handle').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        expect(starts).toHaveBeenCalledTimes(2);
+        expect(drag.disabled).toBe(false);
+        expect(drag.dragStartDelay).toEqual({ mouse: 0, touch: 200 });
+        document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    });
+
+    it('preserves normal activation and disables dragging for the existing editor and disabled state', async () => {
+        const { fixture, drag } = setup();
+        const completed = vi.fn();
+        const scheduled = vi.fn();
+        fixture.componentInstance.toggleDone.subscribe(completed);
+        fixture.componentInstance.scheduleRequested.subscribe(scheduled);
+        fixture.nativeElement.querySelector('.complete-toggle').click();
+        fixture.nativeElement.querySelector('.schedule-task-btn').click();
+        expect(completed).toHaveBeenCalledExactlyOnceWith(fixture.componentInstance.task());
+        expect(scheduled).toHaveBeenCalledTimes(1);
+        const link = fixture.nativeElement.querySelector('.markdown-content a');
+        link.addEventListener('click', (event: Event) => event.preventDefault());
+        link.click();
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
+        fixture.nativeElement.querySelector('.title-btn').click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(drag.disabled).toBe(true);
+        expect(fixture.nativeElement.querySelector('textarea')).toBeTruthy();
+        fixture.nativeElement.querySelector('[aria-label="Cancel editing task"]').click();
+        fixture.detectChanges();
+        fixture.componentRef.setInput('disabled', true);
+        fixture.detectChanges();
+        expect(drag.disabled).toBe(true);
+    });
+
+    it('hides cloned placeholder contents without removing their layout footprint', () => {
+        const { root } = setup();
+        const placeholder = root.cloneNode(true) as HTMLElement;
+        placeholder.classList.add('cdk-drag-placeholder');
+        document.body.append(placeholder);
+        try {
+            expect(getComputedStyle(placeholder).display).toBe('flex');
+            expect(getComputedStyle(placeholder).opacity).toBe('1');
+            expect(getComputedStyle(placeholder).boxShadow).toBe('none');
+            expect(getComputedStyle(placeholder).getPropertyValue('rotate')).not.toBe('1.5deg');
+            const content = placeholder.querySelector('.task-card-content')!;
+            expect(getComputedStyle(content).visibility).toBe('hidden');
+            expect(getComputedStyle(content).display).not.toBe('none');
+            expect(content.querySelector('.title-btn')).toBeTruthy();
+            expect(content.querySelector('.date-control')).toBeTruthy();
+        } finally { placeholder.remove(); }
     });
 });
 

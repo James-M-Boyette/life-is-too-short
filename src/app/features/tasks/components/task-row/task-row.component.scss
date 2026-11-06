@@ -212,7 +212,8 @@ li.row section.task-primary-section div.left-column button.title-btn:hover:not(:
 li.row.cdk-drag-preview {
     box-sizing: border-box;
     list-style: none;
-    box-shadow: 0 8px 24px color-mix(in srgb, var(--color-text-primary) 18%, transparent);
+    rotate: 1.5deg;
+    box-shadow: 0 12px 28px color-mix(in srgb, var(--color-text-primary) 22%, transparent);
 }
 
 .project-selector { min-width: 0; max-width: 100%; }
@@ -231,7 +232,7 @@ li.row.cdk-drag-preview {
         }
         .edit-task-btn, .schedule-task-btn { display: none; }
         .task-actions { gap: 0; }
-        .task-drag-handle { width: 2rem; height: 2rem; padding: 0; }
+        .task-drag-handle { display: none; }
         .complete-toggle { width: 1.75rem; height: 1.75rem; margin-top: var(--space-1); }
         section.task-secondary-section div.description { margin-left: 0; margin-top: var(--space-2); }
         .meta-row { margin-top: var(--space-2); }
@@ -250,3 +251,16 @@ li.row.cdk-drag-preview {
         .date-control:hover:not(:disabled), .compact-schedule-control:hover:not(:disabled), .compact-project-link:hover { background: var(--color-surface-hover); }
     }
 }
+
+.task-card-content { width: 100%; min-width: 0; }
+
+// Keep the default clone in layout at its original footprint; only its contents disappear.
+li.row.cdk-drag-placeholder {
+    opacity: 1;
+    background: var(--color-surface-panel);
+    border-color: var(--color-border-subtle);
+    border-style: dashed;
+    box-shadow: none;
+    pointer-events: none;
+}
+li.row.cdk-drag-placeholder > .task-card-content { visibility: hidden; }

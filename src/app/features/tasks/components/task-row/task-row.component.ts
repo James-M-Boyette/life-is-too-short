@@ -31,7 +31,7 @@ import {
     parseLocalDate,
 } from '@/shared/utils/date.util';
 import type { TaskDateField, TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
-import { CdkDrag, CdkDragHandle, } from '@angular/cdk/drag-drop';
+import { CdkDrag, } from '@angular/cdk/drag-drop';
 import { TaskContentEditorComponent } from '../task-content-editor/task-content-editor.component';
 import { TaskDescriptionComponent } from '@/features/tasks/components/task-description/task-description.component';
 import type { TaskContentChange, TaskContentFeedback, TaskContent } from '@/features/tasks/models/task-content.model';
@@ -48,7 +48,6 @@ import type { TaskContentChange, TaskContentFeedback, TaskContent } from '@/feat
         TagModule,
         TreeSelectModule,
         CdkDrag,
-        CdkDragHandle,
         TaskDescriptionComponent,
         TaskContentEditorComponent,
     ],
@@ -171,6 +170,20 @@ export class TaskRowComponent {
     readonly projects = input<ProjectNode[]>([]); // The list of all *possible* projects (for the project dropdown)
 
     protected readonly calendarClock = inject(CalendarClockService);
+
+    // Keep CDK's movement threshold. A short touch hold lets an ordinary swipe scroll first.
+    protected readonly dragStartDelay = { mouse: 0, touch: 200 };
+
+    protected protectCardInteraction(event: Event): void {
+        if (!this.draggable() || this.disabled() || this.editing() || this.movingProject()) return;
+        const target = event.target;
+        if (!(target instanceof Element) || target.closest('.task-drag-handle')) return;
+        if (target.closest('button, a, input, textarea, select, [role="button"], [role="combobox"], [contenteditable], p-treeselect, app-task-description')) {
+            // This listener is on a child of cdkDrag, so interactive starts never reach its root listener.
+            // Do not preventDefault: native focus, clicks, selection, and scrolling stay available.
+            event.stopPropagation();
+        }
+    }
 
     readonly draggable = input(false);
     readonly scheduleRequested = output<TaskScheduleRequest>();

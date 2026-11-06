@@ -1,10 +1,9 @@
-<li class="row" [class.is-editing]="editing()" cdkDrag [cdkDragData]="task()" [cdkDragDisabled]="!draggable() || disabled() || editing() || movingProject()">
+<li class="row" [class.is-editing]="editing()" cdkDrag [cdkDragStartDelay]="dragStartDelay" [cdkDragData]="task()" [cdkDragDisabled]="!draggable() || disabled() || editing() || movingProject()">
     <ng-template #leading>
             @if (draggable()) {
                 <button
                     type="button"
                     class="task-drag-handle"
-                    cdkDragHandle
                     [disabled]="disabled() || editing()"
                     [attr.aria-label]="'Drag task: ' + task().title"
                     pTooltip="Drag to schedule"
@@ -115,6 +114,7 @@
                 </a>
             </div>
     </ng-template>
+    <div class="task-card-content" (mousedown)="protectCardInteraction($event)" (touchstart)="protectCardInteraction($event)">
     @if (editing()) {
         <app-task-content-editor [content]="task()" [taskId]="task().id" [initialFocus]="initialFocus()"
             [disabled]="disabled()" [pending]="!!contentFeedback()?.pending" [error]="contentError()"
@@ -142,4 +142,5 @@
             <div class="meta-row"><ng-container [ngTemplateOutlet]="metadata" /></div>
         </section>
     }
+    </div>
 </li>
