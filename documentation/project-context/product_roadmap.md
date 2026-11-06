@@ -54,7 +54,9 @@ This roadmap defines the intended order of work. It is not a list of entirely un
 - Manual task ordering
 - Today focus/planning layouts
 
-**Exit criteria:** Correctness across date boundaries, timezone changes, drag interactions, ordering, and asynchronous failures.
+**Current UI follow-up:** PR #46 adds the compact Planned/Due scheduler and immediate field-specific saving; review and merge only after browser acceptance. The next focused feature visually separates deliberately Planned-for-Today tasks from Due-Today-but-Unplanned obligations within the existing Today column. Do not change `planned_date ?? due_date`, overdue indicators, or the underlying drag-and-drop semantics.
+
+**Exit criteria:** Correctness across date boundaries, timezone changes, drag interactions, ordering, asynchronous failures, keyboard navigation, and scheduling UI dismissal.
 
 ## Phase 4 — First quality-of-life wave
 
@@ -62,7 +64,8 @@ This roadmap defines the intended order of work. It is not a list of entirely un
 
 - Reduce task-entry friction
 - Improve editing and navigation
-- Polish existing planning workflows
+- Polish existing planning workflows, including the Planned-versus-Due visual distinction
+- Address visual glitches introduced by the compact scheduler and Today grouping after functional review
 - Address defects revealed through day-to-day usage
 - Improve clarity and responsiveness
 
