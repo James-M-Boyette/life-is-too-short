@@ -29,9 +29,11 @@
 
     </ng-template>
     <ng-template #actions>
-            <button pButton [text]="true" type="button" class="task-action-btn edit-task-btn"
+            @if (!editing()) {
+            <button #pencilButton pButton [text]="true" type="button" class="task-action-btn edit-task-btn"
                 aria-label="Edit task" pTooltip="Edit task" tooltipPosition="bottom" [disabled]="disabled() || editing()"
-                (click)="startEdit('title')"><i class="pi pi-pencil" aria-hidden="true"></i></button>
+                (click)="startEdit('title', 'pencil')"><i class="pi pi-pencil" aria-hidden="true"></i></button>
+            }
             <button
                 pButton
                 type="button"
@@ -101,7 +103,7 @@
             <div class="left-column">
                 <ng-container [ngTemplateOutlet]="leading" />
                 <button #titleButton type="button" class="title-btn" [class.done]="task().is_done"
-                    (click)="startEdit('title', true)" [disabled]="disabled()" aria-label="Edit task title">{{ task().title }}</button>
+                    (click)="startEdit('title', 'title')" [disabled]="disabled()" aria-label="Edit task title">{{ task().title }}</button>
             </div>
             <div class="task-actions"><ng-container [ngTemplateOutlet]="actions" /></div>
         </section>

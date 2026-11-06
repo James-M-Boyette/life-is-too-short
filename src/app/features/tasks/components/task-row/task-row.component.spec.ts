@@ -145,6 +145,8 @@ describe('TaskRowComponent content editing', () => {
         const { fixture, changed } = await setup('**Existing**');
         fixture.nativeElement.querySelector('[aria-label="Cancel editing task"]').click();
         fixture.detectChanges();
+        expect(Array.from(fixture.nativeElement.querySelectorAll('.task-actions button')).map((b: any) => b.getAttribute('aria-label')))
+            .toEqual(['Edit task', 'Schedule task', 'More actions for Task']);
         if (entry === 'title') fixture.nativeElement.querySelector('[aria-label="Edit task title"]').click();
         if (entry === 'description') fixture.nativeElement.querySelector('.markdown-content strong').click();
         if (entry === 'pencil') fixture.nativeElement.querySelector('[aria-label="Edit task"]').click();
@@ -166,12 +168,12 @@ describe('TaskRowComponent content editing', () => {
         expect(actions.closest('.meta-row')).toBeTruthy();
         expect(fixture.nativeElement.querySelector('.editor-title-row').contains(actions)).toBe(false);
         expect(Array.from(fixture.nativeElement.querySelectorAll('.task-actions button')).map((b: any) => b.getAttribute('aria-label')))
-            .toEqual(['Edit task', 'Schedule task', 'More actions for Task']);
+            .toEqual(['Schedule task', 'More actions for Task']);
         title.value = 'Draft title';
         title.dispatchEvent(new Event('input'));
         textarea.value = 'Draft description';
         textarea.dispatchEvent(new Event('input'));
-        fixture.nativeElement.querySelector('[aria-label="Edit task"]').click();
+        expect(fixture.nativeElement.querySelector('[aria-label="Edit task"]')).toBeNull();
         fixture.detectChanges();
         expect(title.value).toBe('Draft title');
         expect(fixture.nativeElement.querySelector('textarea')).toBe(textarea);
@@ -181,7 +183,7 @@ describe('TaskRowComponent content editing', () => {
         await fixture.whenStable();
         expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
         expect(changed).not.toHaveBeenCalled();
-        expect(document.activeElement).toBe(fixture.nativeElement.querySelector(entry === 'title' ? '[aria-label="Edit task title"]' : '.more-actions-btn'));
+        expect(document.activeElement).toBe(fixture.nativeElement.querySelector(entry === 'title' ? '[aria-label="Edit task title"]' : entry === 'pencil' ? '[aria-label="Edit task"]' : '.more-actions-btn'));
     });
 
     it('validates titles and applies the title Enter, textarea newline and Ctrl+Enter rules to both drafts', async () => {

@@ -57,6 +57,7 @@ import type { TaskContentChange, TaskContentFeedback, TaskContent } from '@/feat
 export class TaskRowComponent {
     disabled = input<boolean>(false);
     readonly contentFeedback = input<TaskContentFeedback | null>(null);
+    private readonly pencilButton = viewChild<ElementRef<HTMLButtonElement>>('pencilButton');
     private readonly titleButton = viewChild<ElementRef<HTMLButtonElement>>('titleButton');
     private readonly moreActionsButton = viewChild<ElementRef<HTMLButtonElement>>('moreActionsButton');
     private readonly contentEditBaseline = signal(0);
@@ -104,7 +105,8 @@ export class TaskRowComponent {
             const editing = this.editing();
             const button = this.moreActionsButton();
             if (!editing && wasEditing) {
-                const target = this.restoreFocus === 'title' ? this.titleButton() : button;
+                const target = this.restoreFocus === 'title' ? this.titleButton()
+                    : this.restoreFocus === 'pencil' ? this.pencilButton() : button;
                 target?.nativeElement.focus();
             }
             wasEditing = editing;
@@ -117,7 +119,7 @@ export class TaskRowComponent {
 
     protected readonly editing = signal(false);
     protected readonly initialFocus = signal<'title' | 'description'>('title');
-    private restoreFocus: 'title' | 'actions' = 'actions';
+    private restoreFocus: 'title' | 'pencil' | 'actions' = 'actions';
     readonly task = input.required<Task>(); // The current task
     readonly project = input<Project | null>(null); // The project that the current task belongs to (if any)
     readonly projects = input<ProjectNode[]>([]); // The list of all *possible* projects (for the project dropdown)
@@ -168,10 +170,10 @@ export class TaskRowComponent {
         });
     }
 
-    protected startEdit(focus: 'title' | 'description' = 'title', fromTitle = false): void {
+    protected startEdit(focus: 'title' | 'description' = 'title', restoreFocus: 'title' | 'pencil' | 'actions' = 'actions'): void {
         if (this.disabled() || this.contentFeedback()?.pending || this.editing()) return;
         this.initialFocus.set(focus);
-        this.restoreFocus = fromTitle ? 'title' : 'actions';
+        this.restoreFocus = restoreFocus;
         this.contentEditBaseline.set(this.contentFeedback()?.attemptId ?? 0);
         this.editing.set(true);
     }
