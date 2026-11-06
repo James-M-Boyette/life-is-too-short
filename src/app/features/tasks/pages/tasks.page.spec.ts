@@ -64,7 +64,7 @@ describe('TasksPage', () => {
         expect(component).toBeTruthy();
     });
 
-    it('shows bulk actions and picker defaults only in the planning columns', () => {
+    it('shows bulk actions only in the planning columns', () => {
         fixture.detectChanges();
         expect(fixture.nativeElement.textContent).not.toContain('Reschedule for today');
         expect(fixture.nativeElement.textContent).not.toContain("Clear Today's Schedule");
@@ -73,8 +73,6 @@ describe('TasksPage', () => {
         expect(fixture.nativeElement.textContent).toContain('Reschedule for today');
         expect(fixture.nativeElement.querySelector('[aria-labelledby="today-heading"] .today-board__column-header').textContent)
             .toContain("Clear Today's Schedule");
-        const lists = fixture.debugElement.queryAll(By.directive(TaskListComponent));
-        expect(lists.map(list => list.componentInstance.defaultPlannedDateToToday())).toEqual([false, true, true]);
         expect(fixture.nativeElement.querySelector('[aria-labelledby="unscheduled-heading"]').textContent)
             .toContain('Reschedule for today');
     });

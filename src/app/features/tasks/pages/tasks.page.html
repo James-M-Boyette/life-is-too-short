@@ -1,4 +1,4 @@
-<section class="tasks-page">
+<section class="tasks-page" tabindex="-1" aria-label="Tasks">
     <!-- App Header -->
     <!-- TODO: MOVE THIS to a seperate component and inject into parent -->
     <app-tasks-header
@@ -112,10 +112,7 @@
                     (taskDropped)="onTaskDropped($event)"
                     emptyMessage="Nothing planned for today."
                     (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
-                    (plannedDateChange)="
-                        tasksStore.updatePlannedDate($event.task, $event.plannedDate)
-                    "
-                    (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
+                    (scheduleRequested)="openSchedule($event)"
                     (toggleDone)="tasksStore.toggleDone($event)"
                     (remove)="confirmDeleteTask($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
@@ -168,7 +165,6 @@
 
                     <app-task-list
                         [tasks]="unscheduledTasks()"
-                        [defaultPlannedDateToToday]="true"
                         [projects]="projectsStore.projectTree()"
                         [disabled]="tasksStore.mutating()"
                         [draggable]="true"
@@ -180,10 +176,7 @@
                         (taskReordered)="onTaskReordered($event)"
                         emptyMessage="No unscheduled tasks."
                         (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
-                        (plannedDateChange)="
-                            tasksStore.updatePlannedDate($event.task, $event.plannedDate)
-                        "
-                        (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
+                        (scheduleRequested)="openSchedule($event)"
                         (toggleDone)="tasksStore.toggleDone($event)"
                         (remove)="confirmDeleteTask($event)"
                         (rename)="tasksStore.updateTitle($event.task, $event.title)"
@@ -212,7 +205,6 @@
 
                     <app-task-list
                         [tasks]="overdueTasks()"
-                        [defaultPlannedDateToToday]="true"
                         [projects]="projectsStore.projectTree()"
                         [disabled]="tasksStore.mutating()"
                         [draggable]="true"
@@ -222,10 +214,7 @@
                         (taskDropped)="onTaskDropped($event)"
                         emptyMessage="Nothing overdue."
                         (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
-                        (plannedDateChange)="
-                            tasksStore.updatePlannedDate($event.task, $event.plannedDate)
-                        "
-                        (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
+                        (scheduleRequested)="openSchedule($event)"
                         (toggleDone)="tasksStore.toggleDone($event)"
                         (remove)="confirmDeleteTask($event)"
                         (rename)="tasksStore.updateTitle($event.task, $event.title)"
@@ -282,10 +271,7 @@
                         (taskDropped)="onTaskDropped($event)"
                         emptyMessage="No tasks scheduled."
                         (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
-                        (plannedDateChange)="
-                            tasksStore.updatePlannedDate($event.task, $event.plannedDate)
-                        "
-                        (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
+                        (scheduleRequested)="openSchedule($event)"
                         (toggleDone)="tasksStore.toggleDone($event)"
                         (remove)="confirmDeleteTask($event)"
                         (rename)="tasksStore.updateTitle($event.task, $event.title)"
@@ -333,10 +319,7 @@
                     (taskReordered)="onTaskReordered($event)"
                     emptyMessage="No open tasks."
                     (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
-                    (plannedDateChange)="
-                        tasksStore.updatePlannedDate($event.task, $event.plannedDate)
-                    "
-                    (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
+                    (scheduleRequested)="openSchedule($event)"
                     (toggleDone)="tasksStore.toggleDone($event)"
                     (remove)="confirmDeleteTask($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
@@ -374,10 +357,7 @@
                     [disabled]="tasksStore.mutating()"
                     emptyMessage="No completed tasks."
                     (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
-                    (plannedDateChange)="
-                        tasksStore.updatePlannedDate($event.task, $event.plannedDate)
-                    "
-                    (dueDateChange)="tasksStore.updateDueDate($event.task, $event.dueDate)"
+                    (scheduleRequested)="openSchedule($event)"
                     (toggleDone)="tasksStore.toggleDone($event)"
                     (remove)="confirmDeleteTask($event)"
                     (rename)="tasksStore.updateTitle($event.task, $event.title)"
@@ -391,3 +371,19 @@
 </section>
 
 <p-confirmDialog />
+
+<p-popover #schedulePopover ariaLabelledBy="schedule-task-heading" (onHide)="onScheduleHidden()">
+    @for (task of activeScheduleTask() ? [activeScheduleTask()!] : []; track task.id) {
+        <app-task-scheduler
+            [task]="task"
+            [persistedTask]="persistedScheduleTask() ?? task"
+            [today]="calendarClock.today()"
+            [pending]="scheduleSaving()"
+            [disabled]="tasksStore.mutating() || bulkScheduleBusy()"
+            [error]="scheduleError()"
+            (selectDate)="saveSchedule($event)"
+            (retry)="retrySchedule()"
+            (dismiss)="closeSchedule($event)"
+        />
+    }
+</p-popover>

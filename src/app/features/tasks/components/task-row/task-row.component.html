@@ -109,7 +109,8 @@
                 aria-label="Schedule task"
                 aria-haspopup="dialog"
                 [disabled]="disabled()"
-                (click)="schedulePopover.toggle($event)"
+                [attr.data-schedule-task-id]="task().id"
+                (click)="openSchedule($event)"
                 >
                 <i class="pi pi-calendar-clock" aria-hidden="true"></i>
             </button>
@@ -177,52 +178,3 @@
     </section>
 </li>
 
-<p-popover #schedulePopover>
-    <div
-        class="schedule-popover"
-        tabindex="-1"
-        autofocus
-        (keydown.enter)="commitSchedule($event, plannedPicker.value, duePicker.value) && schedulePopover.hide()"
-    >
-        <h3>Schedule task</h3>
-        <!-- <p class="schedule-hint">Press Enter to save dates.</p> -->
-
-        <div class="schedule-field">
-            <label [for]="'planned-date-' + task().id">
-                Planned date
-            </label>
-
-            <p-datepicker
-                #plannedPicker
-                [inputId]="'planned-date-' + task().id"
-                [ngModel]="plannedDateForPicker()"
-                (ngModelChange)="onPlannedDateChange($event)"
-                placeholder="Choose planned date"
-                dateFormat="M d, yy"
-                [showIcon]="true"
-                [showClear]="true"
-                [showOnFocus]="false"
-                [disabled]="disabled()"
-            />
-        </div>
-
-        <div class="schedule-field">
-            <label [for]="'due-date-' + task().id">
-                Due date
-            </label>
-
-            <p-datepicker
-                #duePicker
-                [inputId]="'due-date-' + task().id"
-                [ngModel]="dueDate()"
-                (ngModelChange)="onDueDateChange($event)"
-                placeholder="Choose due date"
-                dateFormat="M d, yy"
-                [showIcon]="true"
-                [showClear]="true"
-                [showOnFocus]="false"
-                [disabled]="disabled()"
-            />
-        </div>
-    </div>
-</p-popover>

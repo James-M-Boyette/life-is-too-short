@@ -2,7 +2,7 @@
     [x] Extract 'TaskView'
 
  */
-import { Component, signal, inject, computed, input, effect } from '@angular/core';
+import { Component, signal, inject, computed, input, effect, viewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { TasksStore } from '@/features/tasks/state/tasks.store';
@@ -29,6 +29,10 @@ import {
 } from '@/features/tasks/utils/task-ordering.util';
 
 import { TaskCreateDialogService } from '@/features/tasks/services/task-create-dialog.service';
+import { Popover, PopoverModule } from 'primeng/popover';
+import { TaskSchedulerComponent } from '@/features/tasks/components/task-scheduler/task-scheduler.component';
+import type { Task } from '@/features/tasks/models/tasks.model';
+import type { TaskDateSelection, TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
 
 @Component({
     standalone: true,
@@ -38,12 +42,126 @@ import { TaskCreateDialogService } from '@/features/tasks/services/task-create-d
         TasksHeaderComponent,
         TaskListComponent,
         ConfirmDialogModule,
+        PopoverModule,
+        TaskSchedulerComponent,
     ],
     providers: [ConfirmationService],
     templateUrl: './tasks.page.html',
     styleUrls: ['./tasks.page.scss'],
 })
 export class TasksPage {
+    private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
+    private readonly schedulePopover = viewChild<Popover>('schedulePopover');
+    private readonly scheduleContext = signal<{ taskId: string; userId: string } | null>(null);
+    protected readonly activeScheduleTask = computed(() => {
+        const context = this.scheduleContext();
+        if (!context || context.userId !== this.auth.userId()) return null;
+        return this.tasksStore.tasks().find(task => task.id === context.taskId && task.user_id === context.userId) ?? null;
+    });
+    protected readonly persistedScheduleTask = signal<Task | null>(null);
+    protected readonly scheduleSaving = signal(false);
+    protected readonly scheduleError = signal<string | null>(null);
+    private failedSelection: TaskDateSelection | null = null;
+    private saveVersion = 0;
+    private restoreScheduleFocus = false;
+
+    constructor() {
+        let previousUser = this.auth.userId();
+        effect(() => {
+            const userId = this.auth.userId();
+            if (userId !== previousUser) {
+                previousUser = userId;
+                this.saveVersion++;
+                this.scheduleSaving.set(false);
+                this.scheduleContext.set(null);
+                this.persistedScheduleTask.set(null);
+                this.scheduleError.set(null);
+                this.failedSelection = null;
+                this.schedulePopover()?.hide();
+            }
+        });
+        effect(() => {
+            const task = this.activeScheduleTask();
+            if (this.scheduleContext() && !task) {
+                this.schedulePopover()?.hide();
+            }
+            if (task && !this.scheduleSaving()) this.persistedScheduleTask.set(task);
+        });
+    }
+
+    protected openSchedule(request: TaskScheduleRequest): void {
+        const userId = this.auth.userId();
+        const task = this.tasksStore.tasks().find(task => task.id === request.taskId && task.user_id === userId);
+        if (!userId || !task) return;
+        request.event.stopPropagation();
+        const popover = this.schedulePopover();
+        if (popover?.overlayVisible && this.scheduleContext()?.taskId === task.id) {
+            this.closeSchedule(request.event);
+            return;
+        }
+        this.scheduleContext.set({ taskId: task.id, userId });
+        this.persistedScheduleTask.set(task);
+        this.scheduleError.set(null);
+        this.failedSelection = null;
+        this.restoreScheduleFocus = false;
+        popover?.show(request.event, request.anchor);
+        if (popover?.container) popover.align();
+    }
+
+    protected closeSchedule(event: Event): void {
+        event.preventDefault();
+        event.stopPropagation();
+        this.restoreScheduleFocus = true;
+        this.schedulePopover()?.hide();
+    }
+
+    protected onScheduleHidden(): void {
+        if (this.schedulePopover()?.overlayVisible) return;
+        const context = this.scheduleContext();
+        const document = this.element.nativeElement.ownerDocument;
+        const focused = document.activeElement;
+        if (context?.userId === this.auth.userId() &&
+            (this.restoreScheduleFocus || focused === document.body || focused?.closest('app-task-scheduler'))) {
+            const trigger = Array.from(this.element.nativeElement.querySelectorAll<HTMLButtonElement>('[data-schedule-task-id]'))
+                .find(button => button.dataset['scheduleTaskId'] === context.taskId && !button.disabled);
+            (trigger ?? this.element.nativeElement.querySelector<HTMLElement>('.tasks-page'))?.focus();
+        }
+        this.scheduleContext.set(null);
+        this.persistedScheduleTask.set(null);
+        this.scheduleError.set(null);
+        this.failedSelection = null;
+        this.restoreScheduleFocus = false;
+    }
+
+    protected retrySchedule(): void {
+        if (this.failedSelection) void this.saveSchedule(this.failedSelection);
+    }
+
+    protected async saveSchedule(selection: TaskDateSelection): Promise<void> {
+        const task = this.activeScheduleTask();
+        const context = this.scheduleContext();
+        if (!task || !context || this.scheduleSaving() || this.tasksStore.mutating() || this.bulkScheduleBusy()) return;
+        if (task[selection.field] === selection.date) return;
+        const version = ++this.saveVersion;
+        this.scheduleSaving.set(true);
+        this.scheduleError.set(null);
+        this.failedSelection = null;
+        try {
+            if (selection.field === 'planned_date') {
+                await this.tasksStore.updatePlannedDate(task, selection.date);
+            } else {
+                await this.tasksStore.updateDueDate(task, selection.date);
+            }
+        } catch {
+            if (version === this.saveVersion && this.scheduleContext() === context) {
+                this.scheduleError.set('Could not save the date. Your previous date has been restored. Try again.');
+                this.failedSelection = selection;
+            }
+        } finally {
+            if (version === this.saveVersion) this.scheduleSaving.set(false);
+        }
+    }
+
     protected readonly auth = inject(AuthStore);
     protected readonly tasksStore = inject(TasksStore);
     protected readonly projectsStore = inject(ProjectsStore);

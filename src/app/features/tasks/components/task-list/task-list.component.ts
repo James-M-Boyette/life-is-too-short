@@ -11,6 +11,7 @@ import { CdkDropList, CdkDragDrop } from '@angular/cdk/drag-drop';
 import type { TaskScheduleDrop } from '@/features/tasks/models/task-schedule-drop.model';
 import type { TaskReorder } from '@/features/tasks/models/task-reorder.model';
 import { TaskOrderField } from '@/features/tasks/utils/task-ordering.util'
+import type { TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
 
 @Component({
     selector: 'app-task-list',
@@ -30,7 +31,7 @@ export class TaskListComponent {
     readonly rename = output<{ task: Task; title: string }>();
 
     readonly draggable = input(false);
-    readonly defaultPlannedDateToToday = input(false);
+    readonly scheduleRequested = output<TaskScheduleRequest>();
 
     readonly dropListId = input('');
     readonly connectedDropLists = input<string[]>([]);
@@ -84,15 +85,6 @@ export class TaskListComponent {
         projectId: string | null;
     }>();
 
-    readonly plannedDateChange = output<{
-        task: Task;
-        plannedDate: string | null;
-    }>();
-
-    readonly dueDateChange = output<{
-        task: Task;
-        dueDate: string | null;
-    }>();
 
     protected readonly debugTasks = computed(() =>
         this.tasks().map((task) => ({
