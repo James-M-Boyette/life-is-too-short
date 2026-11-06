@@ -135,4 +135,19 @@ describe('TaskCreateComponent', () => {
 
         expect(createSpy).not.toHaveBeenCalled();
     });
+
+    it('creates with Markdown source without stripping indentation or trailing hard-break spaces', async () => {
+        await fixture.whenStable();
+        const title = fixture.nativeElement.querySelector('input');
+        title.value = 'Markdown task';
+        title.dispatchEvent(new Event('input'));
+        const textarea = fixture.nativeElement.querySelector('textarea');
+        const source = '    code\n\n- **First**  \n';
+        textarea.value = source;
+        textarea.dispatchEvent(new Event('input'));
+        const create = vi.fn();
+        fixture.componentInstance.create.subscribe(create);
+        fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true }));
+        expect(create).toHaveBeenCalledWith(expect.objectContaining({ description: source }));
+    });
 });

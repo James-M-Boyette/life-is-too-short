@@ -115,7 +115,7 @@ export class TaskCreateComponent {
 
         this.create.emit({
             title: title.trim(),
-            description: description.trim() || null,
+            description: description.trim() ? description : null,
             projectId: project?.key ?? null,
             plannedDate: formatLocalDate(plannedDate),
         });

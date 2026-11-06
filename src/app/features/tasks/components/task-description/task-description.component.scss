@@ -1,0 +1,34 @@
+app-task-description {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+app-task-description .markdown-content > :first-child { margin-top: 0; }
+app-task-description .markdown-content > :last-child { margin-bottom: 0; }
+app-task-description .markdown-content p { margin-block: var(--space-2); }
+app-task-description .markdown-content ul,
+app-task-description .markdown-content ol { margin-block: var(--space-2); padding-inline-start: 1.5rem; }
+app-task-description .markdown-content li { margin-block: var(--space-1); }
+app-task-description .markdown-content pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+app-task-description .markdown-content blockquote { margin-inline: 0; padding-inline-start: var(--space-3); border-inline-start: 2px solid var(--border-subtle); }
+app-task-description .markdown-content a { color: var(--p-primary-color); text-decoration: underline; }
+app-task-description .markdown-content h1,
+app-task-description .markdown-content h2,
+app-task-description .markdown-content h3 { font-size: 1rem; }
+app-task-description .description-excerpt { margin: 0; }
+app-task-description .description-disclosure {
+    margin-top: var(--space-2);
+    padding: var(--space-1) 0;
+    border: 0;
+    background: transparent;
+    color: var(--p-primary-color);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+app-task-description a:focus-visible,
+app-task-description button:focus-visible { outline: 2px solid var(--p-primary-color); outline-offset: 2px; }

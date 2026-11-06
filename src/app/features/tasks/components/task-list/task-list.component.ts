@@ -13,6 +13,7 @@ import type { TaskReorder } from '@/features/tasks/models/task-reorder.model';
 import { TaskOrderField } from '@/features/tasks/utils/task-ordering.util'
 import type { TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
 import type { TaskListGroup, TaskGroupPlanningTransition } from '@/features/tasks/models/task-list-group.model';
+import type { TaskDescriptionFeedback } from '@/features/tasks/models/task-description.model';
 
 @Component({
     selector: 'app-task-list',
@@ -23,6 +24,7 @@ import type { TaskListGroup, TaskGroupPlanningTransition } from '@/features/task
 })
 export class TaskListComponent {
     readonly tasks = input.required<Task[]>();
+    readonly descriptionFeedback = input<Partial<Record<string, TaskDescriptionFeedback>>>({});
     readonly groups = input<TaskListGroup[]>([]);
     readonly planningTransition = input<TaskGroupPlanningTransition | null>(null);
     private readonly planningInsertionTarget = viewChild<ElementRef<HTMLElement>>('planningInsertionTarget');

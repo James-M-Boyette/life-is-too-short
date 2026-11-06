@@ -31,6 +31,7 @@ describe('TasksPage', () => {
     const updatePlannedDate = vi.fn();
     const updateDueDate = vi.fn();
     const updateTaskPosition = vi.fn();
+    const updateDescription = vi.fn();
     const mutating = signal(false);
     const userId = signal<string | null>('user-1');
 
@@ -56,6 +57,9 @@ describe('TasksPage', () => {
         updateTaskPosition.mockReset().mockImplementation(async (t: Task, field: TaskOrderField, position: number) => {
             tasks.update(items => items.map(item => item.id === t.id ? { ...item, [field]: position } : item));
         });
+        updateDescription.mockReset().mockImplementation(async (t: Task, description: string | null) => {
+            tasks.update(items => items.map(item => item.id === t.id ? { ...item, description } : item));
+        });
         await TestBed.configureTestingModule({
             imports: [TasksPage],
             providers: [
@@ -65,7 +69,7 @@ describe('TasksPage', () => {
                 { provide: ProjectsStore, useValue: { projects: signal([]), projectTree: signal([]) } },
                 { provide: CalendarClockService, useValue: { today: signal('2026-11-05') } },
                 { provide: TasksStore, useValue: {
-                    tasks, updatePlannedDate, updateDueDate, updateTaskPosition, mutating, error: signal(null), loading: signal(false),
+                    tasks, updatePlannedDate, updateDueDate, updateTaskPosition, updateDescription, mutating, error: signal(null), loading: signal(false),
                     realtimeConnected: signal(false),
                 } },
             ],
@@ -79,6 +83,54 @@ describe('TasksPage', () => {
 
     it('should create', () => {
         expect(component).toBeTruthy();
+    });
+
+    it('retains a failed description draft for retry, catches the failure and renders the confirmed Markdown', async () => {
+        tasks.set([task('description-task', '2026-11-05', { description: '**Original**' })]);
+        fixture.detectChanges();
+        fixture.nativeElement.querySelector('.description-edit-button').click();
+        fixture.detectChanges();
+        const textarea = fixture.nativeElement.querySelector('textarea');
+        textarea.value = '- **Draft**\n- Second';
+        textarea.dispatchEvent(new Event('input'));
+        let fail!: (reason: Error) => void;
+        updateDescription.mockImplementationOnce(() => new Promise<void>((_, reject) => { fail = reject; }));
+        const form = fixture.nativeElement.querySelector('.edit-description-form');
+        const submit = () => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        submit();
+        submit();
+        expect(updateDescription).toHaveBeenCalledTimes(1);
+        fixture.detectChanges();
+        expect(fixture.nativeElement.textContent).toContain('Saving description');
+        fail(new Error('Offline'));
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('textarea').value).toBe('- **Draft**\n- Second');
+        expect(fixture.nativeElement.querySelector('.edit-description-form [role="alert"]').textContent).toContain('Could not save');
+        expect(tasks()[0].description).toBe('**Original**');
+        submit();
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(updateDescription).toHaveBeenCalledTimes(2);
+        expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
+        expect(fixture.nativeElement.querySelector('.markdown-content strong').textContent).toBe('Draft');
+    });
+
+    it('does not carry description save feedback into another account', async () => {
+        fixture.detectChanges();
+        fixture.nativeElement.querySelector('.description-edit-button').click();
+        fixture.detectChanges();
+        const textarea = fixture.nativeElement.querySelector('textarea');
+        textarea.value = 'Old account draft';
+        textarea.dispatchEvent(new Event('input'));
+        let fail!: (reason: Error) => void;
+        updateDescription.mockImplementationOnce(() => new Promise<void>((_, reject) => { fail = reject; }));
+        fixture.nativeElement.querySelector('.edit-description-form').dispatchEvent(new Event('submit', { cancelable: true }));
+        userId.set('user-2');
+        fixture.detectChanges();
+        fail(new Error('Old account error'));
+        await fixture.whenStable();
+        expect(component['descriptionFeedback']()).toEqual({});
     });
 
     function todayList() {

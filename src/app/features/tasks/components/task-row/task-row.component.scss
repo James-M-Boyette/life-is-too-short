@@ -155,6 +155,8 @@
                 margin-left: 1.9rem;
                 margin-top: 0.5rem;
                 display: flex;
+                flex-direction: column;
+                min-width: 0;
                 gap: 0.5rem;
             }
 
@@ -167,6 +169,39 @@
         }
     }
 }
+
+.edit-description-form {
+    display: grid;
+    gap: var(--space-2);
+    min-width: 0;
+    font-size: 0.875rem;
+
+    textarea {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        resize: vertical;
+        padding: var(--space-2);
+        font: inherit;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+}
+.description-help { margin: 0; color: var(--text-secondary); font-size: 0.8rem; }
+.description-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.description-edit-button {
+    align-self: flex-start;
+    padding: var(--space-1) 0;
+    border: 0;
+    background: transparent;
+    color: var(--p-primary-color);
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+.description-edit-button:focus-visible,
+.edit-description-form button:focus-visible,
+.edit-description-form textarea:focus-visible { outline: 2px solid var(--p-primary-color); outline-offset: 2px; }
 
 .task-actions {
     display: flex;

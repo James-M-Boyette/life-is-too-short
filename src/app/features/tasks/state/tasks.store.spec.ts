@@ -653,6 +653,32 @@ describe('TasksStore', () => {
         expect(store.tasks()[0].planned_position).toBe(2500);
     });
 
+    it('preserves Markdown source exactly and restores it after a failed description save', async () => {
+        const source = '    indented code\n\n- **Markdown**  \n';
+        const task = createTask({ description: source, planned_position: 3000 });
+        store.tasks.set([task]);
+        let fail!: (error: Error) => void;
+        single.mockImplementationOnce(() => new Promise((_, reject) => { fail = reject; }));
+        const draft = '    new code\n\n1. *Updated*  \n';
+        const save = store.updateDescription(task, draft);
+        const rejected = expect(save).rejects.toThrow('Offline');
+        await vi.waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+        expect(update).toHaveBeenCalledExactlyOnceWith({ description: draft });
+        expect(store.tasks()[0].description).toBe(draft);
+        fail(new Error('Offline'));
+        await rejected;
+        expect(store.tasks()[0]).toMatchObject({ description: source, planned_position: 3000 });
+    });
+
+    it('clears whitespace-only descriptions without modifying other task fields', async () => {
+        const task = createTask({ description: '**Old**', due_date: '2026-11-05' });
+        store.tasks.set([task]);
+        single.mockResolvedValueOnce({ data: { ...task, description: null }, error: null });
+        await store.updateDescription(task, ' \n ');
+        expect(update).toHaveBeenCalledExactlyOnceWith({ description: null });
+        expect(store.tasks()[0].due_date).toBe('2026-11-05');
+    });
+
     it('preserves task position when updating a stale description snapshot', async () => {
         const staleTask = createTask({
             description: 'Old description',

@@ -33,6 +33,7 @@ import { Popover, PopoverModule } from 'primeng/popover';
 import { TaskSchedulerComponent } from '@/features/tasks/components/task-scheduler/task-scheduler.component';
 import type { Task } from '@/features/tasks/models/tasks.model';
 import type { TaskListGroup } from '@/features/tasks/models/task-list-group.model';
+import type { TaskDescriptionChange, TaskDescriptionFeedback } from '@/features/tasks/models/task-description.model';
 import type { TaskDateSelection, TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
 
 @Component({
@@ -51,6 +52,8 @@ import type { TaskDateSelection, TaskScheduleRequest } from '@/features/tasks/mo
     styleUrls: ['./tasks.page.scss'],
 })
 export class TasksPage {
+    protected readonly descriptionFeedback = signal<Partial<Record<string, TaskDescriptionFeedback>>>({});
+    private descriptionAttempt = 0;
     private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
     private readonly schedulePopover = viewChild<Popover>('schedulePopover');
     private readonly scheduleContext = signal<{ taskId: string; userId: string; location: string } | null>(null);
@@ -80,6 +83,7 @@ export class TasksPage {
             if (userId !== previousUser) {
                 previousUser = userId;
                 this.saveVersion++;
+                this.descriptionFeedback.set({});
                 this.scheduleSaving.set(false);
                 this.scheduleContext.set(null);
                 this.persistedScheduleTask.set(null);
@@ -105,6 +109,24 @@ export class TasksPage {
             const popover = this.schedulePopover();
             if (popover?.overlayVisible && popover.container && popover.target?.isConnected) popover.align();
         });
+    }
+
+    protected async saveDescription(change: TaskDescriptionChange): Promise<void> {
+        const userId = this.auth.userId();
+        const task = this.tasksStore.tasks().find(task => task.id === change.task.id && task.user_id === userId);
+        if (!task || this.tasksStore.mutating() || this.descriptionFeedback()[task.id]?.pending) return;
+        const attemptId = ++this.descriptionAttempt;
+        const pending: TaskDescriptionFeedback = { attemptId, pending: true, error: null };
+        this.descriptionFeedback.update(states => ({ ...states, [task.id]: pending }));
+        let error: string | null = null;
+        try {
+            await this.tasksStore.updateDescription(task, change.description);
+        } catch {
+            error = 'Could not save the description. The previous description has been restored.';
+        }
+        if (this.auth.userId() === userId && this.descriptionFeedback()[task.id] === pending) {
+            this.descriptionFeedback.update(states => ({ ...states, [task.id]: { attemptId, pending: false, error } }));
+        }
     }
 
     protected openSchedule(request: TaskScheduleRequest): void {

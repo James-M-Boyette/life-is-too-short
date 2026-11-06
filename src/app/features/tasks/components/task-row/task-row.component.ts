@@ -6,6 +6,10 @@ import {
     input,
     output,
     computed,
+    effect,
+    afterRenderEffect,
+    viewChild,
+    ElementRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -25,6 +29,8 @@ import {
 } from '@/shared/utils/date.util';
 import type { TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
 import { CdkDrag, CdkDragHandle, } from '@angular/cdk/drag-drop';
+import { TaskDescriptionComponent } from '@/features/tasks/components/task-description/task-description.component';
+import type { TaskDescriptionChange, TaskDescriptionFeedback } from '@/features/tasks/models/task-description.model';
 
 @Component({
     standalone: true,
@@ -36,7 +42,8 @@ import { CdkDrag, CdkDragHandle, } from '@angular/cdk/drag-drop';
         TagModule,
         TreeSelectModule,
         CdkDrag,
-        CdkDragHandle
+        CdkDragHandle,
+        TaskDescriptionComponent,
     ],
     selector: 'app-task-row',
     templateUrl: './task-row.component.html',
@@ -44,6 +51,31 @@ import { CdkDrag, CdkDragHandle, } from '@angular/cdk/drag-drop';
 })
 export class TaskRowComponent {
     disabled = input<boolean>(false);
+    readonly descriptionFeedback = input<TaskDescriptionFeedback | null>(null);
+    private readonly descriptionTextarea = viewChild<ElementRef<HTMLTextAreaElement>>('descriptionTextarea');
+    private readonly descriptionEditButton = viewChild<ElementRef<HTMLButtonElement>>('descriptionEditButton');
+    private readonly descriptionEditBaseline = signal(0);
+    protected readonly descriptionError = computed(() => {
+        const result = this.descriptionFeedback();
+        return result && result.attemptId > this.descriptionEditBaseline() ? result.error : null;
+    });
+
+    constructor() {
+        effect(() => {
+            const result = this.descriptionFeedback();
+            if (this.editingDescription() && result && result.attemptId > this.descriptionEditBaseline() &&
+                !result.pending && !result.error) this.editingDescription.set(false);
+        });
+        let wasEditing = false;
+        afterRenderEffect(() => {
+            const editing = this.editingDescription();
+            const textarea = this.descriptionTextarea();
+            const button = this.descriptionEditButton();
+            if (editing && !wasEditing) textarea?.nativeElement.focus();
+            if (!editing && wasEditing) button?.nativeElement.focus();
+            wasEditing = editing;
+        });
+    }
 
     @Output() toggleDone = new EventEmitter<Task>();
     @Output() remove = new EventEmitter<string>();
@@ -138,7 +170,7 @@ export class TaskRowComponent {
         this.commitEdit();
     }
 
-    @Output() editDescription = new EventEmitter<{ task: Task; description: string | null }>();
+    readonly editDescription = output<TaskDescriptionChange>();
 
     protected readonly editingDescription = signal(false);
     protected readonly draftDescription = signal('');
@@ -146,17 +178,24 @@ export class TaskRowComponent {
     protected startDescriptionEdit() {
         if (this.disabled()) return;
         this.draftDescription.set(this.task().description ?? '');
+        this.descriptionEditBaseline.set(this.descriptionFeedback()?.attemptId ?? 0);
         this.editingDescription.set(true);
     }
 
     protected cancelDescriptionEdit() {
+        if (this.descriptionFeedback()?.pending) return;
         this.editingDescription.set(false);
     }
 
     protected commitDescriptionEdit() {
+        if (this.disabled() || this.descriptionFeedback()?.pending) return;
         const value = this.draftDescription();
-        this.editingDescription.set(false);
-        this.editDescription.emit({ task: this.task(), description: value });
+        const description = value.trim() ? value : null;
+        if (description === this.task().description) {
+            this.editingDescription.set(false);
+            return;
+        }
+        this.editDescription.emit({ task: this.task(), description });
     }
 
     protected onDescriptionInput(event: Event) {

@@ -33,6 +33,7 @@
         }
         <app-task-row
             [task]="task"
+            [descriptionFeedback]="descriptionFeedback()[task.id] ?? null"
             [projects]="projects()"
             [disabled]="disabled()"
             [draggable]="draggable()"

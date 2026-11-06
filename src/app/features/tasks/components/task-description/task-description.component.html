@@ -1,0 +1,14 @@
+<div [id]="'task-description-view-' + taskId()">
+    @if (content().compact && !expanded()) {
+        <p class="description-excerpt">{{ content().preview }}</p>
+    } @else {
+        <div class="markdown-content" [innerHTML]="content().html"></div>
+    }
+</div>
+@if (content().compact) {
+    <button type="button" class="description-disclosure"
+        [attr.aria-expanded]="expanded()" [attr.aria-controls]="'task-description-view-' + taskId()"
+        (click)="toggle()">
+        {{ expanded() ? 'Show less' : 'View full description' }}
+    </button>
+}
