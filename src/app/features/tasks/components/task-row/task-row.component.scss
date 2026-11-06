@@ -233,7 +233,7 @@ li.row.cdk-drag-preview {
         .edit-task-btn, .schedule-task-btn { display: none; }
         .task-actions { gap: 0; }
         .task-drag-handle { display: none; }
-        .complete-toggle { width: 1.75rem; height: 1.75rem; margin-top: var(--space-1); }
+        .complete-toggle { width: 1.25rem; height: 1.25rem; margin-top: .2rem; }
         section.task-secondary-section div.description { margin-left: 0; margin-top: var(--space-2); }
         .meta-row { margin-top: var(--space-2); }
         div.meta { flex-direction: column; align-items: stretch; gap: var(--space-1); width: 100%; }
