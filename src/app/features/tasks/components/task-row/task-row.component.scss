@@ -1,78 +1,78 @@
-:host {
-    li.row {
+// CDK clones retain Angular content attributes but leave the component host.
+li.row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border-card);
+    box-shadow: 0 1px 2px #0000000A;
+    border-radius: var(--radius-lg);
+    padding: 0.75rem;
+
+    section.task-primary-section {
         display: flex;
-        flex-direction: column;
+        justify-content: space-between;
+        gap: 1rem;
+        width: 100%;
         align-items: center;
-        background: var(--color-surface-card);
-        border: 1px solid var(--color-border-card);
-        box-shadow: 0 1px 2px #0000000A;
-        border-radius: var(--radius-lg);
-        padding: 0.75rem;
 
-        section.task-primary-section {
+        div.left-column {
             display: flex;
-            justify-content: space-between;
-            gap: 1rem;
-            width: 100%;
             align-items: center;
+            gap: var(--space-2);
 
-            div.left-column {
-                display: flex;
-                align-items: center;
-                gap: var(--space-2);
+            min-width: 0;
+            flex: 1;
 
+            button.title-btn {
                 min-width: 0;
                 flex: 1;
 
-                button.title-btn {
-                    min-width: 0;
-                    flex: 1;
+                padding: 0;
 
-                    padding: 0;
+                overflow: hidden;
 
-                    overflow: hidden;
+                color: var(--text-primary);
+                font: inherit;
+                font-weight: 500;
+                text-align: left;
+                text-overflow: ellipsis;
+                white-space: nowrap;
 
-                    color: var(--text-primary);
-                    font: inherit;
-                    font-weight: 500;
-                    text-align: left;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
+                background: transparent;
+                border: 0;
 
-                    background: transparent;
-                    border: 0;
+                cursor: text;
 
-                    cursor: text;
-
-                    // conditional class for input + button when `is_done` is true
-                    &.done {
-                        color: var(--text-muted);
-                        text-decoration: line-through;
-                    }
+                // conditional class for input + button when `is_done` is true
+                &.done {
+                    color: var(--text-muted);
+                    text-decoration: line-through;
                 }
-
-
-            }
-        }
-
-        section.task-secondary-section {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-
-            div.description {
-                margin-left: 1.9rem;
-                margin-top: 0.5rem;
-                display: flex;
-                flex-direction: column;
-                min-width: 0;
-                gap: 0.5rem;
             }
 
 
         }
     }
+
+    section.task-secondary-section {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+
+        div.description {
+            margin-left: 1.9rem;
+            margin-top: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            gap: 0.5rem;
+        }
+
+
+    }
 }
+
 
 .meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3); min-width: 0; }
 .meta { min-width: 0; flex: 1 1 auto; }
@@ -202,5 +202,11 @@ div.meta {
 
 
 app-task-content-editor { display: block; width: 100%; min-width: 0; }
-:host li.row section.task-primary-section div.left-column button.title-btn:hover:not(:disabled) { background: var(--color-surface-hover); border-radius: var(--radius-sm); }
+li.row section.task-primary-section div.left-column button.title-btn:hover:not(:disabled) { background: var(--color-surface-hover); border-radius: var(--radius-sm); }
 .title-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+li.row.cdk-drag-preview {
+    box-sizing: border-box;
+    list-style: none;
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--color-text-primary) 18%, transparent);
+}

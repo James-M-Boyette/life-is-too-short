@@ -9,6 +9,7 @@ import { TasksStore } from '@/features/tasks/state/tasks.store';
 import { ProjectsStore } from '@/features/projects/state/projects.store';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { CalendarClockService } from '@/shared/services/calendar-clock.service';
+import type { Project } from '@/features/projects/models/project.model';
 import type { Task } from '@/features/tasks/models/tasks.model';
 import { ConfirmationService } from 'primeng/api';
 import { Popover } from 'primeng/popover';
@@ -29,6 +30,7 @@ describe('TasksPage', () => {
     let component: TasksPage;
     let fixture: ComponentFixture<TasksPage>;
     const tasks = signal<Task[]>([]);
+    const projects = signal<Project[]>([]);
     const updatePlannedDate = vi.fn();
     const updateDueDate = vi.fn();
     const updateTaskPosition = vi.fn();
@@ -37,6 +39,7 @@ describe('TasksPage', () => {
     const userId = signal<string | null>('user-1');
 
     beforeEach(async () => {
+        projects.set([]);
         mutating.set(false);
         userId.set('user-1');
         tasks.set([
@@ -67,7 +70,7 @@ describe('TasksPage', () => {
                 TaskCreateDialogService,
                 { provide: Router, useValue: {} },
                 { provide: AuthStore, useValue: { userId } },
-                { provide: ProjectsStore, useValue: { projects: signal([]), projectTree: signal([]) } },
+                { provide: ProjectsStore, useValue: { projects, projectTree: signal([]) } },
                 { provide: CalendarClockService, useValue: { today: signal('2026-11-05') } },
                 { provide: TasksStore, useValue: {
                     tasks, updatePlannedDate, updateDueDate, updateTaskPosition, updateContent, mutating, error: signal(null), loading: signal(false),
@@ -80,6 +83,20 @@ describe('TasksPage', () => {
         component = fixture.componentInstance;
         fixture.componentRef.setInput('view', 'today');
         await fixture.whenStable();
+    });
+
+    it('shows project names verbatim and retains the missing/loading fallback', () => {
+        fixture.componentRef.setInput('view', 'project');
+        fixture.componentRef.setInput('projectId', 'project-1');
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('h1').textContent.trim()).toBe('Project');
+        const name = 'ToDo App: "Life is too Short"';
+        projects.set([{ id: 'project-1', name } as Project]);
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('h1').textContent.trim()).toBe(name);
+        projects.set([]);
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('h1').textContent.trim()).toBe('Project');
     });
 
     it('should create', () => {

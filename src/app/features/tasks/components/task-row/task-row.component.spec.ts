@@ -31,6 +31,37 @@ describe('TaskRowComponent schedule request', () => {
     });
 });
 
+describe('Task card drag preview styling', () => {
+    it('keeps the original card layout when CDK clones it outside the row host', () => {
+        TestBed.configureTestingModule({ providers: [
+            { provide: CalendarClockService, useValue: { today: signal('2026-11-05') } },
+        ] });
+        const fixture = TestBed.createComponent(TaskRowComponent);
+        fixture.componentRef.setInput('task', {
+            id: 'preview-task', title: 'Long title '.repeat(30), description: 'Long description '.repeat(80),
+            project_id: null, planned_date: '2026-11-05', due_date: '2026-11-04',
+        } as Task);
+        fixture.detectChanges();
+        // The default CDK preview is a deep clone with content attributes, without app-task-row.
+        const preview = fixture.nativeElement.querySelector('li.row').cloneNode(true) as HTMLElement;
+        preview.classList.add('cdk-drag-preview');
+        preview.style.width = '260px';
+        document.body.append(preview);
+        try {
+            const card = getComputedStyle(preview);
+            expect(card.display).toBe('flex');
+            expect(card.flexDirection).toBe('column');
+            expect(card.boxSizing).toBe('border-box');
+            expect(getComputedStyle(preview.querySelector('.task-primary-section')!).display).toBe('flex');
+            expect(getComputedStyle(preview.querySelector('.title-btn')!).whiteSpace).toBe('nowrap');
+            expect(getComputedStyle(preview.querySelector('.meta')!).display).toBe('flex');
+            expect(getComputedStyle(preview.querySelector('app-task-description')!).overflowWrap).toBe('anywhere');
+            expect(preview.textContent).toContain('Planned: Nov 5');
+            expect(preview.textContent).toContain('Due: Nov 4');
+        } finally { preview.remove(); }
+    });
+});
+
 describe('TaskRowComponent content editing', () => {
     async function setup(description: string | null) {
         TestBed.configureTestingModule({ providers: [
@@ -334,6 +365,15 @@ describe('TaskRowComponent More actions', () => {
         expect(trigger.getAttribute('aria-expanded')).toBe('true');
         const items = document.querySelectorAll('[role="menuitem"] a');
         expect(items[0].textContent).toContain('Edit task');
+        const destructive = items[1].closest('[role="menuitem"]') as HTMLElement;
+        expect(destructive.closest('app-task-row')).toBeNull();
+        expect(destructive.style.getPropertyValue('--p-menu-item-color')).toBe('var(--color-status-danger)');
+        expect(destructive.style.getPropertyValue('--p-menu-item-icon-color')).toBe('var(--color-status-danger)');
+        expect(destructive.style.getPropertyValue('--p-menu-item-focus-background')).toBe('var(--color-status-danger-soft)');
+        document.querySelector('[role="menu"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', code: 'End', bubbles: true }));
+        fixture.detectChanges();
+        expect(destructive.classList.contains('p-focus')).toBe(true);
+
         (items[1] as HTMLElement).click();
         fixture.detectChanges();
         await fixture.whenStable();

@@ -283,7 +283,7 @@ export class TasksPage {
         } else if (this.view() === 'project') {
             const projectId = this.projectId();
             const project = this.projectsStore.projects().find((p) => p.id === projectId);
-            return project ? `Project: ${project.name}` : 'Project';
+            return project ? project.name : 'Project';
         } else {
             return 'Tasks';
         }
