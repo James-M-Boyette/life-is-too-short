@@ -66,17 +66,17 @@ describe('TasksPage', () => {
 
     it('shows bulk actions and picker defaults only in the planning columns', () => {
         fixture.detectChanges();
-        expect(fixture.nativeElement.textContent).not.toContain('Reschedule all to today');
+        expect(fixture.nativeElement.textContent).not.toContain('Reschedule for today');
         expect(fixture.nativeElement.textContent).not.toContain("Clear Today's Schedule");
         component['setTodayLayout']('planning');
         fixture.detectChanges();
-        expect(fixture.nativeElement.textContent).toContain('Reschedule all to today');
+        expect(fixture.nativeElement.textContent).toContain('Reschedule for today');
         expect(fixture.nativeElement.querySelector('[aria-labelledby="today-heading"] .today-board__column-header').textContent)
             .toContain("Clear Today's Schedule");
         const lists = fixture.debugElement.queryAll(By.directive(TaskListComponent));
         expect(lists.map(list => list.componentInstance.defaultPlannedDateToToday())).toEqual([false, true, true]);
         expect(fixture.nativeElement.querySelector('[aria-labelledby="unscheduled-heading"]').textContent)
-            .toContain('Reschedule all to today');
+            .toContain('Reschedule for today');
     });
 
     it('reschedules only open overdue tasks and preserves due dates', async () => {

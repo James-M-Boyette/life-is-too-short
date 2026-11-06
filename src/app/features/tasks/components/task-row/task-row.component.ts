@@ -144,6 +144,26 @@ export class TaskRowComponent {
         });
     };
 
+    protected commitSchedule(
+        event: Event,
+        plannedDate: Date | null,
+        dueDate: Date | null,
+    ): boolean {
+        event.preventDefault();
+        event.stopPropagation();
+        const keyboardEvent = event as KeyboardEvent;
+        if (this.disabled() || keyboardEvent.repeat || keyboardEvent.isComposing) return false;
+
+        const task = this.task();
+        if (formatLocalDate(plannedDate) !== task.planned_date) {
+            this.onPlannedDateChange(plannedDate);
+        }
+        if (formatLocalDate(dueDate) !== task.due_date) {
+            this.onDueDateChange(dueDate);
+        }
+        return true;
+    }
+
     readonly dueDateChange = output<{
         task: Task;
         dueDate: string | null;
