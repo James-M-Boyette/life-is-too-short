@@ -62,7 +62,8 @@
         >
             <ng-template pTemplate="default" let-node>
                 <div class="project-tree-item">
-                    <a [routerLink]="['/tasks/project', node.key]" routerLinkActive="active">
+                    <a [routerLink]="['/tasks/project', node.key]" routerLinkActive="active"
+                        (dblclick)="toggleProjectChildren(node)">
                         {{ node.label }}
                     </a>
 

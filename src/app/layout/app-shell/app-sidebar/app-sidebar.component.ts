@@ -58,6 +58,12 @@ export class AppSidebarComponent {
         return ids;
     }
 
+    protected toggleProjectChildren(node: TreeNode): void {
+        if (!node.key || !node.children?.length) return;
+        if (this.expandedProjectIds().has(node.key)) this.onNodeCollapse({ node });
+        else this.onNodeExpand({ node });
+    }
+
     protected onNodeExpand(event: { node: TreeNode }): void {
         const projectId = event.node.key;
 

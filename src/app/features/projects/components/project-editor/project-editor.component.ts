@@ -6,6 +6,7 @@ import {
 } from '@angular/forms';
 
 import { TreeSelectModule } from 'primeng/treeselect';
+import { ButtonModule } from 'primeng/button';
 import type { TreeNode } from 'primeng/api';
 
 import type { Project, ProjectNode } from '@/features/projects/models/project.model';
@@ -20,7 +21,7 @@ export type CreateProjectPayload = {
 @Component({
     selector: 'app-project-editor',
     standalone: true,
-    imports: [ReactiveFormsModule, TreeSelectModule],
+    imports: [ReactiveFormsModule, TreeSelectModule, ButtonModule],
     templateUrl: './project-editor.component.html',
     styleUrl: './project-editor.component.scss',
 })
