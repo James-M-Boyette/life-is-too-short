@@ -81,18 +81,30 @@ export class TasksPage {
 
     protected readonly reschedulingOverdue = signal(false);
     protected readonly overdueRescheduleError = signal<string | null>(null);
+    protected readonly reschedulingUnscheduled = signal(false);
+    protected readonly unscheduledRescheduleError = signal<string | null>(null);
 
     protected async rescheduleOverdueToToday(): Promise<void> {
+        await this.rescheduleGroupToToday('overdue');
+    }
+
+    protected async rescheduleUnscheduledToToday(): Promise<void> {
+        await this.rescheduleGroupToToday('unscheduled');
+    }
+
+    private async rescheduleGroupToToday(group: 'overdue' | 'unscheduled'): Promise<void> {
         if (this.view() !== 'today' || !this.isTodayPlanning() ||
-            this.reschedulingOverdue() || this.tasksStore.mutating()) {
+            this.reschedulingOverdue() || this.reschedulingUnscheduled() || this.tasksStore.mutating()) {
             return;
         }
 
-        const tasks = [...this.overdueTasks()];
+        const tasks = [...(group === 'overdue' ? this.overdueTasks() : this.unscheduledTasks())];
+        const rescheduling = group === 'overdue' ? this.reschedulingOverdue : this.reschedulingUnscheduled;
+        const rescheduleError = group === 'overdue' ? this.overdueRescheduleError : this.unscheduledRescheduleError;
         const today = this.calendarClock.today();
         const userId = this.auth.userId();
-        this.reschedulingOverdue.set(true);
-        this.overdueRescheduleError.set(null);
+        rescheduling.set(true);
+        rescheduleError.set(null);
         let updated = 0;
 
         try {
@@ -104,12 +116,12 @@ export class TasksPage {
             }
         } catch {
             if (this.auth.userId() === userId) {
-                this.overdueRescheduleError.set(
+                rescheduleError.set(
                     `Rescheduled ${updated} of ${tasks.length} tasks. Could not save the next task. Please try again.`,
                 );
             }
         } finally {
-            this.reschedulingOverdue.set(false);
+            rescheduling.set(false);
         }
     }
 

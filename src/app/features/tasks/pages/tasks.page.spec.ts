@@ -32,6 +32,9 @@ describe('TasksPage', () => {
             task('today', '2026-11-05'),
             task('future', '2026-11-06'),
             task('done', '2026-11-01', { is_done: true }),
+            task('unscheduled', null),
+            task('also-unscheduled', null),
+            task('done-unscheduled', null, { is_done: true }),
         ]);
         updatePlannedDate.mockReset().mockImplementation(async (t: Task, date: string) => {
             tasks.update(items => items.map(item => item.id === t.id ? { ...item, planned_date: date } : item));
@@ -61,14 +64,16 @@ describe('TasksPage', () => {
         expect(component).toBeTruthy();
     });
 
-    it('shows the bulk action and picker default only in the planning overdue column', () => {
+    it('shows bulk actions and picker defaults only in the planning columns', () => {
         fixture.detectChanges();
         expect(fixture.nativeElement.textContent).not.toContain('Reschedule all to today');
         component['setTodayLayout']('planning');
         fixture.detectChanges();
         expect(fixture.nativeElement.textContent).toContain('Reschedule all to today');
         const lists = fixture.debugElement.queryAll(By.directive(TaskListComponent));
-        expect(lists.map(list => list.componentInstance.defaultPlannedDateToToday())).toEqual([false, false, true]);
+        expect(lists.map(list => list.componentInstance.defaultPlannedDateToToday())).toEqual([false, true, true]);
+        expect(fixture.nativeElement.querySelector('[aria-labelledby="unscheduled-heading"]').textContent)
+            .toContain('Reschedule all to today');
     });
 
     it('reschedules only open overdue tasks and preserves due dates', async () => {
@@ -96,6 +101,41 @@ describe('TasksPage', () => {
         let finish!: () => void;
         updatePlannedDate.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
         const saving = component['rescheduleOverdueToToday']();
+        await component['rescheduleOverdueToToday']();
+        expect(updatePlannedDate).toHaveBeenCalledTimes(1);
+        finish();
+        await saving;
+        expect(updatePlannedDate).toHaveBeenCalledTimes(2);
+    });
+
+    it('reschedules only open unscheduled tasks to today', async () => {
+        component['setTodayLayout']('planning');
+        await component['rescheduleUnscheduledToToday']();
+        expect(updatePlannedDate.mock.calls.map(([t, date]) => [t.id, date])).toEqual([
+            ['also-unscheduled', '2026-11-05'], ['unscheduled', '2026-11-05'],
+        ]);
+        expect(component['unscheduledTasks']()).toEqual([]);
+        expect(tasks().find(t => t.id === 'done-unscheduled')?.planned_date).toBeNull();
+        expect(component['overdueTasks']()).toHaveLength(2);
+    });
+
+    it('reports partial progress in the Unscheduled column when saving fails', async () => {
+        updatePlannedDate.mockImplementationOnce(async () => {}).mockRejectedValueOnce(new Error('offline'));
+        component['setTodayLayout']('planning');
+        await component['rescheduleUnscheduledToToday']();
+        expect(component['unscheduledRescheduleError']()).toContain('Rescheduled 1 of 2 tasks');
+        expect(component['overdueRescheduleError']()).toBeNull();
+        expect(component['reschedulingUnscheduled']()).toBe(false);
+    });
+
+    it('blocks Unscheduled in focus mode and prevents overlapping bulk actions', async () => {
+        await component['rescheduleUnscheduledToToday']();
+        expect(updatePlannedDate).not.toHaveBeenCalled();
+        component['setTodayLayout']('planning');
+        let finish!: () => void;
+        updatePlannedDate.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+        const saving = component['rescheduleUnscheduledToToday']();
+        await component['rescheduleUnscheduledToToday']();
         await component['rescheduleOverdueToToday']();
         expect(updatePlannedDate).toHaveBeenCalledTimes(1);
         finish();

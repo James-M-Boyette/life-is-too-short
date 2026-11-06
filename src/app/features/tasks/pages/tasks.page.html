@@ -132,10 +132,25 @@
 
             @if (isTodayPlanning()) {
                 <section class="today-board__column" aria-labelledby="unscheduled-heading">
-                    <h2 id="unscheduled-heading">Unscheduled ({{ unscheduledTasks().length }})</h2>
+                    <div class="today-board__column-header">
+                        <h2 id="unscheduled-heading">Unscheduled ({{ unscheduledTasks().length }})</h2>
+                        <p-button
+                            label="Reschedule all to today"
+                            icon="pi pi-calendar"
+                            size="small"
+                            [text]="true"
+                            [loading]="reschedulingUnscheduled()"
+                            [disabled]="tasksStore.mutating() || reschedulingUnscheduled() || reschedulingOverdue() || unscheduledTasks().length === 0"
+                            (onClick)="rescheduleUnscheduledToToday()"
+                        />
+                    </div>
+                    @if (unscheduledRescheduleError(); as message) {
+                        <p role="alert">{{ message }}</p>
+                    }
 
                     <app-task-list
                         [tasks]="unscheduledTasks()"
+                        [defaultPlannedDateToToday]="true"
                         [projects]="projectsStore.projectTree()"
                         [disabled]="tasksStore.mutating()"
                         [draggable]="true"
@@ -169,7 +184,7 @@
                             size="small"
                             [text]="true"
                             [loading]="reschedulingOverdue()"
-                            [disabled]="tasksStore.mutating() || reschedulingOverdue() || overdueTasks().length === 0"
+                            [disabled]="tasksStore.mutating() || reschedulingOverdue() || reschedulingUnscheduled() || overdueTasks().length === 0"
                             (onClick)="rescheduleOverdueToToday()"
                         />
                     </div>
