@@ -71,7 +71,17 @@ export class TaskRowComponent {
         { label: 'Edit task', icon: 'pi pi-pencil',
           disabled: this.disabled() || !!this.contentFeedback()?.pending || this.editing(),
           command: () => this.startEdit('title') },
-        { label: 'Delete task', icon: 'pi pi-trash', disabled: this.disabled() || this.editing(),
+        { label: 'Delete task', icon: 'pi pi-trash',
+          // PrimeNG applies these item-local tokens to both pointer and active-descendant focus states.
+          // Inline item styling follows the popup when it is appended to body.
+          style: {
+              '--p-menu-item-color': 'var(--color-status-danger)',
+              '--p-menu-item-icon-color': 'var(--color-status-danger)',
+              '--p-menu-item-focus-color': 'var(--color-status-danger-hover)',
+              '--p-menu-item-icon-focus-color': 'var(--color-status-danger-hover)',
+              '--p-menu-item-focus-background': 'var(--color-status-danger-soft)',
+          },
+          disabled: this.disabled() || this.editing(),
           command: () => {
               if (!this.disabled() && !this.editing()) {
                   this.moreActionsButton()?.nativeElement.focus();
