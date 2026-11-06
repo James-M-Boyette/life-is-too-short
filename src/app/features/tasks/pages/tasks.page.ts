@@ -34,7 +34,7 @@ import { TaskSchedulerComponent } from '@/features/tasks/components/task-schedul
 import type { Task } from '@/features/tasks/models/tasks.model';
 import type { TaskListGroup } from '@/features/tasks/models/task-list-group.model';
 import type { TaskContentChange, TaskContentFeedback } from '@/features/tasks/models/task-content.model';
-import type { TaskDateSelection, TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
+import type { TaskDateField, TaskDateSelection, TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
 
 @Component({
     standalone: true,
@@ -55,6 +55,8 @@ export class TasksPage {
     protected readonly contentFeedback = signal<Partial<Record<string, TaskContentFeedback>>>({});
     private contentAttempt = 0;
     private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
+    protected readonly scheduleEntryField = signal<{ field: TaskDateField }>({ field: 'planned_date' });
+    private scheduleTrigger: HTMLElement | null = null;
     private readonly schedulePopover = viewChild<Popover>('schedulePopover');
     private readonly scheduleContext = signal<{ taskId: string; userId: string; location: string } | null>(null);
     protected readonly activeScheduleTask = computed(() => {
@@ -136,9 +138,16 @@ export class TasksPage {
         request.event.stopPropagation();
         const popover = this.schedulePopover();
         if (popover?.overlayVisible && this.scheduleContext()?.taskId === task.id) {
-            this.closeSchedule(request.event);
+            if (request.field) {
+                this.scheduleEntryField.set({ field: request.field });
+                this.scheduleTrigger = request.anchor;
+                popover.show(request.event, request.anchor);
+                if (popover.container) popover.align();
+            } else this.closeSchedule(request.event);
             return;
         }
+        this.scheduleEntryField.set({ field: request.field ?? 'planned_date' });
+        this.scheduleTrigger = request.anchor;
         const location = this.scheduleLocation(task);
         if (!location) return;
         this.editorVersion++;
@@ -189,13 +198,16 @@ export class TasksPage {
         const focused = document.activeElement;
         if (context?.userId === this.auth.userId() &&
             (this.restoreScheduleFocus || focused === document.body || focused?.closest('app-task-scheduler'))) {
-            const trigger = Array.from(this.element.nativeElement.querySelectorAll<HTMLButtonElement>('[data-schedule-task-id]'))
-                .find(button => button.dataset['scheduleTaskId'] === context.taskId && !button.disabled);
+            const available = (button: HTMLElement) => !(button as HTMLButtonElement).disabled && getComputedStyle(button).display !== 'none';
+            const trigger = this.scheduleTrigger?.isConnected && available(this.scheduleTrigger) ? this.scheduleTrigger
+                : Array.from(this.element.nativeElement.querySelectorAll<HTMLButtonElement>('[data-schedule-task-id]'))
+                    .find(button => button.dataset['scheduleTaskId'] === context.taskId && available(button));
             (trigger ?? this.element.nativeElement.querySelector<HTMLElement>('.tasks-page'))?.focus();
         }
         this.scheduleContext.set(null);
         this.persistedScheduleTask.set(null);
         this.restoreScheduleFocus = false;
+        this.scheduleTrigger = null;
     }
 
     protected retrySchedule(): void {

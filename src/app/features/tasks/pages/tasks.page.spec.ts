@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TaskCreateDialogService } from '@/features/tasks/services/task-create-dialog.service';
 import { TasksPage } from './tasks.page';
 import { signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { vi } from 'vitest';
 import { TasksStore } from '@/features/tasks/state/tasks.store';
@@ -68,7 +68,7 @@ describe('TasksPage', () => {
             imports: [TasksPage],
             providers: [
                 TaskCreateDialogService,
-                { provide: Router, useValue: {} },
+                provideRouter([]),
                 { provide: AuthStore, useValue: { userId } },
                 { provide: ProjectsStore, useValue: { projects, projectTree: signal([]) } },
                 { provide: CalendarClockService, useValue: { today: signal('2026-11-05') } },
@@ -108,7 +108,7 @@ describe('TasksPage', () => {
         fixture.detectChanges();
         fixture.nativeElement.querySelector('.more-actions-btn').click();
         fixture.detectChanges();
-        (document.querySelectorAll('[role="menuitem"] a')[1] as HTMLElement).click();
+        (Array.from(document.querySelectorAll('[role="menuitem"] a')).find(item => item.textContent?.includes('Delete task')) as HTMLElement).click();
         fixture.detectChanges();
         expect(confirm).toHaveBeenCalledTimes(1);
         expect(confirm.mock.calls[0][0]).toMatchObject({ header: 'Delete task?', acceptLabel: 'Delete', rejectLabel: 'Cancel' });
@@ -323,6 +323,41 @@ describe('TasksPage', () => {
         expect(updatePlannedDate).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'p1' }), null);
         expect(todayList().componentInstance.groups()[1].tasks.map((t: Task) => t.id)).toContain('p1');
         expect(tasks().find(t => t.id === 'p1')?.due_date).toBe('2026-11-05');
+    });
+
+    it('opens date-specific tabs without writes, switches an open scheduler, and restores the clicked date control', async () => {
+        tasks.set([task('both-dates', '2026-11-05', { due_date: '2026-11-06' })]);
+        fixture.detectChanges();
+        const due = fixture.nativeElement.querySelector('[aria-label^="Change due date"]');
+        const planned = fixture.nativeElement.querySelector('[aria-label^="Change planned date"]');
+        due.click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(scheduleButton('Tomorrow').getAttribute('aria-label')).toContain('due date');
+        planned.click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(scheduleButton('Today').getAttribute('aria-label')).toContain('planned date');
+        // Re-enter Due after switching the tab manually: every explicit request wins.
+        due.click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        scheduleButton('Planned').click();
+        fixture.detectChanges();
+        due.click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(scheduleButton('Tomorrow').getAttribute('aria-label')).toContain('due date');
+        planned.click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(scheduleButton('Today').getAttribute('aria-label')).toContain('planned date');
+        expect(updatePlannedDate).not.toHaveBeenCalled();
+        expect(updateDueDate).not.toHaveBeenCalled();
+        fixture.nativeElement.ownerDocument.querySelector('[aria-label="Close scheduling"]').click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(document.activeElement).toBe(planned);
     });
 
     async function openScheduler(id = 'unscheduled') {

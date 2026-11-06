@@ -1,4 +1,4 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, input, output, linkedSignal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -27,7 +27,8 @@ export class TaskSchedulerComponent {
     readonly retry = output<void>();
     readonly dismiss = output<Event>();
 
-    protected readonly field = signal<TaskDateField>('planned_date');
+    readonly entryField = input<{ field: TaskDateField }>({ field: 'planned_date' });
+    protected readonly field = linkedSignal(() => this.entryField().field);
     protected readonly fields = [
         { label: 'Planned', value: 'planned_date' },
         { label: 'Due', value: 'due_date' },
