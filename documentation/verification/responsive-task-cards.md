@@ -12,9 +12,9 @@ JSDOM does not evaluate container-query layout or pointer dragging. CSS assertio
 
 ## Verification results
 
-- Full Angular/Vitest suite: 204 tests passed across 18 files (`node node_modules/@angular/cli/bin/ng.js test --watch=false`).
+- Full Angular/Vitest suite: 207 tests passed across 18 files (`node node_modules/@angular/cli/bin/ng.js test --watch=false`).
 - Production build: passed (`node node_modules/@angular/cli/bin/ng.js build --configuration production`).
-- Existing sidebar stylesheet budget warning remains; task-row styling now also warns at 6.81kB against the 4kB warning threshold. Error budgets were not increased.
+- Existing sidebar stylesheet budget warning remains; task-row styling now also warns at 7.08kB against the 4kB warning threshold. Error budgets were not increased.
 - No database, store mutation, grouping, board layout, or ordering changes.
 
 ## Real-browser checks — pending
@@ -37,3 +37,26 @@ Also check:
 - Keyboard/touch access to required controls without hover, focus rings, menu dismissal, TreeSelect selection/clear/cancel, and scheduler focus after task movement.
 - Short previews expose no clipped focusable Markdown links; expand reveals formatted content and links independently of editing.
 - Phone-sized viewport and wide viewport with a narrow sidebar/column: mode follows card width, not device width.
+
+
+## Card-surface dragging follow-up
+
+Expanded cards retain the hamburger drag affordance; compact cards hide it to recover title width. CDK itself now listens on the card root without a registered-handle restriction (CSS-hidden handles would otherwise still block compact dragging). The wide hamburger and blank card surface reach that same CDK listener.
+
+A small listener on the content wrapper stops mouse/touch starts from reaching CDK for buttons, links, input fields, TreeSelect, and the whole rendered-description region. It does **not** call preventDefault, suppress clicks, measure movement, or track pointers. Titles and descriptions remain click/edit and text-selection regions; dragging intentionally starts from blank card space or the wide handle, not from those controls. Required non-drag scheduling and project-move actions remain available.
+
+Mouse drag starts keep CDK's normal movement threshold and no added delay. Touch starts use CDK's 200ms hold delay: movement before that delay cancels the pending drag so a swipe can scroll. Touch behavior is not established by JSDOM and needs device/browser acceptance. Native text selection remains available before a drag; CDK owns selection suppression during an active drag.
+
+The global preview alone uses independent `rotate: 1.5deg` and slightly stronger elevation; CDK continues owning `transform`. The original cloned placeholder remains in layout with a soft surface/dashed border and hidden (not removed) contents. No custom preview/placeholder templates, explicit height measurements, or store changes were added.
+
+Additional real-browser acceptance — pending:
+
+- Expanded: wide handle and blank surface drag; compact: no visible handle, blank surface drag. Confirm pointer movement on completion, title, description, Markdown links, disclosure, dates, project links/selector, More actions, and editor inputs never starts a card drag.
+- A click without movement activates normally; selecting/copying Markdown text still works. Keyboard navigation, editing, scheduling, and Move to project remain usable.
+- On touch devices, swipe to scroll before the hold delay; hold then drag from a surface region. Check that the delay feels deliberate without blocking scrolling or taps.
+- Preview keeps original width and responsive layout while tilted. Placeholder is empty, softly shaded, and the same measured height/spacing as the source at multiple widths, including long descriptions. Check scroll boundaries and insertion animation.
+- Repeat Today same-section reordering, exact Due-only → Planned insertion, allowed/disallowed subgroup transitions, Today/Unscheduled/Overdue cross-column moves, Inbox/Project ordering, and Upcoming date moves. Verify due dates and rollback are unchanged.
+
+These checks require real pointer/touch/browser layout; synthetic component events verify only start-event gating, click outputs, disabled state, and cloned markup/style structure.
+
+Follow-up verification: the full 18-file suite passes (207 tests), including existing cross-column/subgroup ordering, exact insertion, scheduling preservation, and rollback tests. Production build passes with the task-row and existing sidebar stylesheet warnings. Browser acceptance remains pending.
