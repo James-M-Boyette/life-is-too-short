@@ -85,7 +85,9 @@ Communications must disclose that privileged administrators can technically acce
 
 **Reasoning:** These represent different scheduling obligations.
 
-**Avoid:** Using one date field to represent incompatible concepts.
+**Placement and obligation are separate:** For incomplete tasks, the existing display-placement rule is `planned_date ?? due_date`. A planned date expresses deliberate intention and takes precedence for placement; an unplanned task due today still appears in Today, so a deadline can challenge the user's plans. An unplanned overdue task remains in Overdue rather than being automatically planned for today. A task due yesterday but deliberately planned for tomorrow appears in tomorrow's plan **and retains an overdue due-date warning**.
+
+**Avoid:** Treating an obligation surfacing in Today as though the user intentionally planned it, silently clearing overdue status when a task is rescheduled, or using one date field to represent incompatible concepts.
 
 ## D09 — Separate recurrence, completion history, and goals
 
@@ -143,6 +145,33 @@ Prioritize security, outages, and data loss ahead of minor defects and feature r
 **Reasoning:** Preserves extensibility and prevents inappropriate data coupling.
 
 **Avoid:** Forcing fundamentally different concepts into the task schema.
+
+## D15 — Compact scheduler: immediate, field-specific actions
+
+**Decision:** Use a compact, page-hosted task scheduler with separate **Planned** and **Due** tabs, five quick actions (Today, Tomorrow, This weekend, Next week, No date), and an inline calendar. Each deliberate selection updates only the active date field, without Save/Cancel buttons or a popover-wide Enter-to-save handler. Date calculations follow local calendar days.
+
+- Selecting a Planned date (including No date) initiates an optimistic save and closes the popover immediately; unchanged selections close without writing.
+- Selecting a Due date saves immediately but keeps the popover open only while the task remains in the same visible list/column, so the user can then set a Planned date.
+- Dismissal via Escape/outside click produces no additional writes. A failed save must remain visible after dismissal, support retry, and restore task state through the existing store.
+- The scheduling editor is presentational, the page coordinates the interaction, and the existing TasksStore owns mutation and persistence.
+
+**Reasoning:** Preserve one-click scheduling while preventing orphaned editors and making keyboard, error, and asynchronous behavior predictable.
+
+**Implementation status:** Developed in PR #46 (`codex/compact-task-scheduler`); pending merge and real-browser acceptance review at the time of this note.
+
+## D16 — Today shows intended plans and unplanned obligations distinctly
+
+**Decision:** Keep a single Today view that contains both tasks deliberately planned today and unplanned tasks whose due date is today. Within the Today column, visually distinguish **Planned for today** (`planned_date === today`) from **Due today · Not planned** (`planned_date === null && due_date === today`).
+
+- Tasks with both planned and due dates today belong to Planned for today.
+- Planned-today tasks retain overdue due-date indicators when their deadline was earlier.
+- Unplanned overdue tasks remain in the existing Overdue group in Planning mode.
+- Preserve the existing overall Today count, Focus/Planning modes, manual ordering, and drag-and-drop semantics.
+- Treat this as presentation grouping, not new persisted task status or a database migration.
+
+**Reasoning:** Users need to see obligations that conflict with their plans without conflating deadlines with intentional commitments.
+
+**Implementation status:** Selected as the next focused UI enhancement; implementation and visual acceptance are not yet verified.
 
 ## Not settled decisions
 
