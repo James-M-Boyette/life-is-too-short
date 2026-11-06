@@ -290,6 +290,60 @@ describe('TasksStore', () => {
         expect(store.error()).toBe('Project transfer failed');
     });
 
+    it.each([
+        [null, 'p1', 0], ['p1', 'p2', 1500], ['p2', null, 3000],
+    ])('atomically plans and inserts between %s and %s without modifying the deadline', async (previousTaskId, nextTaskId, position) => {
+        const due = createTask({ id: 'due', planned_date: null, due_date: '2026-11-05', planned_position: 9000 });
+        store.tasks.set([
+            createTask({ id: 'p1', planned_date: '2026-11-05', planned_position: 1000 }),
+            createTask({ id: 'p2', planned_date: '2026-11-05', planned_position: 2000 }), due,
+        ]);
+        let finish!: (value: unknown) => void;
+        single.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+        const save = store.updatePlannedDate(due, '2026-11-05', { previousTaskId, nextTaskId });
+        await vi.waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+        expect(update).toHaveBeenCalledExactlyOnceWith({ planned_date: '2026-11-05', planned_position: position });
+        expect(store.tasks().find(t => t.id === 'due')).toMatchObject({
+            planned_date: '2026-11-05', planned_position: position, due_date: '2026-11-05',
+        });
+        const duplicate = store.updatePlannedDate(due, '2026-11-05', { previousTaskId, nextTaskId });
+        finish({ data: { ...due, planned_date: '2026-11-05', planned_position: position }, error: null });
+        await Promise.all([save, duplicate]);
+        expect(update).toHaveBeenCalledTimes(1);
+    });
+
+    it('plans into an empty section and rolls back both date and position on failure', async () => {
+        const due = createTask({ planned_date: null, due_date: '2026-11-05', planned_position: 9000 });
+        store.tasks.set([due]);
+        single.mockResolvedValueOnce({ data: null, error: new Error('Offline') });
+        await expect(store.updatePlannedDate(due, '2026-11-05', { previousTaskId: null, nextTaskId: null })).rejects.toThrow('Offline');
+        expect(update).toHaveBeenCalledExactlyOnceWith({ planned_date: '2026-11-05', planned_position: 1000 });
+        expect(store.tasks()[0]).toMatchObject({ planned_date: null, planned_position: 9000, due_date: '2026-11-05' });
+        expect(store.error()).toBe('Offline');
+    });
+
+    it('rejects stale empty-section insertion boundaries without writing', async () => {
+        const due = createTask({ planned_date: null, due_date: '2026-11-05' });
+        store.tasks.set([due, createTask({ id: 'new-planned', planned_date: '2026-11-05' })]);
+        await expect(store.updatePlannedDate(due, '2026-11-05', { previousTaskId: null, nextTaskId: null }))
+            .rejects.toThrow('no longer empty');
+        expect(update).not.toHaveBeenCalled();
+        expect(store.tasks()[0].planned_date).toBeNull();
+    });
+
+    it.each(['missing', 'other-user', 'unplanned', 'unpositioned'])('rejects a %s insertion neighbor without writing', async kind => {
+        const due = createTask({ planned_date: null, due_date: '2026-11-05' });
+        const neighbor = createTask({ id: 'neighbor', planned_date: '2026-11-05',
+            ...(kind === 'other-user' ? { user_id: 'user-2' } : {}),
+            ...(kind === 'unplanned' ? { planned_date: null, due_date: '2026-11-05' } : {}),
+            ...(kind === 'unpositioned' ? { planned_position: null } : {}),
+        });
+        store.tasks.set([due, ...(kind === 'missing' ? [] : [neighbor])]);
+        await expect(store.updatePlannedDate(due, '2026-11-05', { previousTaskId: 'neighbor', nextTaskId: null })).rejects.toThrow('destination order');
+        expect(update).not.toHaveBeenCalled();
+        expect(store.tasks()[0].planned_date).toBeNull();
+    });
+
     it('appends a task when its planned date changes', async () => {
         const movingTask = createTask({
             id: 'moving',
