@@ -495,6 +495,17 @@ describe('TasksStore', () => {
         expect(store.tasks()[0].planned_position).toBe(2500);
     });
 
+    it('rolls back a failed planned-date clear without changing the deadline', async () => {
+        const task = createTask({ planned_date: '2026-11-05', due_date: '2026-11-04', planned_position: 2500 });
+        store.tasks.set([task]);
+        single.mockResolvedValue({ data: null, error: new Error('Offline') });
+        await expect(store.updatePlannedDate(task, null)).rejects.toThrow('Offline');
+        expect(store.tasks()[0]).toMatchObject({
+            planned_date: '2026-11-05', due_date: '2026-11-04', planned_position: 2500,
+        });
+        expect(store.error()).toBe('Offline');
+    });
+
     it('keeps a task protected until all queued mutations finish', async () => {
         const task = createTask({
             planned_position: 1000,

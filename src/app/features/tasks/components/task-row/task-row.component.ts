@@ -1,7 +1,6 @@
 import {
     Component,
     EventEmitter,
-    Input,
     Output,
     signal,
     input,
@@ -21,12 +20,10 @@ import { CalendarClockService } from '@/shared/services/calendar-clock.service';
 import { inject } from '@angular/core';
 import { TreeSelectModule } from 'primeng/treeselect';
 import type { TreeNode } from 'primeng/api';
-import { DatePickerModule } from 'primeng/datepicker';
 import {
     parseLocalDate,
-    formatLocalDate,
 } from '@/shared/utils/date.util';
-import { PopoverModule } from 'primeng/popover';
+import type { TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
 import { CdkDrag, CdkDragHandle, } from '@angular/cdk/drag-drop';
 
 @Component({
@@ -38,8 +35,6 @@ import { CdkDrag, CdkDragHandle, } from '@angular/cdk/drag-drop';
         FormsModule,
         TagModule,
         TreeSelectModule,
-        DatePickerModule,
-        PopoverModule,
         CdkDrag,
         CdkDragHandle
     ],
@@ -63,7 +58,12 @@ export class TaskRowComponent {
     protected readonly calendarClock = inject(CalendarClockService);
 
     readonly draggable = input(false);
-    readonly defaultPlannedDateToToday = input(false);
+    readonly scheduleRequested = output<TaskScheduleRequest>();
+
+    protected openSchedule(event: Event): void {
+        if (this.disabled()) return;
+        this.scheduleRequested.emit({ taskId: this.task().id, event, anchor: event.currentTarget as HTMLElement });
+    }
 
     protected readonly isDueOverdue = computed(() => {
         const task = this.task();
@@ -122,59 +122,11 @@ export class TaskRowComponent {
         parseLocalDate(this.task().planned_date),
     );
 
-    protected readonly plannedDateForPicker = computed(() =>
-        this.defaultPlannedDateToToday()
-            ? parseLocalDate(this.calendarClock.today())
-            : this.plannedDate(),
-    );
 
     protected readonly dueDate = computed(() =>
         parseLocalDate(this.task().due_date),
     );
 
-    readonly plannedDateChange = output<{
-        task: Task;
-        plannedDate: string | null;
-    }>();
-
-    protected onPlannedDateChange(date: Date | null): void {
-        this.plannedDateChange.emit({
-            task: this.task(),
-            plannedDate: formatLocalDate(date),
-        });
-    };
-
-    protected commitSchedule(
-        event: Event,
-        plannedDate: Date | null,
-        dueDate: Date | null,
-    ): boolean {
-        event.preventDefault();
-        event.stopPropagation();
-        const keyboardEvent = event as KeyboardEvent;
-        if (this.disabled() || keyboardEvent.repeat || keyboardEvent.isComposing) return false;
-
-        const task = this.task();
-        if (formatLocalDate(plannedDate) !== task.planned_date) {
-            this.onPlannedDateChange(plannedDate);
-        }
-        if (formatLocalDate(dueDate) !== task.due_date) {
-            this.onDueDateChange(dueDate);
-        }
-        return true;
-    }
-
-    readonly dueDateChange = output<{
-        task: Task;
-        dueDate: string | null;
-    }>();
-
-    protected onDueDateChange(date: Date | null): void {
-    this.dueDateChange.emit({
-            task: this.task(),
-            dueDate: formatLocalDate(date),
-        });
-    }
 
     protected onDraftInput(event: Event) {
         const input = event.target as HTMLInputElement;

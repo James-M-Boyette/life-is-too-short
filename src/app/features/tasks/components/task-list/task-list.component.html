@@ -17,14 +17,12 @@
             [projects]="projects()"
             [disabled]="disabled()"
             [draggable]="draggable()"
-            [defaultPlannedDateToToday]="defaultPlannedDateToToday()"
+            (scheduleRequested)="scheduleRequested.emit($event)"
             (toggleDone)="toggleDone.emit($event)"
             (remove)="remove.emit($event)"
             (rename)="rename.emit($event)"
             (editDescription)="editDescription.emit($event)"
             (projectChange)="projectChange.emit($event)"
-            (plannedDateChange)="plannedDateChange.emit($event)"
-            (dueDateChange)="dueDateChange.emit($event)"
         />
     } @empty {
         <li class="empty-message">{{ emptyMessage() }}</li>

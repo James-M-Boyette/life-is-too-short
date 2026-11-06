@@ -1,0 +1,47 @@
+<section class="scheduler" [attr.aria-label]="'Schedule task: ' + task().title"
+    [attr.aria-busy]="pending()" (keydown.escape)="dismiss.emit($event)">
+    <header>
+        <h2 id="schedule-task-heading" tabindex="-1" autofocus>Schedule task</h2>
+        <button pButton type="button" [text]="true" [rounded]="true" icon="pi pi-times"
+            aria-label="Close scheduling" (click)="dismiss.emit($event)"></button>
+    </header>
+
+    <p-selectbutton [options]="fields" optionLabel="label" optionValue="value"
+        [ngModel]="field()" (ngModelChange)="field.set($event)" [allowEmpty]="false"
+        aria-label="Date to edit" [fluid]="true" />
+
+    <div class="quick-dates" aria-label="Quick dates">
+        @for (option of quickDates(); track option.label) {
+            <button type="button" class="quick-date" [disabled]="blocked()"
+                [attr.aria-label]="option.label + (field() === 'planned_date' ? ' — planned date' : ' — due date')"
+                (click)="choose(option.date)">
+                <i [class]="'pi ' + option.icon" aria-hidden="true"></i>
+                <span>{{ option.label }}</span>
+                <span class="quick-date__detail">{{ option.date ? (option.date | date: 'EEE') : 'Clear' }}</span>
+                <i class="pi pi-check quick-date__check" aria-hidden="true"
+                    [style.visibility]="!pending() && option.date === persistedTask()[field()] ? 'visible' : 'hidden'"></i>
+            </button>
+        }
+    </div>
+
+    <div class="calendar-section">
+        <h3>Choose another date</h3>
+        <div class="current-date">
+            <span>Current {{ field() === 'planned_date' ? 'planned' : 'due' }} date</span>
+            <strong>{{ persistedDate() ? (persistedDate() | date: 'MMM d, y') : 'None' }}</strong>
+        </div>
+        <div class="calendar-container">
+            <p-datepicker [inline]="true" [ngModel]="currentDate()" [defaultDate]="calendarStart()"
+                (onSelect)="chooseCalendarDate($event)" [disabled]="blocked()"
+                [ariaLabel]="field() === 'planned_date' ? 'Choose planned date' : 'Choose due date'" />
+        </div>
+    </div>
+
+    <div class="feedback" role="status" aria-live="polite">{{ pending() ? 'Saving date…' : '' }}</div>
+    @if (error(); as message) {
+        <div class="save-error" role="alert">
+            <span>{{ message }}</span>
+            <button pButton type="button" [text]="true" label="Retry" [disabled]="blocked()" (click)="retry.emit()"></button>
+        </div>
+    }
+</section>
