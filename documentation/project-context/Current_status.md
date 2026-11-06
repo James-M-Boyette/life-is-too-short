@@ -74,6 +74,16 @@ The repository includes:
 
 These features should be considered implemented at the code level, although their complete correctness and production readiness are not established.
 
+### Active scheduling UI work (not yet in `main` at last review)
+
+- PR #46, `codex/compact-task-scheduler`, implements a two-tab Planned/Due scheduling editor with five quick-date choices and an inline calendar.
+- The accepted interaction is immediate field-specific saving. Planned selections close immediately; Due selections remain open only while the task stays in its original visible list or column.
+- The PR reports 122 tests passing and a production build passing; independent real-browser visual, focus, narrow-screen, and accessibility checks remain before acceptance.
+- A follow-up Today-view enhancement is underway/planned: visually separate **Planned for today** from **Due today · Not planned**, without altering `planned_date ?? due_date` placement.
+- The root `AGENTS.md` now contains risk-based testing guidance and pragmatic AngularStart-inspired Smart/Dumb architecture conventions.
+
+Do not describe unmerged PR code as deployed or completed in `main`. Recheck GitHub branch and PR status before beginning related changes.
+
 ### Development infrastructure
 
 The repository includes:
@@ -110,6 +120,7 @@ Do not assume any of the following are complete:
 
 ## Immediate next steps
 
+- Finish real-browser review and merge the compact scheduler when accepted; separately review and merge Today visual grouping once complete. Address any observed visual glitches in a focused polish pass.
 1. Audit current source, existing branches, and deployed behavior.
 2. Verify hosted Supabase configuration, signup restrictions, RLS, and RPC permissions.
 3. Complete backup/restore validation.
