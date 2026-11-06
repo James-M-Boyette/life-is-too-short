@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TaskListComponent } from './task-list.component';
+import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { vi } from 'vitest';
@@ -13,6 +14,7 @@ describe('TaskListComponent', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [TaskListComponent],
+            providers: [provideRouter([])],
         }).compileComponents();
 
         fixture = TestBed.createComponent(TaskListComponent);

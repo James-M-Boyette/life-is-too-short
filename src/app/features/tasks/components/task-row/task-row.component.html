@@ -1,4 +1,4 @@
-<li class="row" cdkDrag [cdkDragData]="task()" [cdkDragDisabled]="!draggable() || disabled() || editing()">
+<li class="row" [class.is-editing]="editing()" cdkDrag [cdkDragData]="task()" [cdkDragDisabled]="!draggable() || disabled() || editing() || movingProject()">
     <ng-template #leading>
             @if (draggable()) {
                 <button
@@ -62,7 +62,9 @@
     </ng-template>
     <ng-template #metadata>
             <div class="meta">
-                <p-treeselect
+                <div #projectSelector class="project-selector" [class.is-moving]="movingProject()">
+                <p-treeselect #projectSelect appendTo="body" (onHide)="finishProjectMove()"
+                    ariaLabel="Move task to project"
                     [disabled]="disabled() || editing()"
                     [options]="projectOptions()"
                     [ngModel]="selectedProjectNode()"
@@ -70,24 +72,47 @@
                     placeholder="No Project"
                     [showClear]="true"
                 />
+                </div>
 
                 <div class="task-date-tags">
                     @if (plannedDate(); as date) {
-                        <p-tag
+                        <button type="button" class="date-control" [disabled]="disabled() || editing()"
+                            [attr.aria-label]="'Change planned date for ' + task().title + ': ' + (date | date: 'MMM d')"
+                            pTooltip="Change planned date" tooltipPosition="bottom" aria-haspopup="dialog"
+                            [attr.data-schedule-task-id]="task().id" (click)="openSchedule($event, 'planned_date')">
+                        <p-tag class="expanded-date-tag" aria-hidden="true"
                             severity="secondary"
                             [value]="'Planned: ' + (date | date: 'MMM d')"
                             icon="pi pi-calendar"
                         />
+                        <span class="compact-date-label" aria-hidden="true"><i class="pi pi-calendar"></i> {{ date | date: 'MMM d' }}</span>
+                        </button>
                     }
 
                     @if (dueDate(); as date) {
-                        <p-tag
+                        <button type="button" class="date-control" [class.overdue]="isDueOverdue()" [disabled]="disabled() || editing()"
+                            [attr.aria-label]="'Change due date for ' + task().title + ': ' + (date | date: 'MMM d') + (isDueOverdue() ? ', overdue' : '')"
+                            pTooltip="Change due date" tooltipPosition="bottom" aria-haspopup="dialog"
+                            [attr.data-schedule-task-id]="task().id" (click)="openSchedule($event, 'due_date')">
+                        <p-tag class="expanded-date-tag" aria-hidden="true"
                             [severity]="isDueOverdue() ? 'danger' : 'secondary'"
                             [value]="'Due: ' + (date | date: 'MMM d')"
                             icon="pi pi-flag"
                         />
+                        <span class="compact-date-label" aria-hidden="true"><i class="pi pi-flag"></i> Due {{ date | date: 'MMM d' }}</span>
+                        </button>
+                    }
+                    @if (!task().planned_date && !task().due_date) {
+                        <button type="button" class="compact-schedule-control" aria-label="Schedule task"
+                            pTooltip="Schedule task" tooltipPosition="bottom" aria-haspopup="dialog" [disabled]="disabled() || editing()"
+                            [attr.data-schedule-task-id]="task().id" (click)="openSchedule($event, 'planned_date')"><i class="pi pi-calendar-clock" aria-hidden="true"></i> Schedule</button>
                     }
                 </div>
+                <a class="compact-project-link" [class.is-moving]="movingProject()"
+                    [routerLink]="task().project_id ? ['/tasks/project', task().project_id] : ['/tasks/inbox']"
+                    [attr.aria-label]="'Go to ' + projectName()" [pTooltip]="projectName()" tooltipPosition="bottom">
+                    <i [class]="task().project_id ? 'pi pi-folder' : 'pi pi-inbox'" aria-hidden="true"></i><span>{{ projectName() }}</span>
+                </a>
             </div>
     </ng-template>
     @if (editing()) {

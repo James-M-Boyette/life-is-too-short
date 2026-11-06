@@ -1,13 +1,15 @@
 import { TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { CalendarClockService } from '@/shared/services/calendar-clock.service';
+import type { ProjectNode } from '@/features/projects/models/project.model';
 import type { Task } from '@/features/tasks/models/tasks.model';
 import { TaskRowComponent } from './task-row.component';
 
 describe('TaskRowComponent schedule request', () => {
     it('opens scheduling through an event while displaying only stored dates', () => {
-        TestBed.configureTestingModule({ providers: [
+        TestBed.configureTestingModule({ providers: [provideRouter([]),
             { provide: CalendarClockService, useValue: { today: signal('2026-11-05') } },
         ] });
         const fixture = TestBed.createComponent(TaskRowComponent);
@@ -33,7 +35,7 @@ describe('TaskRowComponent schedule request', () => {
 
 describe('Task card drag preview styling', () => {
     it('keeps the original card layout when CDK clones it outside the row host', () => {
-        TestBed.configureTestingModule({ providers: [
+        TestBed.configureTestingModule({ providers: [provideRouter([]),
             { provide: CalendarClockService, useValue: { today: signal('2026-11-05') } },
         ] });
         const fixture = TestBed.createComponent(TaskRowComponent);
@@ -52,6 +54,9 @@ describe('Task card drag preview styling', () => {
             expect(card.display).toBe('flex');
             expect(card.flexDirection).toBe('column');
             expect(card.boxSizing).toBe('border-box');
+            expect(card.getPropertyValue('container').replace(/\s/g, '')).toBe('task-card/inline-size');
+            expect(preview.querySelectorAll('.date-control')).toHaveLength(2);
+            expect(preview.querySelector('.compact-project-link')).toBeTruthy();
             expect(getComputedStyle(preview.querySelector('.task-primary-section')!).display).toBe('flex');
             expect(getComputedStyle(preview.querySelector('.title-btn')!).whiteSpace).toBe('nowrap');
             expect(getComputedStyle(preview.querySelector('.meta')!).display).toBe('flex');
@@ -64,7 +69,7 @@ describe('Task card drag preview styling', () => {
 
 describe('TaskRowComponent content editing', () => {
     async function setup(description: string | null) {
-        TestBed.configureTestingModule({ providers: [
+        TestBed.configureTestingModule({ providers: [provideRouter([]),
             { provide: CalendarClockService, useValue: { today: signal('2026-11-05') } },
         ] });
         const fixture = TestBed.createComponent(TaskRowComponent);
@@ -315,7 +320,7 @@ describe('TaskRowComponent content editing', () => {
 
 describe('TaskRowComponent More actions', () => {
     async function setup(description: string | null = null) {
-        TestBed.configureTestingModule({ providers: [
+        TestBed.configureTestingModule({ providers: [provideRouter([]),
             { provide: CalendarClockService, useValue: { today: signal('2026-11-05') } },
         ] });
         const fixture = TestBed.createComponent(TaskRowComponent);
@@ -365,7 +370,8 @@ describe('TaskRowComponent More actions', () => {
         expect(trigger.getAttribute('aria-expanded')).toBe('true');
         const items = document.querySelectorAll('[role="menuitem"] a');
         expect(items[0].textContent).toContain('Edit task');
-        const destructive = items[1].closest('[role="menuitem"]') as HTMLElement;
+        const deleteAction = Array.from(items).find(item => item.textContent?.includes('Delete task')) as HTMLElement;
+        const destructive = deleteAction.closest('[role="menuitem"]') as HTMLElement;
         expect(destructive.closest('app-task-row')).toBeNull();
         expect(destructive.style.getPropertyValue('--p-menu-item-color')).toBe('var(--color-status-danger)');
         expect(destructive.style.getPropertyValue('--p-menu-item-icon-color')).toBe('var(--color-status-danger)');
@@ -374,7 +380,7 @@ describe('TaskRowComponent More actions', () => {
         fixture.detectChanges();
         expect(destructive.classList.contains('p-focus')).toBe(true);
 
-        (items[1] as HTMLElement).click();
+        deleteAction.click();
         fixture.detectChanges();
         await fixture.whenStable();
         expect(removed).toHaveBeenCalledExactlyOnceWith('menu-task');
@@ -393,5 +399,122 @@ describe('TaskRowComponent More actions', () => {
         trigger.click();
         fixture.detectChanges();
         expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    });
+});
+
+
+describe('Responsive task card interactions', () => {
+    afterEach(() => vi.unstubAllGlobals());
+    function setup(overrides: Partial<Task> = {}) {
+        TestBed.configureTestingModule({ providers: [provideRouter([]),
+            { provide: CalendarClockService, useValue: { today: signal('2026-11-06') } },
+        ] });
+        const fixture = TestBed.createComponent(TaskRowComponent);
+        fixture.componentRef.setInput('task', {
+            id: 'responsive', title: 'Long task title '.repeat(12), project_id: null, description: null,
+            planned_date: null, due_date: null, is_done: false, ...overrides,
+        } as Task);
+        fixture.detectChanges();
+        return fixture;
+    }
+
+    it('distinguishes Planned and Due scheduling requests and retains the overdue warning', () => {
+        const fixture = setup({ planned_date: '2026-11-06', due_date: '2026-11-05' });
+        const requested = vi.fn();
+        fixture.componentInstance.scheduleRequested.subscribe(requested);
+        const planned = fixture.nativeElement.querySelector('[aria-label^="Change planned date"]');
+        const due = fixture.nativeElement.querySelector('[aria-label^="Change due date"]');
+        planned.click();
+        due.click();
+        expect(requested.mock.calls.map(call => call[0].field)).toEqual(['planned_date', 'due_date']);
+        expect(requested.mock.calls[0][0].anchor).toBe(planned);
+        expect(requested.mock.calls[1][0].anchor).toBe(due);
+        expect(due.getAttribute('aria-label')).toContain('overdue');
+        expect(due.classList.contains('overdue')).toBe(true);
+        expect(fixture.nativeElement.querySelector('.compact-schedule-control')).toBeNull();
+        fixture.componentRef.setInput('disabled', true);
+        fixture.detectChanges();
+        planned.click();
+        expect(requested).toHaveBeenCalledTimes(2);
+    });
+
+    it('omits empty descriptions and retains scheduling and Inbox navigation without dates', async () => {
+        const fixture = setup();
+        expect(fixture.nativeElement.querySelector('app-task-description')).toBeNull();
+        expect(fixture.nativeElement.querySelectorAll('.date-control')).toHaveLength(0);
+        const requested = vi.fn();
+        fixture.componentInstance.scheduleRequested.subscribe(requested);
+        fixture.nativeElement.querySelector('.compact-schedule-control').click();
+        expect(requested).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ taskId: 'responsive', field: 'planned_date' }));
+        const link = fixture.nativeElement.querySelector('.compact-project-link');
+        expect(link.getAttribute('href')).toBe('/tasks/inbox');
+        expect(link.textContent).toContain('Inbox');
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+        link.click();
+        expect(navigate).toHaveBeenCalledTimes(1);
+        const completed = vi.fn();
+        fixture.componentInstance.toggleDone.subscribe(completed);
+        fixture.nativeElement.querySelector('.complete-toggle').click();
+        expect(completed).toHaveBeenCalledExactlyOnceWith(fixture.componentInstance.task());
+    });
+
+    it('edits the compact plain-text preview and falls back to More actions if Pencil is hidden after resizing', async () => {
+        const fixture = setup({ description: '**Bold** [Link](https://example.com)' });
+        const excerpt = fixture.nativeElement.querySelector('.compact-description-excerpt');
+        expect(excerpt.textContent).toContain('Bold Link');
+        expect(excerpt.querySelector('a')).toBeNull();
+        excerpt.click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(document.activeElement).toBe(fixture.nativeElement.querySelector('textarea'));
+        fixture.nativeElement.querySelector('[aria-label="Cancel editing task"]').click();
+        fixture.detectChanges();
+        fixture.nativeElement.querySelector('[aria-label="Edit task"]').click();
+        fixture.detectChanges();
+        const style = document.createElement('style');
+        // Model the visibility outcome of crossing the container breakpoint, without pretending JSDOM lays it out.
+        style.textContent = '.edit-task-btn { display: none; }';
+        document.head.append(style);
+        try {
+            fixture.nativeElement.querySelector('[aria-label="Cancel editing task"]').click();
+            fixture.detectChanges();
+            await fixture.whenStable();
+            expect(document.activeElement).toBe(fixture.nativeElement.querySelector('.more-actions-btn'));
+        } finally { style.remove(); }
+    });
+
+    it('navigates to the assigned nested project and moves using the original TreeSelect and project output', async () => {
+        vi.stubGlobal('matchMedia', vi.fn().mockImplementation(query => ({
+            matches: false, media: query, onchange: null,
+            addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
+        })));
+        const fixture = setup({ project_id: 'child' });
+        const project = (id: string, name: string, children: ProjectNode[] = []): ProjectNode => ({
+            project: { id, name, user_id: 'user', parent_project_id: null, created_at: '', updated_at: '' }, children,
+        });
+        const name = 'A long nested project: "Important" '.repeat(12);
+        fixture.componentRef.setInput('projects', [project('root', 'Root', [project('child', name)]), project('destination', 'Destination')]);
+        fixture.detectChanges();
+        const link = fixture.nativeElement.querySelector('.compact-project-link');
+        expect(link.getAttribute('href')).toBe('/tasks/project/child');
+        expect(link.textContent).toContain(name);
+        expect(fixture.nativeElement.querySelectorAll('p-treeselect')).toHaveLength(1);
+        const moved = vi.fn();
+        fixture.componentInstance.projectChange.subscribe(moved);
+        fixture.nativeElement.querySelector('.more-actions-btn').click();
+        fixture.detectChanges();
+        (Array.from(document.querySelectorAll('[role="menuitem"] a')).find(item => item.textContent?.includes('Move to project')) as HTMLElement).click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(fixture.nativeElement.querySelector('.project-selector').classList.contains('is-moving')).toBe(true);
+        const destination = Array.from(document.querySelectorAll('[role="treeitem"]'))
+            .find(item => item.getAttribute('aria-label') === 'Destination')!;
+        expect(destination).toBeTruthy();
+        (destination.querySelector('[data-pc-section="nodecontent"]') as HTMLElement).click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(moved).toHaveBeenCalledExactlyOnceWith({ task: fixture.componentInstance.task(), projectId: 'destination' });
+        expect(fixture.nativeElement.querySelector('.project-selector').classList.contains('is-moving')).toBe(false);
+        expect(document.activeElement).toBe(fixture.nativeElement.querySelector('.more-actions-btn'));
     });
 });
