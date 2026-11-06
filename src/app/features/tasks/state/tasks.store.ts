@@ -1,3 +1,4 @@
+import type { TaskContent } from '../models/task-content.model';
 /** ToDo:
     [] Split repository/data-access concerns from application state
 */
@@ -441,6 +442,38 @@ export class TasksStore {
                 this.creating.set(false);
             }
         }
+    }
+
+    async updateContent(task: Task, content: TaskContent): Promise<void> {
+        const title = content.title.trim();
+        if (!title) throw new Error('A task title is required');
+        const source = content.description ?? '';
+        const description = source.trim() ? source : null;
+
+        await this.runMutation(task.id, async (isCurrentSession) => {
+            const currentTask = this.tasks().find(current => current.id === task.id);
+            if (!currentTask) throw new Error('Task no longer exists');
+            if (currentTask.user_id !== task.user_id) throw new Error('Task ownership changed');
+            if (currentTask.title === title && currentTask.description === description) return;
+            const previous = { title: currentTask.title, description: currentTask.description };
+            const next = { title, description };
+            this.tasks.update(tasks => tasks.map(current => current.id === task.id ? { ...current, ...next } : current));
+            try {
+                const { data, error } = await this.supabase.from('tasks')
+                    .update(next).eq('id', currentTask.id).eq('user_id', currentTask.user_id)
+                    .select('title, description').single();
+                if (error) throw error;
+                if (!isCurrentSession()) return;
+                // Merge only content fields; unrelated local state may have changed during the request.
+                this.tasks.update(tasks => tasks.map(current => current.id === task.id
+                    ? { ...current, title: data.title, description: data.description } : current));
+            } catch (error) {
+                if (isCurrentSession()) {
+                    this.tasks.update(tasks => tasks.map(current => current.id === task.id ? { ...current, ...previous } : current));
+                }
+                throw error;
+            }
+        });
     }
 
     async updateTitle(task: Task, title: string): Promise<void> {

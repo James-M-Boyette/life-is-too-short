@@ -31,9 +31,9 @@ import {
 } from '@/shared/utils/date.util';
 import type { TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
 import { CdkDrag, CdkDragHandle, } from '@angular/cdk/drag-drop';
-import { TaskDescriptionEditorComponent } from '../task-description-editor/task-description-editor.component';
+import { TaskContentEditorComponent } from '../task-content-editor/task-content-editor.component';
 import { TaskDescriptionComponent } from '@/features/tasks/components/task-description/task-description.component';
-import type { TaskDescriptionChange, TaskDescriptionFeedback } from '@/features/tasks/models/task-description.model';
+import type { TaskContentChange, TaskContentFeedback, TaskContent } from '@/features/tasks/models/task-content.model';
 
 @Component({
     standalone: true,
@@ -48,7 +48,7 @@ import type { TaskDescriptionChange, TaskDescriptionFeedback } from '@/features/
         CdkDrag,
         CdkDragHandle,
         TaskDescriptionComponent,
-        TaskDescriptionEditorComponent,
+        TaskContentEditorComponent,
     ],
     selector: 'app-task-row',
     templateUrl: './task-row.component.html',
@@ -56,24 +56,23 @@ import type { TaskDescriptionChange, TaskDescriptionFeedback } from '@/features/
 })
 export class TaskRowComponent {
     disabled = input<boolean>(false);
-    readonly descriptionFeedback = input<TaskDescriptionFeedback | null>(null);
-    private readonly titleInput = viewChild<ElementRef<HTMLInputElement>>('titleInput');
+    readonly contentFeedback = input<TaskContentFeedback | null>(null);
     private readonly titleButton = viewChild<ElementRef<HTMLButtonElement>>('titleButton');
     private readonly moreActionsButton = viewChild<ElementRef<HTMLButtonElement>>('moreActionsButton');
-    private readonly descriptionEditBaseline = signal(0);
-    protected readonly descriptionError = computed(() => {
-        const result = this.descriptionFeedback();
-        return result && result.attemptId > this.descriptionEditBaseline() ? result.error : null;
+    private readonly contentEditBaseline = signal(0);
+    protected readonly contentError = computed(() => {
+        const result = this.contentFeedback();
+        return result && result.attemptId > this.contentEditBaseline() ? result.error : null;
     });
 
     protected readonly actionsMenu = viewChild<Menu>('actionsMenu');
     protected readonly menuItems = computed<MenuItem[]>(() => [
-        { label: this.task().description ? 'Edit description' : 'Add description', icon: 'pi pi-pencil',
-          disabled: this.disabled() || !!this.descriptionFeedback()?.pending || this.editingDescription(),
-          command: () => this.startDescriptionEdit() },
-        { label: 'Delete task', icon: 'pi pi-trash', disabled: this.disabled(),
+        { label: 'Edit task', icon: 'pi pi-pencil',
+          disabled: this.disabled() || !!this.contentFeedback()?.pending || this.editing(),
+          command: () => this.startEdit('title') },
+        { label: 'Delete task', icon: 'pi pi-trash', disabled: this.disabled() || this.editing(),
           command: () => {
-              if (!this.disabled()) {
+              if (!this.disabled() && !this.editing()) {
                   this.moreActionsButton()?.nativeElement.focus();
                   this.remove.emit(this.task().id);
               }
@@ -90,35 +89,35 @@ export class TaskRowComponent {
     }
 
     constructor() {
+        let editingOwner: string | null = null;
         effect(() => {
-            const result = this.descriptionFeedback();
-            if (this.editingDescription() && result && result.attemptId > this.descriptionEditBaseline() &&
-                !result.pending && !result.error) this.editingDescription.set(false);
+            const task = this.task();
+            const owner = task.user_id + ':' + task.id;
+            if (editingOwner !== null && editingOwner !== owner) this.editing.set(false);
+            editingOwner = owner;
+            const result = this.contentFeedback();
+            if (this.editing() && result && result.attemptId > this.contentEditBaseline() &&
+                !result.pending && !result.error) this.editing.set(false);
         });
         let wasEditing = false;
         afterRenderEffect(() => {
-            const editing = this.editingDescription();
+            const editing = this.editing();
             const button = this.moreActionsButton();
-            if (!editing && wasEditing) button?.nativeElement.focus();
+            if (!editing && wasEditing) {
+                const target = this.restoreFocus === 'title' ? this.titleButton() : button;
+                target?.nativeElement.focus();
+            }
             wasEditing = editing;
         });
-        let wasEditingTitle = false;
-        afterRenderEffect(() => {
-            const editing = this.editing();
-            const input = this.titleInput();
-            const button = this.titleButton();
-            if (editing && !wasEditingTitle) input?.nativeElement.focus();
-            if (!editing && wasEditingTitle) button?.nativeElement.focus();
-            wasEditingTitle = editing;
-        });
+
     }
 
     @Output() toggleDone = new EventEmitter<Task>();
     @Output() remove = new EventEmitter<string>();
-    @Output() rename = new EventEmitter<{ task: Task; title: string }>();
 
     protected readonly editing = signal(false);
-    protected readonly draftTitle = signal('');
+    protected readonly initialFocus = signal<'title' | 'description'>('title');
+    private restoreFocus: 'title' | 'actions' = 'actions';
     readonly task = input.required<Task>(); // The current task
     readonly project = input<Project | null>(null); // The project that the current task belongs to (if any)
     readonly projects = input<ProjectNode[]>([]); // The list of all *possible* projects (for the project dropdown)
@@ -129,7 +128,7 @@ export class TaskRowComponent {
     readonly scheduleRequested = output<TaskScheduleRequest>();
 
     protected openSchedule(event: Event): void {
-        if (this.disabled()) return;
+        if (this.disabled() || this.editing()) return;
         this.scheduleRequested.emit({ taskId: this.task().id, event, anchor: event.currentTarget as HTMLElement });
     }
 
@@ -162,29 +161,34 @@ export class TaskRowComponent {
     }>();
 
     protected onProjectChange(project: TreeNode | null) {
+        if (this.disabled() || this.editing()) return;
         this.projectChange.emit({
             task: this.task(),
             projectId: project?.key ?? null,
         });
     }
 
-    protected startEdit() {
-        if (this.disabled()) return;
-        this.draftTitle.set(this.task().title);
+    protected startEdit(focus: 'title' | 'description' = 'title', fromTitle = false): void {
+        if (this.disabled() || this.contentFeedback()?.pending || this.editing()) return;
+        this.initialFocus.set(focus);
+        this.restoreFocus = fromTitle ? 'title' : 'actions';
+        this.contentEditBaseline.set(this.contentFeedback()?.attemptId ?? 0);
         this.editing.set(true);
     }
 
-    protected cancelEdit() {
-        this.editing.set(false);
+    protected cancelEdit(): void {
+        if (!this.contentFeedback()?.pending) this.editing.set(false);
     }
 
-    protected commitEdit() {
-        if (this.disabled() || !this.editing()) return;
-        const title = this.draftTitle().trim();
-        this.editing.set(false);
+    readonly contentSaved = output<TaskContentChange>();
 
-        if (!title || title === this.task().title) return;
-        this.rename.emit({ task: this.task(), title });
+    protected saveContent(content: TaskContent): void {
+        if (this.disabled() || this.contentFeedback()?.pending || !this.editing()) return;
+        if (content.title === this.task().title && content.description === this.task().description) {
+            this.editing.set(false);
+            return;
+        }
+        this.contentSaved.emit({ task: this.task(), ...content });
     }
 
     protected readonly plannedDate = computed(() =>
@@ -197,37 +201,4 @@ export class TaskRowComponent {
     );
 
 
-    protected onDraftInput(event: Event) {
-        const input = event.target as HTMLInputElement;
-        this.draftTitle.set(input.value);
-    }
-
-    protected onSubmit(event: SubmitEvent) {
-        event.preventDefault();
-        this.commitEdit();
-    }
-
-    readonly editDescription = output<TaskDescriptionChange>();
-
-    protected readonly editingDescription = signal(false);
-
-    protected startDescriptionEdit() {
-        if (this.disabled() || this.descriptionFeedback()?.pending || this.editingDescription()) return;
-        this.descriptionEditBaseline.set(this.descriptionFeedback()?.attemptId ?? 0);
-        this.editingDescription.set(true);
-    }
-
-    protected cancelDescriptionEdit() {
-        if (this.descriptionFeedback()?.pending) return;
-        this.editingDescription.set(false);
-    }
-
-    protected commitDescriptionEdit(description: string | null) {
-        if (this.disabled() || this.descriptionFeedback()?.pending) return;
-        if (description === this.task().description) {
-            this.editingDescription.set(false);
-            return;
-        }
-        this.editDescription.emit({ task: this.task(), description });
-    }
 }

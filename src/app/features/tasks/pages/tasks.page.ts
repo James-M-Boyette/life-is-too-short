@@ -33,7 +33,7 @@ import { Popover, PopoverModule } from 'primeng/popover';
 import { TaskSchedulerComponent } from '@/features/tasks/components/task-scheduler/task-scheduler.component';
 import type { Task } from '@/features/tasks/models/tasks.model';
 import type { TaskListGroup } from '@/features/tasks/models/task-list-group.model';
-import type { TaskDescriptionChange, TaskDescriptionFeedback } from '@/features/tasks/models/task-description.model';
+import type { TaskContentChange, TaskContentFeedback } from '@/features/tasks/models/task-content.model';
 import type { TaskDateSelection, TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
 
 @Component({
@@ -52,8 +52,8 @@ import type { TaskDateSelection, TaskScheduleRequest } from '@/features/tasks/mo
     styleUrls: ['./tasks.page.scss'],
 })
 export class TasksPage {
-    protected readonly descriptionFeedback = signal<Partial<Record<string, TaskDescriptionFeedback>>>({});
-    private descriptionAttempt = 0;
+    protected readonly contentFeedback = signal<Partial<Record<string, TaskContentFeedback>>>({});
+    private contentAttempt = 0;
     private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
     private readonly schedulePopover = viewChild<Popover>('schedulePopover');
     private readonly scheduleContext = signal<{ taskId: string; userId: string; location: string } | null>(null);
@@ -83,7 +83,7 @@ export class TasksPage {
             if (userId !== previousUser) {
                 previousUser = userId;
                 this.saveVersion++;
-                this.descriptionFeedback.set({});
+                this.contentFeedback.set({});
                 this.scheduleSaving.set(false);
                 this.scheduleContext.set(null);
                 this.persistedScheduleTask.set(null);
@@ -111,21 +111,21 @@ export class TasksPage {
         });
     }
 
-    protected async saveDescription(change: TaskDescriptionChange): Promise<void> {
+    protected async saveContent(change: TaskContentChange): Promise<void> {
         const userId = this.auth.userId();
         const task = this.tasksStore.tasks().find(task => task.id === change.task.id && task.user_id === userId);
-        if (!task || this.tasksStore.mutating() || this.descriptionFeedback()[task.id]?.pending) return;
-        const attemptId = ++this.descriptionAttempt;
-        const pending: TaskDescriptionFeedback = { attemptId, pending: true, error: null };
-        this.descriptionFeedback.update(states => ({ ...states, [task.id]: pending }));
+        if (!task || this.tasksStore.mutating() || this.contentFeedback()[task.id]?.pending) return;
+        const attemptId = ++this.contentAttempt;
+        const pending: TaskContentFeedback = { attemptId, pending: true, error: null };
+        this.contentFeedback.update(states => ({ ...states, [task.id]: pending }));
         let error: string | null = null;
         try {
-            await this.tasksStore.updateDescription(task, change.description);
+            await this.tasksStore.updateContent(task, { title: change.title, description: change.description });
         } catch {
-            error = 'Could not save the description. The previous description has been restored.';
+            error = 'Could not save the task content. The previous title and description have been restored.';
         }
-        if (this.auth.userId() === userId && this.descriptionFeedback()[task.id] === pending) {
-            this.descriptionFeedback.update(states => ({ ...states, [task.id]: { attemptId, pending: false, error } }));
+        if (this.auth.userId() === userId && this.contentFeedback()[task.id] === pending) {
+            this.contentFeedback.update(states => ({ ...states, [task.id]: { attemptId, pending: false, error } }));
         }
     }
 

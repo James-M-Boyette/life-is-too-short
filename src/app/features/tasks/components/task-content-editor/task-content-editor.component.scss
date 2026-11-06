@@ -1,7 +1,7 @@
 @use '../task-editing' as editing;
 
 :host { display: block; min-width: 0; }
-.edit-description-form { display: grid; gap: var(--space-2); min-width: 0; font-size: 0.875rem; }
+.task-content-form { display: grid; gap: var(--space-2); min-width: 0; font-size: 0.875rem; }
 .description-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 label { font-weight: 500; color: var(--color-text-primary); }
 textarea { @include editing.field; resize: vertical; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -22,3 +22,10 @@ dd { margin: 0; overflow-wrap: anywhere; }
 ul, ol { margin: 0; padding-inline-start: var(--space-4); }
 code { border-radius: var(--radius-sm); background: var(--color-surface-hover); padding: var(--space-1); white-space: pre-wrap; }
 .link-example { color: var(--color-action-primary); text-decoration: underline; }
+
+.editor-title-row { display: flex; align-items: center; gap: var(--space-2); min-width: 0; flex-wrap: wrap; }
+.editor-title-row input { @include editing.field; flex: 1 1 8rem; width: auto; font-weight: 500; }
+.meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-top: var(--space-3); min-width: 0; }
+.edit-actions { display: flex; gap: var(--space-1); flex: 0 0 auto; margin-left: auto; }
+.edit-icon-button { width: 2.5rem; height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: var(--radius-md); }
+.edit-icon-button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }

@@ -33,15 +33,14 @@
         }
         <app-task-row
             [task]="task"
-            [descriptionFeedback]="descriptionFeedback()[task.id] ?? null"
+            [contentFeedback]="contentFeedback()[task.id] ?? null"
             [projects]="projects()"
             [disabled]="disabled()"
             [draggable]="draggable()"
             (scheduleRequested)="scheduleRequested.emit($event)"
             (toggleDone)="toggleDone.emit($event)"
             (remove)="remove.emit($event)"
-            (rename)="rename.emit($event)"
-            (editDescription)="editDescription.emit($event)"
+            (contentSaved)="contentSaved.emit($event)"
             (projectChange)="projectChange.emit($event)"
         />
     } @empty {

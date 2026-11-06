@@ -1,17 +1,11 @@
-<li
-    class="row"
-    cdkDrag
-    [cdkDragData]="task()"
-    [cdkDragDisabled]="!draggable() || disabled() || editing() || editingDescription()"
-    >
-    <section class="task-primary-section">
-        <div class="left-column">
+<li class="row" cdkDrag [cdkDragData]="task()" [cdkDragDisabled]="!draggable() || disabled() || editing()">
+    <ng-template #leading>
             @if (draggable()) {
                 <button
                     type="button"
                     class="task-drag-handle"
                     cdkDragHandle
-                    [disabled]="disabled()"
+                    [disabled]="disabled() || editing()"
                     [attr.aria-label]="'Drag task: ' + task().title"
                     pTooltip="Drag to schedule"
                     tooltipPosition="bottom"
@@ -24,7 +18,7 @@
                 class="complete-toggle"
                 [class.done]="task().is_done"
                 (click)="toggleDone.emit(task())"
-                [disabled]="disabled()"
+                [disabled]="disabled() || editing()"
                 [attr.aria-label]="task().is_done ? 'Mark task not done' : 'Mark task done'"
                 [attr.aria-pressed]="task().is_done"
                 >
@@ -33,37 +27,11 @@
                 </span>
             </button>
 
-            @if (!editing()) {
-                <button
-                    type="button"
-                    #titleButton class="title-btn"
-                    [class.done]="task().is_done"
-                    (click)="startEdit()"
-                    [disabled]="disabled()"
-                    aria-label="Edit task title"
-                    >
-                    <!-- *TASK TITLE* -->
-                    {{ task().title }}
-                </button>
-            } @else {
-                <form
-                    class="edit-title-form" [id]="'title-form-' + task().id"
-                    (keydown.escape)="$event.stopPropagation(); cancelEdit()"
-                    (submit)="onSubmit($event)"
-                    >
-                    <input
-                        #titleInput type="text"
-                        [value]="draftTitle()"
-                        (input)="onDraftInput($event)"
-                        [disabled]="disabled()"
-                        aria-label="Task title"
-                    />
-
-                </form>
-            }
-        </div>
-
-        <div class="task-actions">
+    </ng-template>
+    <ng-template #actions>
+            <button pButton [text]="true" type="button" class="task-action-btn edit-task-btn"
+                aria-label="Edit task" pTooltip="Edit task" tooltipPosition="bottom" [disabled]="disabled() || editing()"
+                (click)="startEdit('title')"><i class="pi pi-pencil" aria-hidden="true"></i></button>
             <button
                 pButton
                 type="button"
@@ -72,7 +40,7 @@
                 tooltipPosition="bottom"
                 aria-label="Schedule task"
                 aria-haspopup="dialog"
-                [disabled]="disabled()"
+                [disabled]="disabled() || editing()"
                 [attr.data-schedule-task-id]="task().id"
                 (click)="openSchedule($event)"
                 >
@@ -89,24 +57,11 @@
             </button>
             <p-menu #actionsMenu [id]="'task-actions-' + task().id" [model]="menuItems()"
                 [popup]="true" appendTo="body" [ariaLabel]="'Actions for ' + task().title" />
-        </div>
-    </section>
-
-    <section class="task-secondary-section">
-        <div class="description">
-            @if (editingDescription()) {
-                <app-task-description-editor [source]="task().description ?? ''" [formId]="'description-form-' + task().id"
-                    [disabled]="disabled()" [pending]="!!descriptionFeedback()?.pending" [error]="descriptionError()"
-                    (saved)="commitDescriptionEdit($event)" (cancelled)="cancelDescriptionEdit()" />
-            } @else {
-                @if (task().description; as description) {
-                    <app-task-description [source]="description" [taskId]="task().id" [editable]="!disabled()" (editRequested)="startDescriptionEdit()" />
-                }
-            }
-        </div>
-        <div class="meta-row">
+    </ng-template>
+    <ng-template #metadata>
             <div class="meta">
                 <p-treeselect
+                    [disabled]="disabled() || editing()"
                     [options]="projectOptions()"
                     [ngModel]="selectedProjectNode()"
                     (ngModelChange)="onProjectChange($event)"
@@ -132,24 +87,32 @@
                     }
                 </div>
             </div>
-            @if (editing()) {
-                <div class="edit-actions" role="group" aria-label="Title editing actions">
-                    <button pButton type="button" [text]="true" class="edit-icon-button" aria-label="Cancel editing task title"
-                        pTooltip="Cancel editing title" tooltipPosition="bottom" (click)="cancelEdit()" [disabled]="disabled()"><i class="pi pi-times" aria-hidden="true"></i></button>
-                    <button pButton type="submit" [attr.form]="'title-form-' + task().id" class="edit-icon-button" aria-label="Save task title"
-                        pTooltip="Save task title" tooltipPosition="bottom" [disabled]="disabled()"><i class="pi pi-check" aria-hidden="true"></i></button>
+    </ng-template>
+    @if (editing()) {
+        <app-task-content-editor [content]="task()" [taskId]="task().id" [initialFocus]="initialFocus()"
+            [disabled]="disabled()" [pending]="!!contentFeedback()?.pending" [error]="contentError()"
+            (saved)="saveContent($event)" (cancelled)="cancelEdit()">
+            <ng-container taskLeading [ngTemplateOutlet]="leading" />
+            <div taskActions class="task-actions"><ng-container [ngTemplateOutlet]="actions" /></div>
+            <ng-container taskMetadata [ngTemplateOutlet]="metadata" />
+        </app-task-content-editor>
+    } @else {
+        <section class="task-primary-section">
+            <div class="left-column">
+                <ng-container [ngTemplateOutlet]="leading" />
+                <button #titleButton type="button" class="title-btn" [class.done]="task().is_done"
+                    (click)="startEdit('title', true)" [disabled]="disabled()" aria-label="Edit task title">{{ task().title }}</button>
+            </div>
+            <div class="task-actions"><ng-container [ngTemplateOutlet]="actions" /></div>
+        </section>
+        <section class="task-secondary-section">
+            @if (task().description; as description) {
+                <div class="description">
+                    <app-task-description [source]="description" [taskId]="task().id" [editable]="!disabled()"
+                        (editRequested)="startEdit('description')" />
                 </div>
             }
-            @if (editingDescription()) {
-                <div class="edit-actions" role="group" aria-label="Description editing actions">
-                    <button pButton type="button" [text]="true" class="edit-icon-button" aria-label="Cancel editing description"
-                        pTooltip="Cancel editing description" tooltipPosition="bottom" (click)="cancelDescriptionEdit()"
-                        [disabled]="!!descriptionFeedback()?.pending"><i class="pi pi-times" aria-hidden="true"></i></button>
-                    <button pButton type="submit" [attr.form]="'description-form-' + task().id" class="edit-icon-button" aria-label="Save description"
-                        pTooltip="Save description" tooltipPosition="bottom" [disabled]="disabled() || !!descriptionFeedback()?.pending"><i class="pi pi-check" aria-hidden="true"></i></button>
-                </div>
-            }
-        </div>
-    </section>
+            <div class="meta-row"><ng-container [ngTemplateOutlet]="metadata" /></div>
+        </section>
+    }
 </li>
-

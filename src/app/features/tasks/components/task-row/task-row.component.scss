@@ -1,5 +1,3 @@
-@use '../task-editing' as editing;
-
 :host {
     li.row {
         display: flex;
@@ -54,89 +52,6 @@
                 }
 
 
-                .complete-toggle {
-                    width: 1.35rem;
-                    height: 1.35rem;
-                    border-radius: 999px;
-                    border: 2px solid var(--color-text-muted);
-                    background: transparent;
-                    padding: 0;
-                    display: grid;
-                    place-items: center;
-                    cursor: pointer;
-                    flex: 0 0 auto;
-                    position: relative;
-
-                    // nice focus ring
-                    &:focus-visible {
-                        outline: 3px solid color-mix(in srgb, var(--color-focus-ring) 35%, transparent);
-                        outline-offset: 2px;
-                    }
-
-                    // The checkmark (hidden by default)
-                    &::after {
-                        content: '';
-                        width: 0.35rem;
-                        height: 0.7rem;
-                        border-right: 2px solid var(--color-text-secondary);
-                        border-bottom: 2px solid var(--color-text-secondary);
-                        transform: rotate(45deg);
-                        opacity: 0; // hidden initially
-                        transition: opacity 120ms ease;
-                    }
-
-                    // Hover preview: "ghost" check
-                    &:hover::after {
-                        opacity: 0.35;
-                    }
-
-                    // Completed state
-                    &.done {
-                        border-color: var(--color-action-primary);
-                        background: color-mix(in srgb, var(--color-action-primary) 9%, transparent);
-
-                        &::after {
-                            opacity: 1;
-                            border-right-color: var(--color-action-primary);
-                            border-bottom-color: var(--color-action-primary);
-                        }
-
-                        // Optional: don’t show ghost-on-hover because it’s already checked
-                        &:hover::after {
-                            opacity: 1;
-                        }
-                    }
-
-                    &:disabled {
-                        opacity: 0.55;
-                        cursor: not-allowed;
-                    }
-                }
-
-                .sr-only {
-                    position: absolute;
-                    width: 1px;
-                    height: 1px;
-                    padding: 0;
-                    margin: -1px;
-                    overflow: hidden;
-                    clip: rect(0, 0, 0, 0);
-                    white-space: nowrap;
-                    border: 0;
-                    color: transparent;
-                }
-
-                form.edit-title-form {
-                    display: flex;
-                    align-items: center;
-                    gap: var(--space-2);
-
-                    min-width: 0;
-                    flex: 1;
-
-                    input { @include editing.field; flex: 1; }
-
-                }
             }
         }
 
@@ -154,12 +69,7 @@
                 gap: 0.5rem;
             }
 
-            div.meta {
-                display: flex;
-                align-items: center;
-                // justify-content: center;
-                gap: 1rem;
-            }
+
         }
     }
 }
@@ -167,10 +77,9 @@
 .meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3); min-width: 0; }
 .meta { min-width: 0; flex: 1 1 auto; }
 .meta p-treeselect { min-width: 0; max-width: 100%; }
-.edit-actions { display: flex; flex: 0 0 auto; gap: var(--space-1); margin-left: auto; }
 .more-actions-btn,
-.edit-icon-button { width: 2.5rem; height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: var(--radius-md); }
-.edit-icon-button:focus-visible,
+.edit-task-btn { width: 2.5rem; height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: var(--radius-md); }
+.edit-task-btn:focus-visible,
 .more-actions-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
 .task-actions {
@@ -185,7 +94,7 @@ div.meta {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: var(--space-2);
+    gap: 1rem;
 }
 
 .task-date-tags {
@@ -218,3 +127,80 @@ div.meta {
         outline-offset: 2px;
     }
 }
+
+.complete-toggle {
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 999px;
+    border: 2px solid var(--color-text-muted);
+    background: transparent;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+    position: relative;
+
+    // nice focus ring
+    &:focus-visible {
+        outline: 3px solid color-mix(in srgb, var(--color-focus-ring) 35%, transparent);
+        outline-offset: 2px;
+    }
+
+    // The checkmark (hidden by default)
+    &::after {
+        content: '';
+        width: 0.35rem;
+        height: 0.7rem;
+        border-right: 2px solid var(--color-text-secondary);
+        border-bottom: 2px solid var(--color-text-secondary);
+        transform: rotate(45deg);
+        opacity: 0; // hidden initially
+        transition: opacity 120ms ease;
+    }
+
+    // Hover preview: "ghost" check
+    &:hover::after {
+        opacity: 0.35;
+    }
+
+    // Completed state
+    &.done {
+        border-color: var(--color-action-primary);
+        background: color-mix(in srgb, var(--color-action-primary) 9%, transparent);
+
+        &::after {
+            opacity: 1;
+            border-right-color: var(--color-action-primary);
+            border-bottom-color: var(--color-action-primary);
+        }
+
+        // Optional: don’t show ghost-on-hover because it’s already checked
+        &:hover::after {
+            opacity: 1;
+        }
+    }
+
+    &:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+    color: transparent;
+}
+
+
+app-task-content-editor { display: block; width: 100%; min-width: 0; }
+:host li.row section.task-primary-section div.left-column button.title-btn:hover:not(:disabled) { background: var(--color-surface-hover); border-radius: var(--radius-sm); }
+.title-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }

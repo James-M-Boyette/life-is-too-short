@@ -89,6 +89,102 @@ describe('TasksStore', () => {
         TestBed.tick();
     });
 
+    it('atomically saves both content fields optimistically and rolls both back without losing unrelated changes', async () => {
+        const original = createTask({ description: 'Original', due_date: '2026-11-06' });
+        store.tasks.set([original]);
+        let fail!: (error: Error) => void;
+        single.mockImplementationOnce(() => new Promise((_, reject) => { fail = reject; }));
+        const content = { title: 'New title', description: '    Markdown  \n' };
+        const save = store.updateContent(original, content);
+        const rejected = expect(save).rejects.toThrow('Offline');
+        await vi.waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+        expect(update).toHaveBeenCalledExactlyOnceWith(content);
+        expect(store.tasks()[0]).toMatchObject(content);
+        store.tasks.update(items => items.map(task => ({ ...task, project_id: 'new-project', planned_position: 3000 })));
+        fail(new Error('Offline'));
+        await rejected;
+        expect(store.tasks()[0]).toEqual({ ...original, project_id: 'new-project', planned_position: 3000 });
+    });
+
+    it('merges only returned content into latest state and preserves source and metadata from a stale snapshot', async () => {
+        const stale = createTask();
+        const latest = { ...stale, project_id: 'new-project', planned_date: '2026-11-06', due_date: '2026-11-07', is_done: true, planned_position: 5000 };
+        store.tasks.set([latest]);
+        const content = { title: 'New title', description: '    Markdown  \n' };
+        single.mockResolvedValueOnce({ data: { ...stale, ...content }, error: null });
+        await store.updateContent(stale, { ...content, title: ' New title ' });
+        expect(update).toHaveBeenCalledExactlyOnceWith(content);
+        expect(select).toHaveBeenCalledWith('title, description');
+        expect(eq).toHaveBeenCalledWith('user_id', latest.user_id);
+        expect(store.tasks()[0]).toEqual({ ...latest, ...content });
+    });
+
+    it('rejects invalid titles and stale ownership, skips unchanged content, and normalizes only empty descriptions', async () => {
+        const task = createTask({ description: 'Old' });
+        store.tasks.set([task]);
+        await expect(store.updateContent(task, { title: '  ', description: 'Draft' })).rejects.toThrow('title is required');
+        await expect(store.updateContent({ ...task, user_id: 'other-user' }, { title: 'Draft', description: null })).rejects.toThrow('ownership changed');
+        await store.updateContent(task, { title: task.title, description: task.description });
+        expect(update).not.toHaveBeenCalled();
+        single.mockResolvedValueOnce({ data: { title: task.title, description: null }, error: null });
+        await store.updateContent(task, { title: task.title, description: ' \n\t' });
+        expect(update).toHaveBeenCalledExactlyOnceWith({ title: task.title, description: null });
+        expect(store.tasks()[0]).toEqual({ ...task, description: null });
+    });
+
+    it('serializes duplicate content submissions and avoids a second database write', async () => {
+        const task = createTask();
+        store.tasks.set([task]);
+        let resolve!: (value: unknown) => void;
+        single.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+        const content = { title: 'New title', description: 'New description' };
+        const first = store.updateContent(task, content);
+        const duplicate = store.updateContent(task, content);
+        await vi.waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+        expect(store.mutating()).toBe(true);
+        resolve({ data: content, error: null });
+        await Promise.all([first, duplicate]);
+        expect(update).toHaveBeenCalledTimes(1);
+        expect(store.mutating()).toBe(false);
+    });
+
+    it('rolls a failed queued content save back to the preceding successful content', async () => {
+        const task = createTask();
+        store.tasks.set([task]);
+        const firstContent = { title: 'First', description: 'First description' };
+        single.mockResolvedValueOnce({ data: firstContent, error: null });
+        single.mockResolvedValueOnce({ data: null, error: new Error('Second failed') });
+        const first = store.updateContent(task, firstContent);
+        const second = store.updateContent(task, { title: 'Second', description: 'Second description' });
+        const rejected = expect(second).rejects.toThrow('Second failed');
+        await first;
+        await rejected;
+        expect(update).toHaveBeenCalledTimes(2);
+        expect(store.tasks()[0]).toEqual({ ...task, ...firstContent });
+    });
+
+    it.each([false, true])('ignores old content responses after logout (failure: %s)', async failure => {
+        const task = createTask();
+        const order = vi.fn().mockReturnValue({ order: vi.fn().mockResolvedValue({ data: [task], error: null }) });
+        select.mockReturnValueOnce({ order });
+        userId.set('user-1');
+        TestBed.tick();
+        await vi.waitFor(() => expect(store.loading()).toBe(false));
+        let resolve!: (value: unknown) => void;
+        single.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+        const content = { title: 'Old session draft', description: 'Old session description' };
+        const save = store.updateContent(task, content);
+        const settled = save.catch(error => error);
+        await vi.waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+        userId.set(null);
+        TestBed.tick();
+        expect(store.tasks()).toEqual([]);
+        resolve(failure ? { data: null, error: new Error('Old failure') } : { data: content, error: null });
+        await settled;
+        expect(store.tasks()).toEqual([]);
+        expect(store.error()).toBeNull();
+    });
+
     it('updates project_position without changing planned_position', async () => {
         const task = createTask({
             project_position: 1000,

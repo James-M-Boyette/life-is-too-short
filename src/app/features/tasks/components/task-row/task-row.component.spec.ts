@@ -31,7 +31,7 @@ describe('TaskRowComponent schedule request', () => {
     });
 });
 
-describe('TaskRowComponent description editing', () => {
+describe('TaskRowComponent content editing', () => {
     async function setup(description: string | null) {
         TestBed.configureTestingModule({ providers: [
             { provide: CalendarClockService, useValue: { today: signal('2026-11-05') } },
@@ -42,7 +42,7 @@ describe('TaskRowComponent description editing', () => {
         } as Task);
         fixture.detectChanges();
         const changed = vi.fn();
-        fixture.componentInstance.editDescription.subscribe(changed);
+        fixture.componentInstance.contentSaved.subscribe(changed);
         const editButton = () => fixture.nativeElement.querySelector('.more-actions-btn') as HTMLButtonElement;
         editButton().click();
         fixture.detectChanges();
@@ -60,22 +60,22 @@ describe('TaskRowComponent description editing', () => {
     }
 
     function submit(fixture: ReturnType<typeof TestBed.createComponent<TaskRowComponent>>) {
-        fixture.nativeElement.querySelector('button[aria-label="Save description"]').click();
+        fixture.nativeElement.querySelector('button[aria-label="Save task"]').click();
     }
 
     it('adds Markdown from an empty description and closes only after a confirmed save', async () => {
         const { fixture, changed, editButton } = await setup(null);
         const textarea = type(fixture, '- First\n- **Second**');
-        expect(document.activeElement).toBe(textarea);
+        expect(document.activeElement).toBe(fixture.nativeElement.querySelector('input[aria-label="Task title"]'));
         submit(fixture);
-        expect(changed).toHaveBeenCalledExactlyOnceWith({ task: fixture.componentInstance.task(), description: '- First\n- **Second**' });
+        expect(changed).toHaveBeenCalledExactlyOnceWith({ task: fixture.componentInstance.task(), title: 'Task', description: '- First\n- **Second**' });
         expect(fixture.nativeElement.querySelector('textarea')).toBeTruthy();
-        fixture.componentRef.setInput('descriptionFeedback', { attemptId: 1, pending: true, error: null });
+        fixture.componentRef.setInput('contentFeedback', { attemptId: 1, pending: true, error: null });
         fixture.detectChanges();
         submit(fixture);
         expect(changed).toHaveBeenCalledTimes(1);
         fixture.componentRef.setInput('task', { ...fixture.componentInstance.task(), description: '- First\n- **Second**' });
-        fixture.componentRef.setInput('descriptionFeedback', { attemptId: 1, pending: false, error: null });
+        fixture.componentRef.setInput('contentFeedback', { attemptId: 1, pending: false, error: null });
         fixture.detectChanges();
         await fixture.whenStable();
         expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
@@ -89,7 +89,7 @@ describe('TaskRowComponent description editing', () => {
         expect(fixture.nativeElement.querySelector('textarea').value).toBe(source);
         type(fixture, 'discard me');
         const cancel = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
-            .find(button => button.getAttribute('aria-label') === 'Cancel editing description')!;
+            .find(button => button.getAttribute('aria-label') === 'Cancel editing task')!;
         cancel.click();
         fixture.detectChanges();
         expect(changed).not.toHaveBeenCalled();
@@ -107,7 +107,7 @@ describe('TaskRowComponent description editing', () => {
     it('clicks description text to edit while keeping links and expansion independent', async () => {
         const source = '**Description** ' + 'text '.repeat(70) + '[Example](https://example.com)';
         const { fixture, changed } = await setup(source);
-        fixture.nativeElement.querySelector('[aria-label="Cancel editing description"]').click();
+        fixture.nativeElement.querySelector('[aria-label="Cancel editing task"]').click();
         fixture.detectChanges();
         const expand = fixture.nativeElement.querySelector('[aria-label="Expand full description"]');
         expand.click();
@@ -133,7 +133,7 @@ describe('TaskRowComponent description editing', () => {
         expect(fixture.nativeElement.querySelector('textarea').value).toBe(source);
         expect(document.activeElement).toBe(fixture.nativeElement.querySelector('textarea'));
         expect(changed).not.toHaveBeenCalled();
-        fixture.nativeElement.querySelector('[aria-label="Cancel editing description"]').click();
+        fixture.nativeElement.querySelector('[aria-label="Cancel editing task"]').click();
         fixture.componentRef.setInput('disabled', true);
         fixture.detectChanges();
         fixture.nativeElement.querySelector('.description-excerpt').click();
@@ -141,42 +141,90 @@ describe('TaskRowComponent description editing', () => {
         expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
     });
 
-    it('submits and cancels titles with metadata-row controls, preserving focus and unchanged behavior', async () => {
-        const { fixture } = await setup(null);
-        fixture.nativeElement.querySelector('[aria-label="Cancel editing description"]').click();
+    it.each(['title', 'description', 'pencil', 'menu'] as const)('enters one combined editor from %s with correct focus and layout', async entry => {
+        const { fixture, changed } = await setup('**Existing**');
+        fixture.nativeElement.querySelector('[aria-label="Cancel editing task"]').click();
         fixture.detectChanges();
-        const rename = vi.fn();
-        fixture.componentInstance.rename.subscribe(rename);
-        const edit = () => fixture.nativeElement.querySelector('[aria-label="Edit task title"]');
-        edit().click();
-        fixture.detectChanges();
-        await fixture.whenStable();
-        const input = fixture.nativeElement.querySelector('input[aria-label="Task title"]');
-        expect(document.activeElement).toBe(input);
-        input.value = 'New title';
-        input.dispatchEvent(new Event('input'));
-        const save = fixture.nativeElement.querySelector('[aria-label="Save task title"]');
-        expect(save.form).toBe(fixture.nativeElement.querySelector('.edit-title-form'));
-        expect(save.closest('.meta-row')).toBeTruthy();
-        save.click();
+        if (entry === 'title') fixture.nativeElement.querySelector('[aria-label="Edit task title"]').click();
+        if (entry === 'description') fixture.nativeElement.querySelector('.markdown-content strong').click();
+        if (entry === 'pencil') fixture.nativeElement.querySelector('[aria-label="Edit task"]').click();
+        if (entry === 'menu') {
+            fixture.nativeElement.querySelector('.more-actions-btn').click();
+            fixture.detectChanges();
+            (document.querySelector('[role="menuitem"] a') as HTMLElement).click();
+        }
         fixture.detectChanges();
         await fixture.whenStable();
-        expect(rename).toHaveBeenCalledExactlyOnceWith({ task: fixture.componentInstance.task(), title: 'New title' });
-        expect(document.activeElement).toBe(edit());
-        edit().click();
+        const title = fixture.nativeElement.querySelector('input[aria-label="Task title"]');
+        const textarea = fixture.nativeElement.querySelector('textarea');
+        expect(title.value).toBe('Task');
+        expect(textarea.value).toBe('**Existing**');
+        expect(document.activeElement).toBe(entry === 'description' ? textarea : title);
+        expect(fixture.nativeElement.querySelectorAll('[aria-label="Save task"]')).toHaveLength(1);
+        expect(fixture.nativeElement.querySelectorAll('[aria-label="Cancel editing task"]')).toHaveLength(1);
+        const actions = fixture.nativeElement.querySelector('.edit-actions');
+        expect(actions.closest('.meta-row')).toBeTruthy();
+        expect(fixture.nativeElement.querySelector('.editor-title-row').contains(actions)).toBe(false);
+        expect(Array.from(fixture.nativeElement.querySelectorAll('.task-actions button')).map((b: any) => b.getAttribute('aria-label')))
+            .toEqual(['Edit task', 'Schedule task', 'More actions for Task']);
+        title.value = 'Draft title';
+        title.dispatchEvent(new Event('input'));
+        textarea.value = 'Draft description';
+        textarea.dispatchEvent(new Event('input'));
+        fixture.nativeElement.querySelector('[aria-label="Edit task"]').click();
         fixture.detectChanges();
-        fixture.nativeElement.querySelector('[aria-label="Cancel editing task title"]').click();
+        expect(title.value).toBe('Draft title');
+        expect(fixture.nativeElement.querySelector('textarea')).toBe(textarea);
+        expect(fixture.nativeElement.querySelector('[aria-label="Schedule task"]').disabled).toBe(true);
+        fixture.nativeElement.querySelector('[aria-label="Cancel editing task"]').click();
         fixture.detectChanges();
-        expect(rename).toHaveBeenCalledTimes(1);
-        expect(fixture.nativeElement.querySelector('.edit-title-form')).toBeNull();
-        edit().click();
+        await fixture.whenStable();
+        expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
+        expect(changed).not.toHaveBeenCalled();
+        expect(document.activeElement).toBe(fixture.nativeElement.querySelector(entry === 'title' ? '[aria-label="Edit task title"]' : '.more-actions-btn'));
+    });
+
+    it('validates titles and applies the title Enter, textarea newline and Ctrl+Enter rules to both drafts', async () => {
+        const { fixture, changed } = await setup(null);
+        const title = fixture.nativeElement.querySelector('input[aria-label="Task title"]');
+        const textarea = fixture.nativeElement.querySelector('textarea');
+        expect(textarea.getAttribute('placeholder')).toBe('Add a description…');
+        title.value = '   ';
+        title.dispatchEvent(new Event('input'));
+        fixture.nativeElement.querySelector('[aria-label="Save task"]').click();
         fixture.detectChanges();
-        fixture.nativeElement.querySelector('.edit-title-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        expect(changed).not.toHaveBeenCalled();
+        expect(title.getAttribute('aria-invalid')).toBe('true');
+        expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain('title is required');
+        title.value = ' Combined title ';
+        title.dispatchEvent(new Event('input'));
+        const source = '    indented code  \n';
+        type(fixture, source);
+        const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+        textarea.dispatchEvent(enter);
+        expect(enter.defaultPrevented).toBe(false);
+        expect(changed).not.toHaveBeenCalled();
+        textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true }));
+        expect(changed).toHaveBeenCalledExactlyOnceWith({ task: fixture.componentInstance.task(), title: 'Combined title', description: source });
+        changed.mockClear();
+        title.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+        expect(changed).toHaveBeenCalledExactlyOnceWith({ task: fixture.componentInstance.task(), title: 'Combined title', description: source });
+        fixture.componentRef.setInput('contentFeedback', { attemptId: 1, pending: true, error: null });
         fixture.detectChanges();
-        expect(rename).toHaveBeenCalledTimes(1);
-        expect(fixture.nativeElement.querySelector('.edit-title-form')).toBeNull();
+        title.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        expect(changed).toHaveBeenCalledTimes(1);
         expect(getComputedStyle(fixture.nativeElement.querySelector('.meta-row')).flexWrap).toBe('wrap');
-        expect(getComputedStyle(fixture.nativeElement.querySelector('.meta')).minWidth).toBe('0');
+        expect(getComputedStyle(fixture.nativeElement.querySelector('.edit-actions')).marginLeft).toBe('auto');
+    });
+
+    it('discards drafts if the rendered task changes ownership', async () => {
+        const { fixture, changed } = await setup('Original');
+        type(fixture, 'Old account draft');
+        fixture.componentRef.setInput('task', { ...fixture.componentInstance.task(), user_id: 'other-user' });
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
+        expect(changed).not.toHaveBeenCalled();
     });
 
     it('opens compact Markdown help and dismisses it with Escape without cancelling the draft', async () => {
@@ -200,8 +248,8 @@ describe('TaskRowComponent description editing', () => {
         expect(document.activeElement).toBe(trigger);
         expect(fixture.nativeElement.querySelector('textarea').value).toBe('Unsaved draft');
         expect(changed).not.toHaveBeenCalled();
-        const save = fixture.nativeElement.querySelector('[aria-label="Save description"]');
-        expect(save.form).toBe(fixture.nativeElement.querySelector('.edit-description-form'));
+        const save = fixture.nativeElement.querySelector('[aria-label="Save task"]');
+        expect(save.form).toBe(fixture.nativeElement.querySelector('.task-content-form'));
         expect(save.closest('.meta-row')).toBeTruthy();
         trigger.click();
         fixture.detectChanges();
@@ -220,14 +268,14 @@ describe('TaskRowComponent description editing', () => {
         expect(changed).not.toHaveBeenCalled();
         expect(fixture.nativeElement.querySelector('textarea').value).toBe('');
         submit(fixture);
-        expect(changed).toHaveBeenCalledExactlyOnceWith({ task: fixture.componentInstance.task(), description: null });
-        fixture.componentRef.setInput('descriptionFeedback', { attemptId: 1, pending: false, error: 'Could not save' });
+        expect(changed).toHaveBeenCalledExactlyOnceWith({ task: fixture.componentInstance.task(), title: 'Task', description: null });
+        fixture.componentRef.setInput('contentFeedback', { attemptId: 1, pending: false, error: 'Could not save' });
         fixture.detectChanges();
         expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain('Could not save');
         expect(fixture.nativeElement.querySelector('textarea').value).toBe('');
         type(fixture, '*Retry draft*');
         submit(fixture);
-        expect(changed).toHaveBeenLastCalledWith({ task: fixture.componentInstance.task(), description: '*Retry draft*' });
+        expect(changed).toHaveBeenLastCalledWith({ task: fixture.componentInstance.task(), title: 'Task', description: '*Retry draft*' });
     });
 });
 
@@ -246,31 +294,31 @@ describe('TaskRowComponent More actions', () => {
         return { fixture, trigger };
     }
 
-    it('opens by keyboard, activates Add with Enter, and returns focus after Escape cancels editing', async () => {
+    it('opens by keyboard, activates Edit with Enter, and returns focus after Escape cancels editing', async () => {
         const { fixture, trigger } = await setup();
         const changed = vi.fn();
-        fixture.componentInstance.editDescription.subscribe(changed);
+        fixture.componentInstance.contentSaved.subscribe(changed);
         trigger.focus();
         trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', bubbles: true }));
         fixture.detectChanges();
         await fixture.whenStable();
         const menu = document.querySelector('[role="menu"]') as HTMLElement;
-        expect(menu.textContent).toContain('Add description');
+        expect(menu.textContent).toContain('Edit task');
         expect(menu.textContent).toContain('Delete task');
         menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', bubbles: true }));
         menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
         fixture.detectChanges();
         await fixture.whenStable();
         const textarea = fixture.nativeElement.querySelector('textarea');
-        expect(document.activeElement).toBe(textarea);
-        for (const label of ['Save description', 'Cancel editing description']) {
+        expect(document.activeElement).toBe(fixture.nativeElement.querySelector('input[aria-label="Task title"]'));
+        for (const label of ['Save task', 'Cancel editing task']) {
             expect(fixture.nativeElement.querySelector(`button[aria-label="${label}"]`)).toBeTruthy();
         }
         textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         fixture.detectChanges();
         await fixture.whenStable();
         expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
-        expect(document.activeElement).toBe(trigger);
+        expect(document.activeElement).toBe(fixture.nativeElement.querySelector('.more-actions-btn'));
         expect(changed).not.toHaveBeenCalled();
     });
 
@@ -283,7 +331,7 @@ describe('TaskRowComponent More actions', () => {
         await fixture.whenStable();
         expect(trigger.getAttribute('aria-expanded')).toBe('true');
         const items = document.querySelectorAll('[role="menuitem"] a');
-        expect(items[0].textContent).toContain('Edit description');
+        expect(items[0].textContent).toContain('Edit task');
         (items[1] as HTMLElement).click();
         fixture.detectChanges();
         await fixture.whenStable();

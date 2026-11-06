@@ -38,3 +38,5 @@ app-task-description button:focus-visible { outline: 2px solid var(--p-primary-c
 app-task-description .description-disclosure:hover { background: var(--color-surface-hover); }
 
 app-task-description .editable-description { cursor: text; }
+
+app-task-description .editable-description:hover { background: var(--color-surface-hover); border-radius: var(--radius-sm); }

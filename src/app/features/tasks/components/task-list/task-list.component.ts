@@ -13,7 +13,7 @@ import type { TaskReorder } from '@/features/tasks/models/task-reorder.model';
 import { TaskOrderField } from '@/features/tasks/utils/task-ordering.util'
 import type { TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
 import type { TaskListGroup, TaskGroupPlanningTransition } from '@/features/tasks/models/task-list-group.model';
-import type { TaskDescriptionFeedback } from '@/features/tasks/models/task-description.model';
+import type { TaskContentChange, TaskContentFeedback } from '@/features/tasks/models/task-content.model';
 
 @Component({
     selector: 'app-task-list',
@@ -24,7 +24,7 @@ import type { TaskDescriptionFeedback } from '@/features/tasks/models/task-descr
 })
 export class TaskListComponent {
     readonly tasks = input.required<Task[]>();
-    readonly descriptionFeedback = input<Partial<Record<string, TaskDescriptionFeedback>>>({});
+    readonly contentFeedback = input<Partial<Record<string, TaskContentFeedback>>>({});
     readonly groups = input<TaskListGroup[]>([]);
     readonly planningTransition = input<TaskGroupPlanningTransition | null>(null);
     private readonly planningInsertionTarget = viewChild<ElementRef<HTMLElement>>('planningInsertionTarget');
@@ -58,7 +58,6 @@ export class TaskListComponent {
 
     readonly toggleDone = output<Task>();
     readonly remove = output<string>();
-    readonly rename = output<{ task: Task; title: string }>();
 
     readonly draggable = input(false);
     readonly scheduleRequested = output<TaskScheduleRequest>();
@@ -150,10 +149,7 @@ export class TaskListComponent {
         });
     }
 
-    readonly editDescription = output<{
-        task: Task;
-        description: string | null;
-    }>();
+    readonly contentSaved = output<TaskContentChange>();
 
     readonly projectChange = output<{
         task: Task;
