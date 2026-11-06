@@ -43,8 +43,10 @@ describe('TaskRowComponent description editing', () => {
         fixture.detectChanges();
         const changed = vi.fn();
         fixture.componentInstance.editDescription.subscribe(changed);
-        const editButton = () => fixture.nativeElement.querySelector('.description-edit-button') as HTMLButtonElement;
+        const editButton = () => fixture.nativeElement.querySelector('.more-actions-btn') as HTMLButtonElement;
         editButton().click();
+        fixture.detectChanges();
+        (document.querySelector('[role="menuitem"] a') as HTMLElement).click();
         fixture.detectChanges();
         await fixture.whenStable();
         return { fixture, changed, editButton };
@@ -87,11 +89,13 @@ describe('TaskRowComponent description editing', () => {
         expect(fixture.nativeElement.querySelector('textarea').value).toBe(source);
         type(fixture, 'discard me');
         const cancel = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
-            .find(button => button.textContent?.trim() === 'Cancel')!;
+            .find(button => button.getAttribute('aria-label') === 'Cancel editing description')!;
         cancel.click();
         fixture.detectChanges();
         expect(changed).not.toHaveBeenCalled();
         editButton().click();
+        fixture.detectChanges();
+        (document.querySelector('[role="menuitem"] a') as HTMLElement).click();
         fixture.detectChanges();
         expect(fixture.nativeElement.querySelector('textarea').value).toBe(source);
         submit(fixture);
@@ -103,7 +107,7 @@ describe('TaskRowComponent description editing', () => {
     it('clears only on Save and keeps failed drafts editable for retry', async () => {
         const { fixture, changed } = await setup('**Existing**');
         const clear = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
-            .find(button => button.textContent?.trim() === 'Clear description')!;
+            .find(button => button.getAttribute('aria-label') === 'Clear draft; save to apply')!;
         clear.click();
         fixture.detectChanges();
         expect(changed).not.toHaveBeenCalled();
@@ -117,5 +121,80 @@ describe('TaskRowComponent description editing', () => {
         type(fixture, '*Retry draft*');
         submit(fixture);
         expect(changed).toHaveBeenLastCalledWith({ task: fixture.componentInstance.task(), description: '*Retry draft*' });
+    });
+});
+
+
+describe('TaskRowComponent More actions', () => {
+    async function setup(description: string | null = null) {
+        TestBed.configureTestingModule({ providers: [
+            { provide: CalendarClockService, useValue: { today: signal('2026-11-05') } },
+        ] });
+        const fixture = TestBed.createComponent(TaskRowComponent);
+        fixture.componentRef.setInput('task', {
+            id: 'menu-task', title: 'Read a book', description, project_id: null, planned_date: null, due_date: null,
+        } as Task);
+        fixture.detectChanges();
+        const trigger = fixture.nativeElement.querySelector('[aria-label="More actions for Read a book"]') as HTMLButtonElement;
+        return { fixture, trigger };
+    }
+
+    it('opens by keyboard, activates Add with Enter, and returns focus after Escape cancels editing', async () => {
+        const { fixture, trigger } = await setup();
+        const changed = vi.fn();
+        fixture.componentInstance.editDescription.subscribe(changed);
+        trigger.focus();
+        trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', bubbles: true }));
+        fixture.detectChanges();
+        await fixture.whenStable();
+        const menu = document.querySelector('[role="menu"]') as HTMLElement;
+        expect(menu.textContent).toContain('Add description');
+        expect(menu.textContent).toContain('Delete task');
+        menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', bubbles: true }));
+        menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+        fixture.detectChanges();
+        await fixture.whenStable();
+        const textarea = fixture.nativeElement.querySelector('textarea');
+        expect(document.activeElement).toBe(textarea);
+        for (const label of ['Save description', 'Cancel editing description', 'Clear draft; save to apply']) {
+            expect(fixture.nativeElement.querySelector(`button[aria-label="${label}"]`)).toBeTruthy();
+        }
+        textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
+        expect(document.activeElement).toBe(trigger);
+        expect(changed).not.toHaveBeenCalled();
+    });
+
+    it('opens with a click, emits Delete once, dismisses with Escape and honors disabled state', async () => {
+        const { fixture, trigger } = await setup('Existing');
+        const removed = vi.fn();
+        fixture.componentInstance.remove.subscribe(removed);
+        trigger.click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(trigger.getAttribute('aria-expanded')).toBe('true');
+        const items = document.querySelectorAll('[role="menuitem"] a');
+        expect(items[0].textContent).toContain('Edit description');
+        (items[1] as HTMLElement).click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(removed).toHaveBeenCalledExactlyOnceWith('menu-task');
+        expect(document.activeElement).toBe(trigger);
+        trigger.click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        document.querySelector('[role="menu"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(trigger.getAttribute('aria-expanded')).toBe('false');
+        expect(document.activeElement).toBe(trigger);
+        expect(removed).toHaveBeenCalledTimes(1);
+        fixture.componentRef.setInput('disabled', true);
+        fixture.detectChanges();
+        trigger.click();
+        fixture.detectChanges();
+        expect(trigger.getAttribute('aria-expanded')).toBe('false');
     });
 });

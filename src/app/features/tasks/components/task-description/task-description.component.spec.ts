@@ -57,15 +57,23 @@ describe('Markdown task descriptions', () => {
         const fixture = render(source);
         const el = fixture.nativeElement;
         const toggle = el.querySelector('button');
-        expect(toggle.textContent).toContain('View full description');
+        expect(toggle.getAttribute('aria-label')).toBe('Expand full description');
         expect(toggle.getAttribute('aria-expanded')).toBe('false');
         expect(el.querySelector('a')).toBeNull();
         expect(el.querySelector('.description-excerpt').textContent.length).toBeLessThanOrEqual(241);
-        toggle.click();
+        // Keyboard activation generates a click with detail 0 on native buttons.
+        toggle.focus();
+        toggle.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
         fixture.detectChanges();
+        expect(document.activeElement).toBe(toggle);
         expect(toggle.getAttribute('aria-expanded')).toBe('true');
+        expect(toggle.getAttribute('aria-label')).toBe('Collapse description');
+        expect(toggle.tagName).toBe('BUTTON');
+        expect(toggle.getAttribute('type')).toBe('button');
         expect(el.querySelector('strong').textContent).toBe('Full description');
         expect(el.querySelector('a').textContent).toBe('End');
+        // Touch activation reaches the same click path without requiring hover.
+        toggle.dispatchEvent(new Event('touchend', { bubbles: true }));
         toggle.click();
         fixture.detectChanges();
         expect(el.querySelector('a')).toBeNull();

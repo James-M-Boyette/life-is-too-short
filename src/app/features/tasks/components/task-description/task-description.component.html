@@ -8,7 +8,9 @@
 @if (content().compact) {
     <button type="button" class="description-disclosure"
         [attr.aria-expanded]="expanded()" [attr.aria-controls]="'task-description-view-' + taskId()"
+        [attr.aria-label]="expanded() ? 'Collapse description' : 'Expand full description'"
+        [pTooltip]="expanded() ? 'Collapse description' : 'Expand full description'" tooltipPosition="bottom"
         (click)="toggle()">
-        {{ expanded() ? 'Show less' : 'View full description' }}
+        <i class="pi" [class.pi-chevron-up]="expanded()" [class.pi-chevron-down]="!expanded()" aria-hidden="true"></i>
     </button>
 }

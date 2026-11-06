@@ -189,19 +189,18 @@
         overflow-wrap: anywhere;
     }
 }
-.description-help { margin: 0; color: var(--text-secondary); font-size: 0.8rem; }
-.description-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.description-edit-button {
-    align-self: flex-start;
-    padding: var(--space-1) 0;
-    border: 0;
-    background: transparent;
-    color: var(--p-primary-color);
-    font: inherit;
-    font-size: 0.8rem;
-    cursor: pointer;
-}
-.description-edit-button:focus-visible,
+.description-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
+.description-actions { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.more-actions-btn,
+.description-icon-button,
+.description-help summary { width: 2.5rem; height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.description-help { color: var(--text-secondary); font-size: 0.8rem; max-width: 65%; }
+.description-help summary { cursor: pointer; border-radius: var(--radius-sm); list-style: none; margin-left: auto; }
+.description-help summary::-webkit-details-marker { display: none; }
+.description-help summary:hover { background: var(--color-surface-hover); }
+.description-help p { margin-block: var(--space-2) 0; overflow-wrap: anywhere; }
+.description-help summary:focus-visible,
+.more-actions-btn:focus-visible,
 .edit-description-form button:focus-visible,
 .edit-description-form textarea:focus-visible { outline: 2px solid var(--p-primary-color); outline-offset: 2px; }
 
@@ -211,17 +210,7 @@
     gap: var(--space-2);
     flex: 0 0 auto;
 
-    button.delete-task-btn {
-        background-color: var(--color-status-danger-soft);
-        color: var(--color-status-danger);
-        border-color: var(--color-status-danger-border);
 
-        &:hover {
-            background-color: var(--color-status-danger);
-            color: #FFFFFF;
-            border-color: var(--color-status-danger);
-        }
-    }
 }
 
 

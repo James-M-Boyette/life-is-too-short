@@ -1,9 +1,11 @@
 import { Component, ViewEncapsulation, computed, input, signal } from '@angular/core';
+import { TooltipModule } from 'primeng/tooltip';
 import { taskMarkdown } from '@/features/tasks/utils/task-markdown.util';
 
 @Component({
     selector: 'app-task-description',
     standalone: true,
+    imports: [TooltipModule],
     templateUrl: './task-description.component.html',
     styleUrl: './task-description.component.scss',
     // Prefix every rule with the component selector so generated Markdown HTML is styled too.

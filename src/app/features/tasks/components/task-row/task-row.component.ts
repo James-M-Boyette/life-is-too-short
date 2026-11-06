@@ -13,6 +13,8 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
+import { Menu, MenuModule } from 'primeng/menu';
+import type { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import type { Task } from '@/features/tasks/models/tasks.model';
@@ -37,6 +39,7 @@ import type { TaskDescriptionChange, TaskDescriptionFeedback } from '@/features/
     imports: [
         CommonModule,
         ButtonModule,
+        MenuModule,
         TooltipModule,
         FormsModule,
         TagModule,
@@ -53,12 +56,35 @@ export class TaskRowComponent {
     disabled = input<boolean>(false);
     readonly descriptionFeedback = input<TaskDescriptionFeedback | null>(null);
     private readonly descriptionTextarea = viewChild<ElementRef<HTMLTextAreaElement>>('descriptionTextarea');
-    private readonly descriptionEditButton = viewChild<ElementRef<HTMLButtonElement>>('descriptionEditButton');
+    private readonly moreActionsButton = viewChild<ElementRef<HTMLButtonElement>>('moreActionsButton');
     private readonly descriptionEditBaseline = signal(0);
     protected readonly descriptionError = computed(() => {
         const result = this.descriptionFeedback();
         return result && result.attemptId > this.descriptionEditBaseline() ? result.error : null;
     });
+
+    protected readonly actionsMenu = viewChild<Menu>('actionsMenu');
+    protected readonly menuItems = computed<MenuItem[]>(() => [
+        { label: this.task().description ? 'Edit description' : 'Add description', icon: 'pi pi-pencil',
+          disabled: this.disabled() || !!this.descriptionFeedback()?.pending || this.editingDescription(),
+          command: () => this.startDescriptionEdit() },
+        { label: 'Delete task', icon: 'pi pi-trash', disabled: this.disabled(),
+          command: () => {
+              if (!this.disabled()) {
+                  this.moreActionsButton()?.nativeElement.focus();
+                  this.remove.emit(this.task().id);
+              }
+          } },
+    ]);
+
+    protected openActions(event: Event): void {
+        if (!this.disabled()) this.actionsMenu()?.toggle(event);
+    }
+
+    protected openActionsWithKeyboard(event: Event): void {
+        event.preventDefault();
+        if (!this.disabled()) this.actionsMenu()?.show(event);
+    }
 
     constructor() {
         effect(() => {
@@ -70,7 +96,7 @@ export class TaskRowComponent {
         afterRenderEffect(() => {
             const editing = this.editingDescription();
             const textarea = this.descriptionTextarea();
-            const button = this.descriptionEditButton();
+            const button = this.moreActionsButton();
             if (editing && !wasEditing) textarea?.nativeElement.focus();
             if (!editing && wasEditing) button?.nativeElement.focus();
             wasEditing = editing;
@@ -176,7 +202,7 @@ export class TaskRowComponent {
     protected readonly draftDescription = signal('');
 
     protected startDescriptionEdit() {
-        if (this.disabled()) return;
+        if (this.disabled() || this.descriptionFeedback()?.pending || this.editingDescription()) return;
         this.draftDescription.set(this.task().description ?? '');
         this.descriptionEditBaseline.set(this.descriptionFeedback()?.attemptId ?? 0);
         this.editingDescription.set(true);

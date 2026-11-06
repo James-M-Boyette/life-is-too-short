@@ -22,13 +22,17 @@ app-task-description .markdown-content h3 { font-size: 1rem; }
 app-task-description .description-excerpt { margin: 0; }
 app-task-description .description-disclosure {
     margin-top: var(--space-2);
-    padding: var(--space-1) 0;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border-radius: var(--radius-sm);
     border: 0;
     background: transparent;
     color: var(--p-primary-color);
     font: inherit;
-    text-decoration: underline;
     cursor: pointer;
 }
 app-task-description a:focus-visible,
 app-task-description button:focus-visible { outline: 2px solid var(--p-primary-color); outline-offset: 2px; }
+
+app-task-description .description-disclosure:hover { background: var(--color-surface-hover); }

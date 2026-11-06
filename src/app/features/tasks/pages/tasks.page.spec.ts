@@ -10,6 +10,7 @@ import { ProjectsStore } from '@/features/projects/state/projects.store';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { CalendarClockService } from '@/shared/services/calendar-clock.service';
 import type { Task } from '@/features/tasks/models/tasks.model';
+import { ConfirmationService } from 'primeng/api';
 import { Popover } from 'primeng/popover';
 import { TaskSchedulerComponent } from '@/features/tasks/components/task-scheduler/task-scheduler.component';
 import { TaskListComponent } from '@/features/tasks/components/task-list/task-list.component';
@@ -85,10 +86,25 @@ describe('TasksPage', () => {
         expect(component).toBeTruthy();
     });
 
+    it('routes Delete from More actions through the existing confirmation before mutating', async () => {
+        const confirm = vi.spyOn(fixture.debugElement.injector.get(ConfirmationService), 'confirm');
+        fixture.detectChanges();
+        fixture.nativeElement.querySelector('.more-actions-btn').click();
+        fixture.detectChanges();
+        (document.querySelectorAll('[role="menuitem"] a')[1] as HTMLElement).click();
+        fixture.detectChanges();
+        expect(confirm).toHaveBeenCalledTimes(1);
+        expect(confirm.mock.calls[0][0]).toMatchObject({ header: 'Delete task?', acceptLabel: 'Delete', rejectLabel: 'Cancel' });
+        await fixture.whenStable();
+        expect(document.body.textContent).toContain('Delete task?');
+    });
+
     it('retains a failed description draft for retry, catches the failure and renders the confirmed Markdown', async () => {
         tasks.set([task('description-task', '2026-11-05', { description: '**Original**' })]);
         fixture.detectChanges();
-        fixture.nativeElement.querySelector('.description-edit-button').click();
+        fixture.nativeElement.querySelector('.more-actions-btn').click();
+        fixture.detectChanges();
+        (document.querySelector('[role="menuitem"] a') as HTMLElement).click();
         fixture.detectChanges();
         const textarea = fixture.nativeElement.querySelector('textarea');
         textarea.value = '- **Draft**\n- Second';
@@ -118,7 +134,9 @@ describe('TasksPage', () => {
 
     it('does not carry description save feedback into another account', async () => {
         fixture.detectChanges();
-        fixture.nativeElement.querySelector('.description-edit-button').click();
+        fixture.nativeElement.querySelector('.more-actions-btn').click();
+        fixture.detectChanges();
+        (document.querySelector('[role="menuitem"] a') as HTMLElement).click();
         fixture.detectChanges();
         const textarea = fixture.nativeElement.querySelector('textarea');
         textarea.value = 'Old account draft';

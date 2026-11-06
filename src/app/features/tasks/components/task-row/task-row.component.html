@@ -1,9 +1,3 @@
-<!-- Todo:
-    [x] Allow a user to change a task's project once it's been created (or unassign it entirely from any project)
-    [] Currently, if a task title (see *TASK TITLE*) is too long, the first part is clipped; decide how to handle this better
-    [] 'View Description' button is too big. Maybe have 'eye' icon only?
-    [] 'Delete' button is too big. Maybe have 'trash' icon only? + add confirmation dialog (and eventually have a toggle that's project-speicifc for safe vs unsafe CRUD? Or use an 'undo' pattern instead of a confiramtion dialog)
--->
 <li
     class="row"
     cdkDrag
@@ -115,21 +109,16 @@
                 <i class="pi pi-calendar-clock" aria-hidden="true"></i>
             </button>
 
-            <button
-                pButton
-                type="button"
-                class="task-action-btn delete-task-btn"
-                pTooltip="Delete task"
-                tooltipPosition="bottom"
-                aria-label="Delete task"
-                (click)="remove.emit(task().id)"
-                [disabled]="disabled()"
-                >
-                <i
-                    class="pi pi-trash"
-                    aria-hidden="true"
-                ></i>
+            <button #moreActionsButton pButton [text]="true" type="button" class="task-action-btn more-actions-btn"
+                pTooltip="More actions" tooltipPosition="bottom"
+                [attr.aria-label]="'More actions for ' + task().title" aria-haspopup="menu"
+                [attr.aria-controls]="'task-actions-' + task().id"
+                [attr.aria-expanded]="!!actionsMenu.visible" [disabled]="disabled()"
+                (click)="openActions($event)" (keydown.arrowdown)="openActionsWithKeyboard($event)">
+                <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
             </button>
+            <p-menu #actionsMenu [id]="'task-actions-' + task().id" [model]="menuItems()"
+                [popup]="true" appendTo="body" [ariaLabel]="'Actions for ' + task().title" />
         </div>
     </section>
 
@@ -146,11 +135,22 @@
                         rows="6" [value]="draftDescription()" (input)="onDescriptionInput($event)"
                         [disabled]="disabled() || !!descriptionFeedback()?.pending"
                         [attr.aria-describedby]="'description-help-' + task().id"></textarea>
-                    <p class="description-help" [id]="'description-help-' + task().id">Use Markdown for lists, bold, italic, and links. Choose Save to apply changes.</p>
-                    <div class="description-actions">
-                        <button pButton size="small" type="submit" [disabled]="disabled() || !!descriptionFeedback()?.pending"><span pButtonLabel>Save description</span></button>
-                        <button pButton size="small" [text]="true" type="button" (click)="cancelDescriptionEdit()" [disabled]="!!descriptionFeedback()?.pending"><span pButtonLabel>Cancel</span></button>
-                        <button pButton size="small" [text]="true" type="button" (click)="draftDescription.set('')" [disabled]="disabled() || !!descriptionFeedback()?.pending"><span pButtonLabel>Clear description</span></button>
+                    <div class="description-toolbar">
+                        <div class="description-actions">
+                            <button pButton type="submit" class="description-icon-button" aria-label="Save description"
+                                pTooltip="Save description" tooltipPosition="bottom"
+                                [disabled]="disabled() || !!descriptionFeedback()?.pending"><i class="pi pi-check" aria-hidden="true"></i></button>
+                            <button pButton [text]="true" type="button" class="description-icon-button" aria-label="Cancel editing description"
+                                pTooltip="Cancel editing" tooltipPosition="bottom" (click)="cancelDescriptionEdit()"
+                                [disabled]="!!descriptionFeedback()?.pending"><i class="pi pi-times" aria-hidden="true"></i></button>
+                            <button pButton [text]="true" type="button" class="description-icon-button" aria-label="Clear draft; save to apply"
+                                pTooltip="Clear draft; save to apply" tooltipPosition="bottom" (click)="draftDescription.set('')"
+                                [disabled]="disabled() || !!descriptionFeedback()?.pending"><i class="pi pi-trash" aria-hidden="true"></i></button>
+                        </div>
+                        <details class="description-help">
+                            <summary aria-label="Markdown help" pTooltip="Markdown help" tooltipPosition="bottom"><i class="pi pi-question-circle" aria-hidden="true"></i></summary>
+                            <p [id]="'description-help-' + task().id">Markdown: **bold**, *italic*, - bullets, 1. numbered lists, [link](https://example.com).</p>
+                        </details>
                     </div>
                     @if (descriptionFeedback()?.pending) {
                         <p role="status">Saving description…</p>
@@ -163,11 +163,6 @@
                 @if (task().description; as description) {
                     <app-task-description [source]="description" [taskId]="task().id" />
                 }
-                <button #descriptionEditButton type="button" class="description-edit-button"
-                    [attr.aria-label]="(task().description ? 'Edit description: ' : 'Add description: ') + task().title"
-                    [disabled]="disabled()" (click)="startDescriptionEdit()">
-                    {{ task().description ? 'Edit description' : 'Add description' }}
-                </button>
             }
         </div>
         <div class="meta">
