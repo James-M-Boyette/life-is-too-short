@@ -42,11 +42,12 @@
         cursor: pointer;
 
         &:hover {
-            background: var(--surface-hover);
+            background: var(--color-surface-hover);
         }
 
         &.active {
-            background: var(--surface-hover);
+            background: var(--color-surface-selected);
+            color: var(--color-action-primary);
             font-weight: 600;
         }
     }
@@ -101,11 +102,11 @@
 
             &:hover {
                 color: var(--text-primary);
-                background: var(--surface-hover);
+                background: var(--color-surface-hover);
             }
 
             &:focus-visible {
-                outline: 2px solid var(--p-primary-color);
+                outline: 2px solid var(--color-focus-ring);
                 outline-offset: 2px;
             }
         }
@@ -136,11 +137,12 @@
         border-radius: var(--radius-md);
 
         &:hover {
-            background: var(--surface-hover);
+            background: var(--color-surface-hover);
         }
 
         &.active {
-            background: var(--surface-hover);
+            background: var(--color-surface-selected);
+            color: var(--color-action-primary);
             font-weight: 600;
         }
     }
@@ -166,7 +168,7 @@
 
         &:hover {
             color: var(--text-primary);
-            background: var(--surface-hover);
+            background: var(--color-surface-hover);
         }
     }
 }
@@ -202,20 +204,20 @@ div.project-tree-item {
 
             &:hover {
                 color: var(--text-primary);
-                background: var(--surface-hover);
+                background: var(--color-surface-hover);
             }
 
             &:focus-visible {
-                outline: 2px solid var(--p-primary-color);
+                outline: 2px solid var(--color-focus-ring);
                 outline-offset: 2px;
             }
         }
 
         button.delete-project-btn {
-            color: var(--surface-warning);
+            color: var(--color-status-danger);
 
             &:hover {
-                color: var(--surface-warning-hover);
+                color: var(--color-status-danger-hover);
             }
         }
     }
