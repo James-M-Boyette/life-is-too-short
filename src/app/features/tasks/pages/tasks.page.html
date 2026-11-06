@@ -9,6 +9,17 @@
         (signOut)="signOut()"
     />
 
+    @if (scheduleError(); as message) {
+        <div class="schedule-save-error" role="alert">
+            <p>{{ message }}</p>
+            @if (failedSchedule()) {
+                <p-button label="Retry scheduling" [text]="true"
+                    [disabled]="scheduleSaving() || tasksStore.mutating() || bulkScheduleBusy()"
+                    (onClick)="retrySchedule()" />
+            }
+        </div>
+    }
+
     <!-- Preserving this for now in case we want to return to it later -->
     <!-- <app-task-create
         [projects]="projectsStore.projectTree()"
@@ -380,9 +391,7 @@
             [today]="calendarClock.today()"
             [pending]="scheduleSaving()"
             [disabled]="tasksStore.mutating() || bulkScheduleBusy()"
-            [error]="scheduleError()"
             (selectDate)="saveSchedule($event)"
-            (retry)="retrySchedule()"
             (dismiss)="closeSchedule($event)"
         />
     }

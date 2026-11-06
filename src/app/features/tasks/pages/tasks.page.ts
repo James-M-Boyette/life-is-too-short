@@ -2,7 +2,7 @@
     [x] Extract 'TaskView'
 
  */
-import { Component, signal, inject, computed, input, effect, viewChild, ElementRef } from '@angular/core';
+import { Component, signal, inject, computed, input, effect, afterRenderEffect, viewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { TasksStore } from '@/features/tasks/state/tasks.store';
@@ -52,7 +52,7 @@ import type { TaskDateSelection, TaskScheduleRequest } from '@/features/tasks/mo
 export class TasksPage {
     private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
     private readonly schedulePopover = viewChild<Popover>('schedulePopover');
-    private readonly scheduleContext = signal<{ taskId: string; userId: string } | null>(null);
+    private readonly scheduleContext = signal<{ taskId: string; userId: string; location: string } | null>(null);
     protected readonly activeScheduleTask = computed(() => {
         const context = this.scheduleContext();
         if (!context || context.userId !== this.auth.userId()) return null;
@@ -61,7 +61,13 @@ export class TasksPage {
     protected readonly persistedScheduleTask = signal<Task | null>(null);
     protected readonly scheduleSaving = signal(false);
     protected readonly scheduleError = signal<string | null>(null);
-    private failedSelection: TaskDateSelection | null = null;
+    protected readonly failedSchedule = signal<{
+        taskId: string;
+        userId: string;
+        selection: TaskDateSelection;
+        editorVersion: number;
+    } | null>(null);
+    private editorVersion = 0;
     private saveVersion = 0;
     private pendingScheduleSnapshot: Task | null = null;
     private restoreScheduleFocus = false;
@@ -77,17 +83,26 @@ export class TasksPage {
                 this.scheduleContext.set(null);
                 this.persistedScheduleTask.set(null);
                 this.scheduleError.set(null);
-                this.failedSelection = null;
+                this.failedSchedule.set(null);
+                this.editorVersion++;
                 this.pendingScheduleSnapshot = null;
                 this.schedulePopover()?.hide();
             }
         });
         effect(() => {
             const task = this.activeScheduleTask();
-            if (this.scheduleContext() && !task) {
-                this.schedulePopover()?.hide();
+            const context = this.scheduleContext();
+            if (context && (!task || this.scheduleLocation(task) !== context.location)) {
+                this.dismissSchedule();
             }
             if (task && !this.scheduleSaving()) this.persistedScheduleTask.set(task);
+        });
+        afterRenderEffect(() => {
+            // Dates and page-level feedback can change layout while the Due editor stays open.
+            this.activeScheduleTask();
+            this.scheduleError();
+            const popover = this.schedulePopover();
+            if (popover?.overlayVisible && popover.container && popover.target?.isConnected) popover.align();
         });
     }
 
@@ -101,10 +116,13 @@ export class TasksPage {
             this.closeSchedule(request.event);
             return;
         }
-        this.scheduleContext.set({ taskId: task.id, userId });
+        const location = this.scheduleLocation(task);
+        if (!location) return;
+        this.editorVersion++;
+        this.scheduleContext.set({ taskId: task.id, userId, location });
         this.persistedScheduleTask.set(this.pendingScheduleSnapshot?.id === task.id ? this.pendingScheduleSnapshot : task);
         this.scheduleError.set(null);
-        this.failedSelection = null;
+        this.failedSchedule.set(null);
         this.restoreScheduleFocus = false;
         popover?.show(request.event, request.anchor);
         if (popover?.container) popover.align();
@@ -113,8 +131,32 @@ export class TasksPage {
     protected closeSchedule(event: Event): void {
         event.preventDefault();
         event.stopPropagation();
+        this.dismissSchedule();
+    }
+
+    private dismissSchedule(): void {
         this.restoreScheduleFocus = true;
         this.schedulePopover()?.hide();
+    }
+
+    // Describe visibility, not placement: keep the board's planned_date ?? due_date rules intact.
+    private scheduleLocation(task: Task): string | null {
+        const view = this.view();
+        const projectId = this.projectId();
+        if (view === 'inbox' && task.project_id !== null) return null;
+        if (view === 'project' && (!projectId || task.project_id !== projectId)) return null;
+        const scope = `${view}:${projectId ?? ''}`;
+        if (task.is_done) return this.showCompleted() ? `${scope}:completed` : null;
+        if (view === 'today') {
+            const group = getTaskDateGroup(task, this.calendarClock.today());
+            if (group === 'future' || (!this.isTodayPlanning() && group !== 'today')) return null;
+            return `${scope}:${this.todayLayout()}:${group}`;
+        }
+        if (view === 'upcoming') {
+            const date = getTaskDisplayDate(task);
+            return this.upcomingDays().some(day => day.date === date) ? `${scope}:${date}` : null;
+        }
+        return `${scope}:open`;
     }
 
     protected onScheduleHidden(): void {
@@ -130,29 +172,47 @@ export class TasksPage {
         }
         this.scheduleContext.set(null);
         this.persistedScheduleTask.set(null);
-        this.scheduleError.set(null);
-        this.failedSelection = null;
         this.restoreScheduleFocus = false;
     }
 
     protected retrySchedule(): void {
-        if (this.failedSelection) void this.saveSchedule(this.failedSelection);
+        const failure = this.failedSchedule();
+        if (!failure || failure.userId !== this.auth.userId() || failure.editorVersion !== this.editorVersion) return;
+        const task = this.tasksStore.tasks().find(task => task.id === failure.taskId && task.user_id === failure.userId);
+        if (!task) {
+            this.failedSchedule.set(null);
+            this.scheduleError.set('This task is no longer available. Its scheduling change cannot be retried.');
+            return;
+        }
+        void this.persistSchedule(task, failure.selection);
     }
 
     protected async saveSchedule(selection: TaskDateSelection): Promise<void> {
         const task = this.activeScheduleTask();
         const context = this.scheduleContext();
         if (!task || !context || this.scheduleSaving() || this.tasksStore.mutating() || this.bulkScheduleBusy()) return;
+        const operation = this.persistSchedule(task, selection);
+        const destination = { ...task, [selection.field]: selection.date };
+        if (selection.field === 'planned_date' || this.scheduleLocation(destination) !== context.location) {
+            this.dismissSchedule();
+        }
+        await operation;
+    }
+
+    private async persistSchedule(task: Task, selection: TaskDateSelection): Promise<void> {
+        if (this.scheduleSaving() || this.tasksStore.mutating() || this.bulkScheduleBusy()) return;
+        if (task.user_id !== this.auth.userId()) return;
         if (task[selection.field] === selection.date) {
             this.scheduleError.set(null);
-            this.failedSelection = null;
+            this.failedSchedule.set(null);
             return;
         }
         const version = ++this.saveVersion;
+        const editorVersion = this.editorVersion;
         this.pendingScheduleSnapshot = task;
         this.scheduleSaving.set(true);
         this.scheduleError.set(null);
-        this.failedSelection = null;
+        this.failedSchedule.set(null);
         try {
             if (selection.field === 'planned_date') {
                 await this.tasksStore.updatePlannedDate(task, selection.date);
@@ -160,10 +220,11 @@ export class TasksPage {
                 await this.tasksStore.updateDueDate(task, selection.date);
             }
         } catch {
-            if (version === this.saveVersion && this.scheduleContext() === context && this.auth.userId() === context.userId) {
+            if (version === this.saveVersion && editorVersion === this.editorVersion && this.auth.userId() === task.user_id) {
                 const field = selection.field === 'planned_date' ? 'planned' : 'due';
-                this.scheduleError.set(`Could not save the ${field} date. Your previous date has been restored. Try again.`);
-                this.failedSelection = selection;
+                if (!this.tasksStore.tasks().some(current => current.id === task.id && current.user_id === task.user_id)) return;
+                this.scheduleError.set(`Could not save the ${field} date for “${task.title}”. Your previous date has been restored.`);
+                this.failedSchedule.set({ taskId: task.id, userId: task.user_id, selection, editorVersion });
             }
         } finally {
             if (version === this.saveVersion) {
