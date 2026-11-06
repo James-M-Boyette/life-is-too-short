@@ -86,4 +86,13 @@ describe('TaskSchedulerComponent', () => {
         expect(retry).toHaveBeenCalledTimes(1);
         expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain('Could not save');
     });
+
+    it('keyboard activation switches fields without committing a date', async () => {
+        const { fixture, selected, button } = await setup();
+        button('Due').dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', bubbles: true, cancelable: true }));
+        await fixture.whenStable();
+        fixture.detectChanges();
+        expect(selected).not.toHaveBeenCalled();
+        expect(fixture.nativeElement.querySelector('.current-date').textContent).toContain('Nov 12, 2026');
+    });
 });

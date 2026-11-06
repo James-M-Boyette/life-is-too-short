@@ -1,4 +1,5 @@
-<section class="scheduler" [attr.aria-busy]="pending()" (keydown.escape)="dismiss.emit($event)">
+<section class="scheduler" [attr.aria-label]="'Schedule task: ' + task().title"
+    [attr.aria-busy]="pending()" (keydown.escape)="dismiss.emit($event)">
     <header>
         <h2 id="schedule-task-heading" tabindex="-1" autofocus>Schedule task</h2>
         <button pButton type="button" [text]="true" [rounded]="true" icon="pi pi-times"

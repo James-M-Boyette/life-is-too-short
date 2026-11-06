@@ -63,6 +63,7 @@ export class TasksPage {
     protected readonly scheduleError = signal<string | null>(null);
     private failedSelection: TaskDateSelection | null = null;
     private saveVersion = 0;
+    private pendingScheduleSnapshot: Task | null = null;
     private restoreScheduleFocus = false;
 
     constructor() {
@@ -77,6 +78,7 @@ export class TasksPage {
                 this.persistedScheduleTask.set(null);
                 this.scheduleError.set(null);
                 this.failedSelection = null;
+                this.pendingScheduleSnapshot = null;
                 this.schedulePopover()?.hide();
             }
         });
@@ -100,7 +102,7 @@ export class TasksPage {
             return;
         }
         this.scheduleContext.set({ taskId: task.id, userId });
-        this.persistedScheduleTask.set(task);
+        this.persistedScheduleTask.set(this.pendingScheduleSnapshot?.id === task.id ? this.pendingScheduleSnapshot : task);
         this.scheduleError.set(null);
         this.failedSelection = null;
         this.restoreScheduleFocus = false;
@@ -141,8 +143,13 @@ export class TasksPage {
         const task = this.activeScheduleTask();
         const context = this.scheduleContext();
         if (!task || !context || this.scheduleSaving() || this.tasksStore.mutating() || this.bulkScheduleBusy()) return;
-        if (task[selection.field] === selection.date) return;
+        if (task[selection.field] === selection.date) {
+            this.scheduleError.set(null);
+            this.failedSelection = null;
+            return;
+        }
         const version = ++this.saveVersion;
+        this.pendingScheduleSnapshot = task;
         this.scheduleSaving.set(true);
         this.scheduleError.set(null);
         this.failedSelection = null;
@@ -153,12 +160,16 @@ export class TasksPage {
                 await this.tasksStore.updateDueDate(task, selection.date);
             }
         } catch {
-            if (version === this.saveVersion && this.scheduleContext() === context) {
-                this.scheduleError.set('Could not save the date. Your previous date has been restored. Try again.');
+            if (version === this.saveVersion && this.scheduleContext() === context && this.auth.userId() === context.userId) {
+                const field = selection.field === 'planned_date' ? 'planned' : 'due';
+                this.scheduleError.set(`Could not save the ${field} date. Your previous date has been restored. Try again.`);
                 this.failedSelection = selection;
             }
         } finally {
-            if (version === this.saveVersion) this.scheduleSaving.set(false);
+            if (version === this.saveVersion) {
+                this.pendingScheduleSnapshot = null;
+                this.scheduleSaving.set(false);
+            }
         }
     }
 

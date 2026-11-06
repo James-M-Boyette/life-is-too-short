@@ -9,8 +9,8 @@ import { TasksStore } from '@/features/tasks/state/tasks.store';
 import { ProjectsStore } from '@/features/projects/state/projects.store';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { CalendarClockService } from '@/shared/services/calendar-clock.service';
-import { TaskListComponent } from '@/features/tasks/components/task-list/task-list.component';
 import type { Task } from '@/features/tasks/models/tasks.model';
+import { TaskSchedulerComponent } from '@/features/tasks/components/task-scheduler/task-scheduler.component';
 
 const task = (id: string, plannedDate: string | null, overrides: Partial<Task> = {}): Task => ({
     id, user_id: 'user-1', title: id, description: null, project_id: null,
@@ -24,8 +24,11 @@ describe('TasksPage', () => {
     let fixture: ComponentFixture<TasksPage>;
     const tasks = signal<Task[]>([]);
     const updatePlannedDate = vi.fn();
+    const updateDueDate = vi.fn();
+    const userId = signal<string | null>('user-1');
 
     beforeEach(async () => {
+        userId.set('user-1');
         tasks.set([
             task('old', '2026-11-01'),
             task('due-only', null, { due_date: '2026-11-02' }),
@@ -39,16 +42,19 @@ describe('TasksPage', () => {
         updatePlannedDate.mockReset().mockImplementation(async (t: Task, date: string | null) => {
             tasks.update(items => items.map(item => item.id === t.id ? { ...item, planned_date: date } : item));
         });
+        updateDueDate.mockReset().mockImplementation(async (t: Task, date: string | null) => {
+            tasks.update(items => items.map(item => item.id === t.id ? { ...item, due_date: date } : item));
+        });
         await TestBed.configureTestingModule({
             imports: [TasksPage],
             providers: [
                 TaskCreateDialogService,
                 { provide: Router, useValue: {} },
-                { provide: AuthStore, useValue: { userId: signal('user-1') } },
+                { provide: AuthStore, useValue: { userId } },
                 { provide: ProjectsStore, useValue: { projects: signal([]), projectTree: signal([]) } },
                 { provide: CalendarClockService, useValue: { today: signal('2026-11-05') } },
                 { provide: TasksStore, useValue: {
-                    tasks, updatePlannedDate, mutating: signal(false), error: signal(null),
+                    tasks, updatePlannedDate, updateDueDate, mutating: signal(false), error: signal(null),
                     realtimeConnected: signal(false),
                 } },
             ],
@@ -62,6 +68,154 @@ describe('TasksPage', () => {
 
     it('should create', () => {
         expect(component).toBeTruthy();
+    });
+
+    async function openScheduler(id = 'unscheduled') {
+        component['setTodayLayout']('planning');
+        fixture.detectChanges();
+        fixture.nativeElement.querySelector(`[data-schedule-task-id="${id}"]`).click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+    }
+
+    function scheduler() {
+        return fixture.debugElement.query(By.directive(TaskSchedulerComponent));
+    }
+
+    function scheduleButton(label: string): HTMLElement {
+        return Array.from(scheduler().nativeElement.querySelectorAll('button, [role="button"]') as NodeListOf<HTMLElement>)
+            .find(button => button.textContent?.trim() === label || button.getAttribute('aria-label')?.startsWith(label + ' —'))!;
+    }
+
+    async function settleSchedule() {
+        await fixture.whenStable();
+        fixture.detectChanges();
+    }
+
+    it('keeps the same editor open when a task moves columns and saves only the selected field', async () => {
+        await openScheduler();
+        const editor = scheduler().componentInstance;
+        expect(updatePlannedDate).not.toHaveBeenCalled();
+        scheduleButton('Today').click();
+        await settleSchedule();
+        expect(updatePlannedDate).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: 'unscheduled' }), '2026-11-05');
+        expect(scheduler().componentInstance).toBe(editor);
+        expect(fixture.nativeElement.querySelector('[aria-labelledby="today-heading"] [data-schedule-task-id="unscheduled"]')).toBeTruthy();
+        scheduleButton('Due').click();
+        await settleSchedule();
+        expect(updateDueDate).not.toHaveBeenCalled();
+        scheduleButton('Tomorrow').click();
+        await settleSchedule();
+        expect(updateDueDate).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: 'unscheduled' }), '2026-11-06');
+        expect(tasks().find(task => task.id === 'unscheduled')?.planned_date).toBe('2026-11-05');
+        expect(scheduler().componentInstance).toBe(editor);
+    });
+
+    it('does not save unchanged selections and prevents duplicate submissions before rendering pending state', async () => {
+        await openScheduler();
+        scheduleButton('No date').click();
+        expect(updatePlannedDate).not.toHaveBeenCalled();
+        let finish!: () => void;
+        updatePlannedDate.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+        const today = scheduleButton('Today');
+        today.click();
+        today.click();
+        fixture.detectChanges();
+        expect(updatePlannedDate).toHaveBeenCalledTimes(1);
+        expect(scheduler().nativeElement.textContent).toContain('Saving date');
+        expect(scheduler().nativeElement.querySelector('.current-date').textContent).toContain('None');
+        finish();
+        await settleSchedule();
+    });
+
+    it('shows save errors and retries the failed field even after switching tabs', async () => {
+        await openScheduler();
+        updatePlannedDate.mockRejectedValueOnce(new Error('offline'));
+        scheduleButton('Today').click();
+        await settleSchedule();
+        expect(scheduler().nativeElement.querySelector('[role="alert"]').textContent).toContain('planned date');
+        expect(scheduler().nativeElement.querySelector('.current-date').textContent).toContain('None');
+        scheduleButton('Due').click();
+        await settleSchedule();
+        scheduleButton('Retry').click();
+        await settleSchedule();
+        expect(updatePlannedDate).toHaveBeenCalledTimes(2);
+        expect(updateDueDate).not.toHaveBeenCalled();
+        expect(scheduler().nativeElement.querySelector('[role="alert"]')).toBeNull();
+    });
+
+    it('Escape dismisses without saving and restores focus to the moved task', async () => {
+        await openScheduler();
+        scheduleButton('Today').click();
+        await settleSchedule();
+        scheduler().nativeElement.querySelector('section').dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+        );
+        await settleSchedule();
+        expect(scheduler()).toBeNull();
+        expect(updatePlannedDate).toHaveBeenCalledTimes(1);
+        expect(document.activeElement?.getAttribute('data-schedule-task-id')).toBe('unscheduled');
+        await openScheduler();
+        expect(scheduler().nativeElement.querySelector('.current-date').textContent).toContain('Nov 5, 2026');
+        expect(updatePlannedDate).toHaveBeenCalledTimes(1);
+    });
+
+    it('switches tasks without saving and discards a previous task\'s late error', async () => {
+        await openScheduler();
+        let fail!: (reason: Error) => void;
+        updatePlannedDate.mockImplementationOnce(() => new Promise<void>((_, reject) => { fail = reject; }));
+        scheduleButton('Today').click();
+        fixture.detectChanges();
+        await openScheduler('old');
+        expect(scheduler().componentInstance.task().id).toBe('old');
+        fail(new Error('late failure'));
+        await settleSchedule();
+        expect(scheduler().nativeElement.querySelector('[role="alert"]')).toBeNull();
+        expect(scheduler().nativeElement.querySelector('.current-date').textContent).toContain('Nov 1, 2026');
+    });
+
+    it('closes on account changes and ignores the previous account\'s pending failure', async () => {
+        await openScheduler();
+        let fail!: (reason: Error) => void;
+        updatePlannedDate.mockImplementationOnce(() => new Promise<void>((_, reject) => { fail = reject; }));
+        scheduleButton('Today').click();
+        userId.set('user-2');
+        fixture.detectChanges();
+        fail(new Error('old session failure'));
+        await settleSchedule();
+        expect(scheduler()).toBeNull();
+        expect(component['scheduleError']()).toBeNull();
+        expect(component['scheduleSaving']()).toBe(false);
+    });
+
+    it('reconciles with live task changes and dismisses if the task disappears', async () => {
+        await openScheduler();
+        tasks.update(items => items.map(task => task.id === 'unscheduled' ? { ...task, planned_date: '2026-11-10' } : task));
+        await settleSchedule();
+        expect(scheduler().nativeElement.querySelector('.current-date').textContent).toContain('Nov 10, 2026');
+        expect(updatePlannedDate).not.toHaveBeenCalled();
+        tasks.update(items => items.filter(task => task.id !== 'unscheduled'));
+        await settleSchedule();
+        expect(scheduler()).toBeNull();
+    });
+
+    it('does not label an optimistic date as persisted when reopening during a save', async () => {
+        await openScheduler();
+        let finish!: () => void;
+        updatePlannedDate.mockImplementationOnce((task: Task, date: string) => {
+            tasks.update(items => items.map(item => item.id === task.id ? { ...item, planned_date: date } : item));
+            return new Promise<void>(resolve => { finish = resolve; });
+        });
+        scheduleButton('Today').click();
+        fixture.detectChanges();
+        scheduler().nativeElement.querySelector('[aria-label="Close scheduling"]').click();
+        await settleSchedule();
+        await openScheduler();
+        expect(scheduler().nativeElement.querySelector('.current-date').textContent).toContain('None');
+        expect(scheduler().nativeElement.textContent).toContain('Saving date');
+        finish();
+        await settleSchedule();
+        expect(scheduler().nativeElement.querySelector('.current-date').textContent).toContain('Nov 5, 2026');
     });
 
     it('shows bulk actions only in the planning columns', () => {
