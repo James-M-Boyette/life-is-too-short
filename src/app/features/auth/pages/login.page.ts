@@ -1,13 +1,15 @@
 import { Component, signal, inject, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { PasswordModule } from 'primeng/password';
 import { Router } from '@angular/router';
 import { AuthStore } from '@/shared/supabase/auth.store';
 
 @Component({
     imports: [
         CommonModule,
-        ReactiveFormsModule
+        ReactiveFormsModule,
+        PasswordModule
     ],
     templateUrl: './login.page.html',
     styleUrls: ['./login.page.scss'],
