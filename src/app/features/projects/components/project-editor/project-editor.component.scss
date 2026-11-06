@@ -17,15 +17,28 @@
             }
 
             input {
+                box-sizing: border-box;
                 width: 100%;
                 padding: var(--space-2) var(--space-3);
-
-                color: var(--text-primary);
+                color: var(--color-text-primary);
                 font: inherit;
-
-                background: var(--surface-page);
-                border: 1px solid var(--border-subtle);
+                background: var(--color-surface-panel);
+                border: 1px solid var(--color-border-card);
                 border-radius: var(--radius-md);
+
+                &:hover:not(:disabled) {
+                    border-color: var(--color-border-strong);
+                }
+
+                &:focus-visible {
+                    outline: 2px solid var(--color-focus-ring);
+                    outline-offset: 2px;
+                }
+
+                &:disabled {
+                    opacity: 0.55;
+                    cursor: not-allowed;
+                }
             }
 
             p-treeselect {
@@ -40,6 +53,7 @@
         footer.form-actions {
             display: flex;
             justify-content: flex-end;
+            flex-wrap: wrap;
             gap: var(--space-2);
             margin-top: var(--space-2);
         }
