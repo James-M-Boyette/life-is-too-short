@@ -6,3 +6,9 @@ export interface TaskListGroup {
     label: string;
     tasks: Task[];
 }
+
+export interface TaskGroupPlanningTransition {
+    sourceGroupId: string;
+    targetGroupId: string;
+    plannedDate: string;
+}

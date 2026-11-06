@@ -7,6 +7,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { SUPABASE_CLIENT } from '@/shared/supabase/supabase.client';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import type { TaskStatus, Task } from '@/features/tasks/models/tasks.model';
+import type { TaskPlanningPlacement } from '@/features/tasks/models/task-schedule-drop.model';
 
 import type { TaskOrderField } from '@/features/tasks/utils/task-ordering.util';
 
@@ -14,6 +15,7 @@ import {
     getFirstTaskPosition,
     getNextTaskPosition,
     getTaskPlanningContext,
+    calculateTaskPosition,
 } from '@/features/tasks/utils/task-ordering.util';
 
 // Type for inserting a new task
@@ -709,7 +711,7 @@ export class TasksStore {
         });
     }
 
-    async updatePlannedDate(task: Task, plannedDate: string | null): Promise<void> {
+    async updatePlannedDate(task: Task, plannedDate: string | null, placement?: TaskPlanningPlacement): Promise<void> {
         await this.runMutation(task.id, async (isCurrentSession) => {
             const currentTask = this.tasks().find((current) => current.id === task.id);
 
@@ -717,7 +719,7 @@ export class TasksStore {
                 throw new Error('Task no longer exists');
             }
 
-            if (currentTask.planned_date === plannedDate) {
+            if (currentTask.planned_date === plannedDate && !placement) {
                 return;
             }
 
@@ -732,8 +734,9 @@ export class TasksStore {
             const currentContext = getTaskPlanningContext(currentTask);
             const destinationContext = getTaskPlanningContext(destinationTask);
 
-            const position =
-                destinationContext === currentContext && previousPosition !== null
+            const position = placement
+                ? this.plannedInsertionPosition(currentTask, plannedDate, placement)
+                : destinationContext === currentContext && previousPosition !== null
                     ? previousPosition
                     : getNextTaskPosition(
                           this.tasks().filter(
@@ -744,6 +747,9 @@ export class TasksStore {
                           ),
                           'planned_position',
                       );
+
+            if (!Number.isFinite(position)) throw new Error('Task positions require rebalancing');
+            if (currentTask.planned_date === plannedDate && previousPosition === position) return;
 
             // Optimistically update both fields.
             this.tasks.update((tasks) =>
@@ -800,6 +806,24 @@ export class TasksStore {
                 throw error;
             }
         });
+    }
+
+    private plannedInsertionPosition(task: Task, plannedDate: string | null, placement: TaskPlanningPlacement): number {
+        if (!plannedDate) throw new Error('An insertion requires a planned date');
+        const candidates = this.tasks().filter(current => current.id !== task.id &&
+            current.user_id === task.user_id && !current.is_done && current.planned_date === plannedDate);
+        const positionOf = (id: string | null): number | null => {
+            if (id === null) return null;
+            const neighbor = candidates.find(current => current.id === id);
+            if (!neighbor || neighbor.planned_position === null || !Number.isFinite(neighbor.planned_position)) {
+                throw new Error('The destination order has changed. Please try the drop again.');
+            }
+            return neighbor.planned_position;
+        };
+        if (placement.previousTaskId === null && placement.nextTaskId === null && candidates.length) {
+            throw new Error('The destination list is no longer empty. Please try the drop again.');
+        }
+        return calculateTaskPosition(positionOf(placement.previousTaskId), positionOf(placement.nextTaskId));
     }
 
     async updateDueDate(task: Task, dueDate: string | null): Promise<void> {

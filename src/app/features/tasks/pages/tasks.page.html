@@ -113,6 +113,11 @@
                 <app-task-list
                     [tasks]="todayTasks()"
                     [groups]="todayTaskGroups()"
+                    [planningTransition]="{
+                        sourceGroupId: 'due-today-unplanned',
+                        targetGroupId: 'planned-today',
+                        plannedDate: calendarClock.today()
+                    }"
                     [projects]="projectsStore.projectTree()"
                     [disabled]="tasksStore.mutating()"
                     [draggable]="true"
@@ -174,6 +179,7 @@
                     @if (unscheduledRescheduleError(); as message) {
                         <p role="alert">{{ message }}</p>
                     }
+                    <p class="schedule-drop-hint">Drop to clear the planned date; due dates still apply.</p>
 
                     <app-task-list
                         [tasks]="unscheduledTasks()"

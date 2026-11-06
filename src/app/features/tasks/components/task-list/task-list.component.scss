@@ -63,3 +63,26 @@
     font-size: 0.75rem;
     font-weight: 400;
 }
+
+.list__planning-target {
+    padding: var(--space-3);
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.5;
+
+    h3 {
+        display: flex;
+        justify-content: space-between;
+        gap: var(--space-2);
+        margin: 0 0 var(--space-2);
+        color: var(--text-primary);
+        font-size: 0.875rem;
+    }
+}
+
+.list.cdk-drop-list-dragging .list__planning-target:hover {
+    border-color: var(--p-primary-color);
+    background: var(--p-content-hover-background);
+}

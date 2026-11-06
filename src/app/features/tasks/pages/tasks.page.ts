@@ -354,12 +354,17 @@ export class TasksPage {
     ];
 
     protected async onTaskDropped(event: TaskScheduleDrop): Promise<void> {
-        if (event.task.planned_date === event.plannedDate) {
+        if (event.placement && this.tasksStore.mutating()) return;
+        if (event.task.planned_date === event.plannedDate && !event.placement) {
             return;
         }
 
         try {
-            await this.tasksStore.updatePlannedDate(event.task, event.plannedDate);
+            if (event.placement) {
+                await this.tasksStore.updatePlannedDate(event.task, event.plannedDate, event.placement);
+            } else {
+                await this.tasksStore.updatePlannedDate(event.task, event.plannedDate);
+            }
         } catch (error) {
             // The store records the error and rolls back the optimistic update.
             console.error('Could not reschedule task:', error);

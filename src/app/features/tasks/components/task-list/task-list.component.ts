@@ -1,4 +1,4 @@
-import { Component, input, output, computed } from '@angular/core';
+import { Component, input, output, computed, viewChild, ElementRef } from '@angular/core';
 
 import type { Task } from '@/features/tasks/models/tasks.model';
 import type { ProjectNode } from '@/features/projects/models/project.model';
@@ -12,7 +12,7 @@ import type { TaskScheduleDrop } from '@/features/tasks/models/task-schedule-dro
 import type { TaskReorder } from '@/features/tasks/models/task-reorder.model';
 import { TaskOrderField } from '@/features/tasks/utils/task-ordering.util'
 import type { TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
-import type { TaskListGroup } from '@/features/tasks/models/task-list-group.model';
+import type { TaskListGroup, TaskGroupPlanningTransition } from '@/features/tasks/models/task-list-group.model';
 
 @Component({
     selector: 'app-task-list',
@@ -24,6 +24,15 @@ import type { TaskListGroup } from '@/features/tasks/models/task-list-group.mode
 export class TaskListComponent {
     readonly tasks = input.required<Task[]>();
     readonly groups = input<TaskListGroup[]>([]);
+    readonly planningTransition = input<TaskGroupPlanningTransition | null>(null);
+    private readonly planningInsertionTarget = viewChild<ElementRef<HTMLElement>>('planningInsertionTarget');
+    protected readonly planningTarget = computed(() => {
+        const transition = this.planningTransition();
+        if (!transition) return null;
+        const source = this.groups().find(group => group.id === transition.sourceGroupId);
+        const target = this.groups().find(group => group.id === transition.targetGroupId);
+        return source?.tasks.length && target ? { source, target, transition } : null;
+    });
     protected readonly displayTasks = computed(() =>
         this.groups().length ? this.groups().flatMap(group => group.tasks) : this.tasks(),
     );
@@ -71,15 +80,38 @@ export class TaskListComponent {
         if (drag.dropContainer !== drop || !this.groups().length) return true;
         const group = this.groupByTask().get(drag.data.id);
         const target = this.displayTasks()[index];
+        const planning = this.planningTarget();
+        if (planning && group === planning.source && index >= 0 && index < planning.target.tasks.length) return true;
         return !!group && !!target && this.groupByTask().get(target.id) === group;
     };
 
     protected onDrop(event: CdkDragDrop<Task[]>): void {
+        if (this.disabled() || event.isPointerOverContainer === false) return;
         const task = event.item.data as Task;
 
         // A drop within the same list changes manual ordering.
         if (event.previousContainer === event.container) {
-            if (!this.sortable() || event.previousIndex === event.currentIndex) {
+            if (!this.sortable()) return;
+            const planning = this.planningTarget();
+            if (planning && this.groupByTask().get(task.id) === planning.source) {
+                const rect = this.planningInsertionTarget()?.nativeElement.getBoundingClientRect();
+                const point = event.dropPoint;
+                const atEnd = !!rect && rect.height > 0 && !!point &&
+                    point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+                const index = atEnd ? planning.target.tasks.length : event.currentIndex;
+                if (atEnd || (index >= 0 && index < planning.target.tasks.length)) {
+                    this.taskDropped.emit({
+                        task,
+                        plannedDate: planning.transition.plannedDate,
+                        placement: {
+                            previousTaskId: planning.target.tasks[index - 1]?.id ?? null,
+                            nextTaskId: planning.target.tasks[index]?.id ?? null,
+                        },
+                    });
+                    return;
+                }
+            }
+            if (event.previousIndex === event.currentIndex) {
                 return;
             }
 

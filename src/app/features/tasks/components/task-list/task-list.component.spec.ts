@@ -107,4 +107,96 @@ describe('TaskListComponent', () => {
         expect(list.data).toHaveLength(4);
         expect(list.sortPredicate(3, drags[0], list)).toBe(true);
     });
+
+    function allowPlanning() {
+        fixture.componentRef.setInput('planningTransition', {
+            sourceGroupId: 'due', targetGroupId: 'planned', plannedDate: '2026-11-05',
+        });
+        fixture.detectChanges();
+    }
+
+    function endTargetPoint() {
+        const target = fixture.nativeElement.querySelector('.list__planning-target');
+        vi.spyOn(target, 'getBoundingClientRect').mockReturnValue({ left: 0, right: 200, top: 100, bottom: 140, width: 200, height: 40 });
+        return { x: 50, y: 120 };
+    }
+
+    it.each([
+        ['beginning', 0, null, 'p1'],
+        ['middle', 1, 'p1', 'p2'],
+        ['end', 2, 'p2', null],
+    ])('plans a due-only task at the %s using task indices rather than heading indices', (where, index, previous, next) => {
+        const { listElement, list, drags, due } = groupedList();
+        allowPlanning();
+        expect(list.sortPredicate(0, drags[2], list)).toBe(true);
+        expect(list.sortPredicate(2, drags[0], list)).toBe(false);
+        const dropped = vi.fn();
+        const reordered = vi.fn();
+        component.taskDropped.subscribe(dropped);
+        component.taskReordered.subscribe(reordered);
+        listElement.triggerEventHandler('cdkDropListDropped', {
+            item: drags[2], previousContainer: list, container: list, previousIndex: 2, currentIndex: index,
+            dropPoint: where === 'end' ? endTargetPoint() : { x: 50, y: 20 },
+        });
+        expect(dropped).toHaveBeenCalledExactlyOnceWith({
+            task: due[0], plannedDate: '2026-11-05', placement: { previousTaskId: previous, nextTaskId: next },
+        });
+        expect(reordered).not.toHaveBeenCalled();
+        // Headings and the end target are not registered as draggables.
+        expect(list.getSortedItems()).toHaveLength(4);
+    });
+
+    it('makes an empty Planned section reachable even when the only task retains CDK index zero', () => {
+        const { listElement, list, drags, due } = groupedList();
+        fixture.componentRef.setInput('groups', [
+            { id: 'planned', label: 'Planned for today', tasks: [] },
+            { id: 'due', label: 'Due today · Not planned', tasks: [due[0]] },
+        ]);
+        allowPlanning();
+        const dropped = vi.fn();
+        component.taskDropped.subscribe(dropped);
+        expect(fixture.nativeElement.querySelector('.list__planning-target').textContent).toContain('Planned for today');
+        listElement.triggerEventHandler('cdkDropListDropped', {
+            item: drags[2], previousContainer: list, container: list, previousIndex: 0, currentIndex: 0,
+            dropPoint: endTargetPoint(),
+        });
+        expect(dropped).toHaveBeenCalledExactlyOnceWith({
+            task: due[0], plannedDate: '2026-11-05', placement: { previousTaskId: null, nextTaskId: null },
+        });
+    });
+
+    it('does not plan an unchanged Due drop or reverse a Planned task into Due, and ignores outside releases', () => {
+        const { listElement, list, drags } = groupedList();
+        allowPlanning();
+        const dropped = vi.fn();
+        component.taskDropped.subscribe(dropped);
+        for (const event of [
+            { item: drags[2], previousIndex: 2, currentIndex: 2 },
+            { item: drags[0], previousIndex: 0, currentIndex: 2 },
+            { item: drags[2], previousIndex: 2, currentIndex: 0, isPointerOverContainer: false },
+        ]) {
+            listElement.triggerEventHandler('cdkDropListDropped', { ...event, previousContainer: list, container: list });
+        }
+        expect(dropped).not.toHaveBeenCalled();
+    });
+
+    it.each([false, true])('plans around a single Planned item (at end: %s)', atEnd => {
+        const { listElement, list, drags, planned, due } = groupedList();
+        fixture.componentRef.setInput('groups', [
+            { id: 'planned', label: 'Planned for today', tasks: [planned[0]] },
+            { id: 'due', label: 'Due today · Not planned', tasks: [due[0]] },
+        ]);
+        allowPlanning();
+        const dropped = vi.fn();
+        component.taskDropped.subscribe(dropped);
+        listElement.triggerEventHandler('cdkDropListDropped', {
+            item: drags[2], previousContainer: list, container: list, previousIndex: 1, currentIndex: atEnd ? 1 : 0,
+            dropPoint: atEnd ? endTargetPoint() : { x: 50, y: 20 },
+        });
+        expect(dropped).toHaveBeenCalledExactlyOnceWith({
+            task: due[0], plannedDate: '2026-11-05', placement: {
+                previousTaskId: atEnd ? 'p1' : null, nextTaskId: atEnd ? null : 'p1',
+            },
+        });
+    });
 });
