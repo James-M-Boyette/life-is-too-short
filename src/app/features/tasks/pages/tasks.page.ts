@@ -83,41 +83,58 @@ export class TasksPage {
     protected readonly overdueRescheduleError = signal<string | null>(null);
     protected readonly reschedulingUnscheduled = signal(false);
     protected readonly unscheduledRescheduleError = signal<string | null>(null);
+    protected readonly clearingToday = signal(false);
+    protected readonly clearTodayError = signal<string | null>(null);
+    protected readonly clearableTodayTasks = computed(() =>
+        this.todayTasks().filter(task => task.planned_date !== null),
+    );
+    protected readonly bulkScheduleBusy = computed(() =>
+        this.reschedulingOverdue() || this.reschedulingUnscheduled() || this.clearingToday(),
+    );
 
     protected async rescheduleOverdueToToday(): Promise<void> {
-        await this.rescheduleGroupToToday('overdue');
+        await this.updateGroupSchedule('overdue');
     }
 
     protected async rescheduleUnscheduledToToday(): Promise<void> {
-        await this.rescheduleGroupToToday('unscheduled');
+        await this.updateGroupSchedule('unscheduled');
     }
 
-    private async rescheduleGroupToToday(group: 'overdue' | 'unscheduled'): Promise<void> {
+    protected async clearTodaySchedule(): Promise<void> {
+        await this.updateGroupSchedule('today');
+    }
+
+    private async updateGroupSchedule(group: 'overdue' | 'unscheduled' | 'today'): Promise<void> {
         if (this.view() !== 'today' || !this.isTodayPlanning() ||
-            this.reschedulingOverdue() || this.reschedulingUnscheduled() || this.tasksStore.mutating()) {
+            this.bulkScheduleBusy() || this.tasksStore.mutating()) {
             return;
         }
 
-        const tasks = [...(group === 'overdue' ? this.overdueTasks() : this.unscheduledTasks())];
-        const rescheduling = group === 'overdue' ? this.reschedulingOverdue : this.reschedulingUnscheduled;
-        const rescheduleError = group === 'overdue' ? this.overdueRescheduleError : this.unscheduledRescheduleError;
-        const today = this.calendarClock.today();
+        const tasks = [...(group === 'today' ? this.clearableTodayTasks() :
+            group === 'overdue' ? this.overdueTasks() : this.unscheduledTasks())];
+        const rescheduling = group === 'today' ? this.clearingToday :
+            group === 'overdue' ? this.reschedulingOverdue : this.reschedulingUnscheduled;
+        const rescheduleError = group === 'today' ? this.clearTodayError :
+            group === 'overdue' ? this.overdueRescheduleError : this.unscheduledRescheduleError;
+        const plannedDate = group === 'today' ? null : this.calendarClock.today();
         const userId = this.auth.userId();
         rescheduling.set(true);
         rescheduleError.set(null);
         let updated = 0;
 
         try {
-            // Save in sequence so each task receives its own position in Today's list.
+            // Save in sequence so each task receives its own position in its destination list.
             for (const task of tasks) {
                 if (this.auth.userId() !== userId) return;
-                await this.tasksStore.updatePlannedDate(task, today);
+                await this.tasksStore.updatePlannedDate(task, plannedDate);
                 updated++;
             }
         } catch {
             if (this.auth.userId() === userId) {
                 rescheduleError.set(
-                    `Rescheduled ${updated} of ${tasks.length} tasks. Could not save the next task. Please try again.`,
+                    group === 'today'
+                        ? `Cleared planned dates for ${updated} of ${tasks.length} tasks. Could not save the next task. Please try again.`
+                        : `Rescheduled ${updated} of ${tasks.length} tasks. Could not save the next task. Please try again.`,
                 );
             }
         } finally {

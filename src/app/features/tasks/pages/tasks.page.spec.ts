@@ -36,7 +36,7 @@ describe('TasksPage', () => {
             task('also-unscheduled', null),
             task('done-unscheduled', null, { is_done: true }),
         ]);
-        updatePlannedDate.mockReset().mockImplementation(async (t: Task, date: string) => {
+        updatePlannedDate.mockReset().mockImplementation(async (t: Task, date: string | null) => {
             tasks.update(items => items.map(item => item.id === t.id ? { ...item, planned_date: date } : item));
         });
         await TestBed.configureTestingModule({
@@ -67,9 +67,12 @@ describe('TasksPage', () => {
     it('shows bulk actions and picker defaults only in the planning columns', () => {
         fixture.detectChanges();
         expect(fixture.nativeElement.textContent).not.toContain('Reschedule all to today');
+        expect(fixture.nativeElement.textContent).not.toContain("Clear Today's Schedule");
         component['setTodayLayout']('planning');
         fixture.detectChanges();
         expect(fixture.nativeElement.textContent).toContain('Reschedule all to today');
+        expect(fixture.nativeElement.querySelector('[aria-labelledby="today-heading"] .today-board__column-header').textContent)
+            .toContain("Clear Today's Schedule");
         const lists = fixture.debugElement.queryAll(By.directive(TaskListComponent));
         expect(lists.map(list => list.componentInstance.defaultPlannedDateToToday())).toEqual([false, true, true]);
         expect(fixture.nativeElement.querySelector('[aria-labelledby="unscheduled-heading"]').textContent)
@@ -141,5 +144,52 @@ describe('TasksPage', () => {
         finish();
         await saving;
         expect(updatePlannedDate).toHaveBeenCalledTimes(2);
+    });
+
+    it('clears planned dates only for open Today tasks while preserving due dates', async () => {
+        tasks.set([
+            task('planned-only', '2026-11-05'),
+            task('due-today', '2026-11-05', { due_date: '2026-11-05' }),
+            task('due-later', '2026-11-05', { due_date: '2026-11-12' }),
+            task('due-only', null, { due_date: '2026-11-05' }),
+            task('done-today', '2026-11-05', { is_done: true }),
+            task('future', '2026-11-12'),
+        ]);
+        component['setTodayLayout']('planning');
+        await component['clearTodaySchedule']();
+        expect(updatePlannedDate.mock.calls.map(([t, date]) => [t.id, date])).toEqual([
+            ['due-later', null], ['due-today', null], ['planned-only', null],
+        ]);
+        expect(tasks().find(t => t.id === 'due-today')?.due_date).toBe('2026-11-05');
+        expect(tasks().find(t => t.id === 'due-later')?.due_date).toBe('2026-11-12');
+        expect(component['todayTasks']().map(t => t.id)).toEqual(['due-only', 'due-today']);
+        expect(tasks().find(t => t.id === 'done-today')?.planned_date).toBe('2026-11-05');
+        expect(tasks().find(t => t.id === 'future')?.planned_date).toBe('2026-11-12');
+        expect(component['clearableTodayTasks']()).toEqual([]);
+    });
+
+    it('reports failed clearing and restores the bulk action state', async () => {
+        updatePlannedDate.mockRejectedValueOnce(new Error('offline'));
+        component['setTodayLayout']('planning');
+        await component['clearTodaySchedule']();
+        expect(component['clearTodayError']()).toContain('Cleared planned dates for 0 of 1 tasks');
+        expect(component['bulkScheduleBusy']()).toBe(false);
+        expect(tasks().find(t => t.id === 'today')?.planned_date).toBe('2026-11-05');
+    });
+
+    it('blocks clearing in focus mode and other bulk actions while clearing', async () => {
+        await component['clearTodaySchedule']();
+        expect(updatePlannedDate).not.toHaveBeenCalled();
+        component['setTodayLayout']('planning');
+        let finish!: () => void;
+        updatePlannedDate.mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+        const saving = component['clearTodaySchedule']();
+        await component['clearTodaySchedule']();
+        await component['rescheduleUnscheduledToToday']();
+        await component['rescheduleOverdueToToday']();
+        expect(updatePlannedDate).toHaveBeenCalledTimes(1);
+        finish();
+        await saving;
+        expect(component['bulkScheduleBusy']()).toBe(false);
     });
 });
