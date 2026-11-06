@@ -188,7 +188,7 @@
 
             <p-datepicker
                 [inputId]="'planned-date-' + task().id"
-                [ngModel]="plannedDate()"
+                [ngModel]="plannedDateForPicker()"
                 (ngModelChange)="onPlannedDateChange($event)"
                 placeholder="Choose planned date"
                 dateFormat="M d, yy"

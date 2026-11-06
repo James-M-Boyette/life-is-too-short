@@ -161,10 +161,25 @@
                 </section>
 
                 <section class="today-board__column" aria-labelledby="overdue-heading">
-                    <h2 id="overdue-heading">Overdue ({{ overdueTasks().length }})</h2>
+                    <div class="today-board__column-header">
+                        <h2 id="overdue-heading">Overdue ({{ overdueTasks().length }})</h2>
+                        <p-button
+                            label="Reschedule all to today"
+                            icon="pi pi-calendar"
+                            size="small"
+                            [text]="true"
+                            [loading]="reschedulingOverdue()"
+                            [disabled]="tasksStore.mutating() || reschedulingOverdue() || overdueTasks().length === 0"
+                            (onClick)="rescheduleOverdueToToday()"
+                        />
+                    </div>
+                    @if (overdueRescheduleError(); as message) {
+                        <p role="alert">{{ message }}</p>
+                    }
 
                     <app-task-list
                         [tasks]="overdueTasks()"
+                        [defaultPlannedDateToToday]="true"
                         [projects]="projectsStore.projectTree()"
                         [disabled]="tasksStore.mutating()"
                         [draggable]="true"

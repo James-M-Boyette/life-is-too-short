@@ -79,6 +79,40 @@ export class TasksPage {
 
     protected readonly isTodayPlanning = computed(() => this.todayLayout() === 'planning');
 
+    protected readonly reschedulingOverdue = signal(false);
+    protected readonly overdueRescheduleError = signal<string | null>(null);
+
+    protected async rescheduleOverdueToToday(): Promise<void> {
+        if (this.view() !== 'today' || !this.isTodayPlanning() ||
+            this.reschedulingOverdue() || this.tasksStore.mutating()) {
+            return;
+        }
+
+        const tasks = [...this.overdueTasks()];
+        const today = this.calendarClock.today();
+        const userId = this.auth.userId();
+        this.reschedulingOverdue.set(true);
+        this.overdueRescheduleError.set(null);
+        let updated = 0;
+
+        try {
+            // Save in sequence so each task receives its own position in Today's list.
+            for (const task of tasks) {
+                if (this.auth.userId() !== userId) return;
+                await this.tasksStore.updatePlannedDate(task, today);
+                updated++;
+            }
+        } catch {
+            if (this.auth.userId() === userId) {
+                this.overdueRescheduleError.set(
+                    `Rescheduled ${updated} of ${tasks.length} tasks. Could not save the next task. Please try again.`,
+                );
+            }
+        } finally {
+            this.reschedulingOverdue.set(false);
+        }
+    }
+
     protected setTodayLayout(layout: 'focus' | 'planning'): void {
         this.todayLayout.set(layout);
     }

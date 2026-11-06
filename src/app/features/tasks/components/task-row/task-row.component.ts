@@ -63,6 +63,7 @@ export class TaskRowComponent {
     protected readonly calendarClock = inject(CalendarClockService);
 
     readonly draggable = input(false);
+    readonly defaultPlannedDateToToday = input(false);
 
     protected readonly isDueOverdue = computed(() => {
         const task = this.task();
@@ -119,6 +120,12 @@ export class TaskRowComponent {
 
     protected readonly plannedDate = computed(() =>
         parseLocalDate(this.task().planned_date),
+    );
+
+    protected readonly plannedDateForPicker = computed(() =>
+        this.defaultPlannedDateToToday()
+            ? parseLocalDate(this.calendarClock.today())
+            : this.plannedDate(),
     );
 
     protected readonly dueDate = computed(() =>
