@@ -1,23 +1,11 @@
-<!-- Todo:
-    [x] Allow a user to change a task's project once it's been created (or unassign it entirely from any project)
-    [] Currently, if a task title (see *TASK TITLE*) is too long, the first part is clipped; decide how to handle this better
-    [] 'View Description' button is too big. Maybe have 'eye' icon only?
-    [] 'Delete' button is too big. Maybe have 'trash' icon only? + add confirmation dialog (and eventually have a toggle that's project-speicifc for safe vs unsafe CRUD? Or use an 'undo' pattern instead of a confiramtion dialog)
--->
-<li
-    class="row"
-    cdkDrag
-    [cdkDragData]="task()"
-    [cdkDragDisabled]="!draggable() || disabled() || editing() || editingDescription()"
-    >
-    <section class="task-primary-section">
-        <div class="left-column">
+<li class="row" cdkDrag [cdkDragData]="task()" [cdkDragDisabled]="!draggable() || disabled() || editing()">
+    <ng-template #leading>
             @if (draggable()) {
                 <button
                     type="button"
                     class="task-drag-handle"
                     cdkDragHandle
-                    [disabled]="disabled()"
+                    [disabled]="disabled() || editing()"
                     [attr.aria-label]="'Drag task: ' + task().title"
                     pTooltip="Drag to schedule"
                     tooltipPosition="bottom"
@@ -30,7 +18,7 @@
                 class="complete-toggle"
                 [class.done]="task().is_done"
                 (click)="toggleDone.emit(task())"
-                [disabled]="disabled()"
+                [disabled]="disabled() || editing()"
                 [attr.aria-label]="task().is_done ? 'Mark task not done' : 'Mark task done'"
                 [attr.aria-pressed]="task().is_done"
                 >
@@ -39,67 +27,13 @@
                 </span>
             </button>
 
+    </ng-template>
+    <ng-template #actions>
             @if (!editing()) {
-                <button
-                    type="button"
-                    class="title-btn"
-                    [class.done]="task().is_done"
-                    (click)="startEdit()"
-                    [disabled]="disabled()"
-                    aria-label="Edit task title"
-                    >
-                    <!-- *TASK TITLE* -->
-                    {{ task().title }}
-                </button>
-            } @else {
-                <form
-                    class="edit-title-form"
-                    (submit)="onSubmit($event)"
-                    >
-                    <input
-                        type="text"
-                        [value]="draftTitle()"
-                        (input)="onDraftInput($event)"
-                        [disabled]="disabled()"
-                        aria-label="Task title"
-                        autofocus
-                    />
-
-                    <div class="edit-title-actions">
-                        <button
-                            type="submit"
-                            class="task-action-btn"
-                            pTooltip="Save title"
-                            tooltipPosition="bottom"
-                            aria-label="Save task title"
-                            [disabled]="disabled()"
-                        >
-                            <i
-                                class="pi pi-check"
-                                aria-hidden="true"
-                            ></i>
-                        </button>
-
-                        <button
-                            type="button"
-                            class="task-action-btn"
-                            pTooltip="Cancel editing"
-                            tooltipPosition="bottom"
-                            aria-label="Cancel editing task title"
-                            (click)="cancelEdit()"
-                            [disabled]="disabled()"
-                        >
-                            <i
-                                class="pi pi-times"
-                                aria-hidden="true"
-                            ></i>
-                        </button>
-                    </div>
-                </form>
+            <button #pencilButton pButton [text]="true" type="button" class="task-action-btn edit-task-btn"
+                aria-label="Edit task" pTooltip="Edit task" tooltipPosition="bottom" [disabled]="disabled() || editing()"
+                (click)="startEdit('title', 'pencil')"><i class="pi pi-pencil" aria-hidden="true"></i></button>
             }
-        </div>
-
-        <div class="task-actions">
             <button
                 pButton
                 type="button"
@@ -108,95 +42,79 @@
                 tooltipPosition="bottom"
                 aria-label="Schedule task"
                 aria-haspopup="dialog"
-                [disabled]="disabled()"
+                [disabled]="disabled() || editing()"
                 [attr.data-schedule-task-id]="task().id"
                 (click)="openSchedule($event)"
                 >
                 <i class="pi pi-calendar-clock" aria-hidden="true"></i>
             </button>
 
-            <button
-                pButton
-                type="button"
-                class="task-action-btn delete-task-btn"
-                pTooltip="Delete task"
-                tooltipPosition="bottom"
-                aria-label="Delete task"
-                (click)="remove.emit(task().id)"
-                [disabled]="disabled()"
-                >
-                <i
-                    class="pi pi-trash"
-                    aria-hidden="true"
-                ></i>
+            <button #moreActionsButton pButton [text]="true" type="button" class="task-action-btn more-actions-btn"
+                pTooltip="More actions" tooltipPosition="bottom"
+                [attr.aria-label]="'More actions for ' + task().title" aria-haspopup="menu"
+                [attr.aria-controls]="'task-actions-' + task().id"
+                [attr.aria-expanded]="!!actionsMenu.visible" [disabled]="disabled()"
+                (click)="openActions($event)" (keydown.arrowdown)="openActionsWithKeyboard($event)">
+                <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
             </button>
-        </div>
-    </section>
+            <p-menu #actionsMenu [id]="'task-actions-' + task().id" [model]="menuItems()"
+                [popup]="true" appendTo="body" [ariaLabel]="'Actions for ' + task().title" />
+    </ng-template>
+    <ng-template #metadata>
+            <div class="meta">
+                <p-treeselect
+                    [disabled]="disabled() || editing()"
+                    [options]="projectOptions()"
+                    [ngModel]="selectedProjectNode()"
+                    (ngModelChange)="onProjectChange($event)"
+                    placeholder="No Project"
+                    [showClear]="true"
+                />
 
-    <section class="task-secondary-section">
-        <div class="description">
-            @if (editingDescription()) {
-                <form
-                    class="edit-description-form"
-                    (submit)="onDescriptionSubmit($event)"
-                    (keydown.escape)="$event.stopPropagation(); cancelDescriptionEdit()"
-                >
-                    <label [for]="'description-source-' + task().id">Description (Markdown)</label>
-                    <textarea #descriptionTextarea [id]="'description-source-' + task().id"
-                        rows="6" [value]="draftDescription()" (input)="onDescriptionInput($event)"
-                        [disabled]="disabled() || !!descriptionFeedback()?.pending"
-                        [attr.aria-describedby]="'description-help-' + task().id"></textarea>
-                    <p class="description-help" [id]="'description-help-' + task().id">Use Markdown for lists, bold, italic, and links. Choose Save to apply changes.</p>
-                    <div class="description-actions">
-                        <button pButton size="small" type="submit" [disabled]="disabled() || !!descriptionFeedback()?.pending"><span pButtonLabel>Save description</span></button>
-                        <button pButton size="small" [text]="true" type="button" (click)="cancelDescriptionEdit()" [disabled]="!!descriptionFeedback()?.pending"><span pButtonLabel>Cancel</span></button>
-                        <button pButton size="small" [text]="true" type="button" (click)="draftDescription.set('')" [disabled]="disabled() || !!descriptionFeedback()?.pending"><span pButtonLabel>Clear description</span></button>
-                    </div>
-                    @if (descriptionFeedback()?.pending) {
-                        <p role="status">Saving description…</p>
+                <div class="task-date-tags">
+                    @if (plannedDate(); as date) {
+                        <p-tag
+                            severity="secondary"
+                            [value]="'Planned: ' + (date | date: 'MMM d')"
+                            icon="pi pi-calendar"
+                        />
                     }
-                    @if (descriptionError(); as message) {
-                        <p role="alert">{{ message }} Your draft is still here; choose Save to retry.</p>
+
+                    @if (dueDate(); as date) {
+                        <p-tag
+                            [severity]="isDueOverdue() ? 'danger' : 'secondary'"
+                            [value]="'Due: ' + (date | date: 'MMM d')"
+                            icon="pi pi-flag"
+                        />
                     }
-                </form>
-            } @else {
-                @if (task().description; as description) {
-                    <app-task-description [source]="description" [taskId]="task().id" />
-                }
-                <button #descriptionEditButton type="button" class="description-edit-button"
-                    [attr.aria-label]="(task().description ? 'Edit description: ' : 'Add description: ') + task().title"
-                    [disabled]="disabled()" (click)="startDescriptionEdit()">
-                    {{ task().description ? 'Edit description' : 'Add description' }}
-                </button>
-            }
-        </div>
-        <div class="meta">
-            <p-treeselect
-                [options]="projectOptions()"
-                [ngModel]="selectedProjectNode()"
-                (ngModelChange)="onProjectChange($event)"
-                placeholder="No Project"
-                [showClear]="true"
-            />
-
-            <div class="task-date-tags">
-                @if (plannedDate(); as date) {
-                    <p-tag
-                        severity="secondary"
-                        [value]="'Planned: ' + (date | date: 'MMM d')"
-                        icon="pi pi-calendar"
-                    />
-                }
-
-                @if (dueDate(); as date) {
-                    <p-tag
-                        [severity]="isDueOverdue() ? 'danger' : 'secondary'"
-                        [value]="'Due: ' + (date | date: 'MMM d')"
-                        icon="pi pi-flag"
-                    />
-                }
+                </div>
             </div>
-        </div>
-    </section>
+    </ng-template>
+    @if (editing()) {
+        <app-task-content-editor [content]="task()" [taskId]="task().id" [initialFocus]="initialFocus()"
+            [disabled]="disabled()" [pending]="!!contentFeedback()?.pending" [error]="contentError()"
+            (saved)="saveContent($event)" (cancelled)="cancelEdit()">
+            <ng-container taskLeading [ngTemplateOutlet]="leading" />
+            <div taskActions class="task-actions"><ng-container [ngTemplateOutlet]="actions" /></div>
+            <ng-container taskMetadata [ngTemplateOutlet]="metadata" />
+        </app-task-content-editor>
+    } @else {
+        <section class="task-primary-section">
+            <div class="left-column">
+                <ng-container [ngTemplateOutlet]="leading" />
+                <button #titleButton type="button" class="title-btn" [class.done]="task().is_done"
+                    (click)="startEdit('title', 'title')" [disabled]="disabled()" aria-label="Edit task title">{{ task().title }}</button>
+            </div>
+            <div class="task-actions"><ng-container [ngTemplateOutlet]="actions" /></div>
+        </section>
+        <section class="task-secondary-section">
+            @if (task().description; as description) {
+                <div class="description">
+                    <app-task-description [source]="description" [taskId]="task().id" [editable]="!disabled()"
+                        (editRequested)="startEdit('description')" />
+                </div>
+            }
+            <div class="meta-row"><ng-container [ngTemplateOutlet]="metadata" /></div>
+        </section>
+    }
 </li>
-

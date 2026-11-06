@@ -1,0 +1,15 @@
+@mixin field {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: var(--space-3);
+    border: 1px solid var(--color-border-card);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-panel);
+    color: var(--color-text-primary);
+    font: inherit;
+    line-height: 1.5;
+    &:hover:not(:disabled) { border-color: var(--color-border-strong); }
+    &:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+    &:disabled { opacity: 0.55; cursor: not-allowed; }
+}

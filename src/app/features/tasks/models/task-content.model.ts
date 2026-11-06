@@ -1,12 +1,15 @@
 import type { Task } from './tasks.model';
 
-export interface TaskDescriptionChange {
+export interface TaskContentChange {
     task: Task;
+    title: string;
     description: string | null;
 }
 
-export interface TaskDescriptionFeedback {
+export interface TaskContentFeedback {
     attemptId: number;
     pending: boolean;
     error: string | null;
 }
+
+export type TaskContent = Pick<Task, 'title' | 'description'>;

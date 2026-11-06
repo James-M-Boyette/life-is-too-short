@@ -52,99 +52,6 @@
                 }
 
 
-                .complete-toggle {
-                    width: 1.35rem;
-                    height: 1.35rem;
-                    border-radius: 999px;
-                    border: 2px solid var(--color-text-muted);
-                    background: transparent;
-                    padding: 0;
-                    display: grid;
-                    place-items: center;
-                    cursor: pointer;
-                    flex: 0 0 auto;
-                    position: relative;
-
-                    // nice focus ring
-                    &:focus-visible {
-                        outline: 3px solid color-mix(in srgb, var(--color-focus-ring) 35%, transparent);
-                        outline-offset: 2px;
-                    }
-
-                    // The checkmark (hidden by default)
-                    &::after {
-                        content: '';
-                        width: 0.35rem;
-                        height: 0.7rem;
-                        border-right: 2px solid var(--color-text-secondary);
-                        border-bottom: 2px solid var(--color-text-secondary);
-                        transform: rotate(45deg);
-                        opacity: 0; // hidden initially
-                        transition: opacity 120ms ease;
-                    }
-
-                    // Hover preview: "ghost" check
-                    &:hover::after {
-                        opacity: 0.35;
-                    }
-
-                    // Completed state
-                    &.done {
-                        border-color: var(--color-action-primary);
-                        background: color-mix(in srgb, var(--color-action-primary) 9%, transparent);
-
-                        &::after {
-                            opacity: 1;
-                            border-right-color: var(--color-action-primary);
-                            border-bottom-color: var(--color-action-primary);
-                        }
-
-                        // Optional: don’t show ghost-on-hover because it’s already checked
-                        &:hover::after {
-                            opacity: 1;
-                        }
-                    }
-
-                    &:disabled {
-                        opacity: 0.55;
-                        cursor: not-allowed;
-                    }
-                }
-
-                .sr-only {
-                    position: absolute;
-                    width: 1px;
-                    height: 1px;
-                    padding: 0;
-                    margin: -1px;
-                    overflow: hidden;
-                    clip: rect(0, 0, 0, 0);
-                    white-space: nowrap;
-                    border: 0;
-                    color: transparent;
-                }
-
-                form.edit-title-form {
-                    display: flex;
-                    align-items: center;
-                    gap: var(--space-2);
-
-                    min-width: 0;
-                    flex: 1;
-
-                    input {
-                        min-width: 0;
-                        flex: 1;
-                    }
-
-                    div.edit-title-actions {
-                        display: flex;
-                        align-items: center;
-                        gap: var(--space-1);
-
-                        flex: 0 0 auto;
-                    }
-                }
             }
         }
 
@@ -162,66 +69,24 @@
                 gap: 0.5rem;
             }
 
-            div.meta {
-                display: flex;
-                align-items: center;
-                // justify-content: center;
-                gap: 1rem;
-            }
+
         }
     }
 }
 
-.edit-description-form {
-    display: grid;
-    gap: var(--space-2);
-    min-width: 0;
-    font-size: 0.875rem;
-
-    textarea {
-        box-sizing: border-box;
-        width: 100%;
-        min-width: 0;
-        resize: vertical;
-        padding: var(--space-2);
-        font: inherit;
-        white-space: pre-wrap;
-        overflow-wrap: anywhere;
-    }
-}
-.description-help { margin: 0; color: var(--text-secondary); font-size: 0.8rem; }
-.description-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.description-edit-button {
-    align-self: flex-start;
-    padding: var(--space-1) 0;
-    border: 0;
-    background: transparent;
-    color: var(--p-primary-color);
-    font: inherit;
-    font-size: 0.8rem;
-    cursor: pointer;
-}
-.description-edit-button:focus-visible,
-.edit-description-form button:focus-visible,
-.edit-description-form textarea:focus-visible { outline: 2px solid var(--p-primary-color); outline-offset: 2px; }
+.meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3); min-width: 0; }
+.meta { min-width: 0; flex: 1 1 auto; }
+.meta p-treeselect { min-width: 0; max-width: 100%; }
+.more-actions-btn,
+.edit-task-btn { width: 2.5rem; height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: var(--radius-md); }
+.edit-task-btn:focus-visible,
+.more-actions-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
 .task-actions {
     display: flex;
     align-items: center;
     gap: var(--space-2);
     flex: 0 0 auto;
-
-    button.delete-task-btn {
-        background-color: var(--color-status-danger-soft);
-        color: var(--color-status-danger);
-        border-color: var(--color-status-danger-border);
-
-        &:hover {
-            background-color: var(--color-status-danger);
-            color: #FFFFFF;
-            border-color: var(--color-status-danger);
-        }
-    }
 }
 
 
@@ -229,7 +94,7 @@ div.meta {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: var(--space-2);
+    gap: 1rem;
 }
 
 .task-date-tags {
@@ -262,3 +127,80 @@ div.meta {
         outline-offset: 2px;
     }
 }
+
+.complete-toggle {
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 999px;
+    border: 2px solid var(--color-text-muted);
+    background: transparent;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+    position: relative;
+
+    // nice focus ring
+    &:focus-visible {
+        outline: 3px solid color-mix(in srgb, var(--color-focus-ring) 35%, transparent);
+        outline-offset: 2px;
+    }
+
+    // The checkmark (hidden by default)
+    &::after {
+        content: '';
+        width: 0.35rem;
+        height: 0.7rem;
+        border-right: 2px solid var(--color-text-secondary);
+        border-bottom: 2px solid var(--color-text-secondary);
+        transform: rotate(45deg);
+        opacity: 0; // hidden initially
+        transition: opacity 120ms ease;
+    }
+
+    // Hover preview: "ghost" check
+    &:hover::after {
+        opacity: 0.35;
+    }
+
+    // Completed state
+    &.done {
+        border-color: var(--color-action-primary);
+        background: color-mix(in srgb, var(--color-action-primary) 9%, transparent);
+
+        &::after {
+            opacity: 1;
+            border-right-color: var(--color-action-primary);
+            border-bottom-color: var(--color-action-primary);
+        }
+
+        // Optional: don’t show ghost-on-hover because it’s already checked
+        &:hover::after {
+            opacity: 1;
+        }
+    }
+
+    &:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+    color: transparent;
+}
+
+
+app-task-content-editor { display: block; width: 100%; min-width: 0; }
+:host li.row section.task-primary-section div.left-column button.title-btn:hover:not(:disabled) { background: var(--color-surface-hover); border-radius: var(--radius-sm); }
+.title-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }

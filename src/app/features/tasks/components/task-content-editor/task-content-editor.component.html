@@ -1,0 +1,48 @@
+<form class="task-content-form" [id]="'content-form-' + taskId()" (submit)="submit($event)" (keydown.escape)="escape($event)">
+    <div class="editor-title-row">
+        <ng-content select="[taskLeading]" />
+        <input #titleInput type="text" aria-label="Task title" [value]="draftTitle()"
+            (input)="draftTitle.set(inputValue($event))" (keydown.enter)="submit($event)"
+            [disabled]="disabled() || pending()" [attr.aria-invalid]="attempted() && titleInvalid()"
+            [attr.aria-describedby]="attempted() && titleInvalid() ? 'title-error-' + taskId() : null" />
+        <ng-content select="[taskActions]" />
+    </div>
+    @if (attempted() && titleInvalid()) { <p role="alert" [id]="'title-error-' + taskId()">A task title is required.</p> }
+    <div class="description-heading">
+        <label [for]="'description-source-' + taskId()">Description</label>
+        <button #helpButton type="button" class="help-button" aria-label="Markdown help"
+            pTooltip="Markdown help" tooltipPosition="bottom" aria-haspopup="dialog"
+            [attr.aria-expanded]="!!help.overlayVisible" (click)="help.toggle($event)">
+            <i class="pi pi-question-circle" aria-hidden="true"></i>
+        </button>
+    </div>
+    <textarea #textarea [id]="'description-source-' + taskId()" rows="4" placeholder="Add a description…"
+        [value]="draftDescription()" (input)="draftDescription.set(inputValue($event))"
+        (keydown.control.enter)="submit($event)" [disabled]="disabled() || pending()"></textarea>
+    @if (pending()) { <p role="status">Saving task…</p> }
+    @if (error(); as message) { <p role="alert">{{ message }} Your drafts are still here; choose Save to retry.</p> }
+</form>
+<div class="meta-row" (keydown.escape)="escape($event)">
+    <ng-content select="[taskMetadata]" />
+    <div class="edit-actions">
+        <button pButton type="submit" [attr.form]="'content-form-' + taskId()" class="edit-icon-button" aria-label="Save task"
+            pTooltip="Save task" tooltipPosition="bottom" [disabled]="disabled() || pending()"><i class="pi pi-check" aria-hidden="true"></i></button>
+        <button pButton type="button" [text]="true" class="edit-icon-button" aria-label="Cancel editing task"
+            pTooltip="Cancel editing" tooltipPosition="bottom" (click)="cancel()" [disabled]="pending()"><i class="pi pi-times" aria-hidden="true"></i></button>
+    </div>
+</div>
+<p-popover #help appendTo="body" ariaLabel="Markdown formatting">
+    <div class="markdown-help" (keydown.escape)="$event.preventDefault(); $event.stopPropagation(); closeHelp()">
+        <header><strong>Markdown formatting</strong>
+            <button type="button" class="help-button" aria-label="Close Markdown help" (click)="closeHelp()"><i class="pi pi-times" aria-hidden="true"></i></button>
+        </header>
+        <dl>
+            <div><dt><strong>Bold</strong></dt><dd><code>**text**</code></dd></div>
+            <div><dt><em>Italic</em></dt><dd><code>*text*</code></dd></div>
+            <div><dt><ul><li>Bulleted list</li></ul></dt><dd><code>- Item</code></dd></div>
+            <div><dt><ol><li>Numbered list</li></ol></dt><dd><code>1. Item</code></dd></div>
+            <div><dt><span class="link-example">Link</span></dt><dd><code>[text](url)</code></dd></div>
+            <div><dt><code>Inline code</code></dt><dd><code>`code`</code></dd></div>
+        </dl>
+    </div>
+</p-popover>
