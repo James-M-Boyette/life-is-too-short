@@ -251,3 +251,17 @@ Continue examining:
 When an idea becomes relevant, first identify the intended user outcome, alternative approaches, architecture implications, scope, and acceptance criteria.
 
 Only proceed when the feature has been explicitly selected for development.
+
+## Visual design and palette exploration
+
+**Current exploration, not implementation authorization:** Balance restrained minimalism, deliberate color, and clearly discoverable controls. The interface should feel intentional and recognizable without collapsing into bland gray or overdesigned shadows/gradients.
+
+Open questions:
+- Which primary family and neutrals best express the "Life Is Too Short" identity?
+- How much warmth, saturation, and dimensionality should daily views use?
+- Which accent(s) guide primary interactions versus convey statuses?
+- How can users learn UI affordances through consistent color, shape, iconography, and placement (analogous to video-game visual language)?
+- How should planned, due, overdue, and completed states look distinct, without making every task look urgent?
+- Which treatments remain readable in dense task views, mobile, and a future dark mode?
+
+Default to hex notation; use semantic/global tokens and component-local SCSS. Finalize a candidate palette before targeted WCAG contrast adjustments. Dark mode remains medium-term. No actual palette values have been approved. See [Visual Design Principles](visual_design_principles.md).
