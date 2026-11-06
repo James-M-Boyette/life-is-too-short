@@ -158,3 +158,19 @@ The following remain open:
 - Client-side encryption
 
 Codex should not treat these as finalized requirements.
+
+## D15 — Visual design ownership, hierarchy, and component-local styling
+
+**Decision:** Develop an intentional, distinctive UI guided by "minimalism in complexity, not minimalism in personality." Prioritize discoverable affordances, meaningful visual hierarchy, and consistency over either featureless gray minimalism or excessive decoration.
+
+Use **primitive -> semantic -> component-level** design tokens. Shared colors, text, surfaces, interaction-state meaning, and genuinely reused styling belong in global styles; unique component appearance and layout remain in the corresponding component SCSS. Component-local tokens are appropriate when not broadly shared.
+
+**Decision:** The app owns its semantic style vocabulary; PrimeNG should be adapted to the chosen appearance during the gradual transition to a custom component library. Do not make PrimeNG's default visual tokens the permanent source of truth.
+
+**Decision:** Use hexadecimal color syntax by default, with 8-digit hex, RGBA, or token-derived `color-mix()` where opacity or composability warrants it.
+
+**Reasoning:** A consistent visual language teaches the user how to interact, like visual signposting in video games. Modest, purposeful depth and contrast can make a button read as a button without making every control ornamental.
+
+**Avoid:** Duplicated literal hex colors in components; overloading global CSS with one-off component styles; removing affordances in the name of minimalism; indiscriminate shadows, outlines, and gradients.
+
+**Timing:** Select a palette before the dedicated contrast-adjustment pass. Dark mode is a medium-term goal; do not claim the palette is production-ready until accessibility is validated. Further details: [Visual Design Principles](visual_design_principles.md).

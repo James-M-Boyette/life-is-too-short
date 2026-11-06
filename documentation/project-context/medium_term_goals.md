@@ -118,3 +118,14 @@ Maintain:
 ## Success criteria
 
 A maintainable daily productivity application that handles one-off tasks, recurring tasks, and habits in a cohesive, mobile-friendly experience.
+
+## Design system and dark mode
+
+- Design and approve an application-owned palette and semantic token vocabulary before broad styling implementation.
+- Extend global primitives/semantics, while keeping individual component styling beside its component.
+- Evaluate light/dark equivalents through semantic tokens; **dark mode is a medium-term goal**, not an immediate requirement.
+- After settling palette direction, conduct a dedicated WCAG contrast review and adjust values for accessible use. Continue addressing material accessibility blockers throughout development.
+- Prepare a controlled, incremental move away from PrimeNG's default aesthetic and eventually toward custom reusable UI components.
+- Evaluate color as functional visual signposting for planned, due, overdue, completed, destructive, and interactive states, with labels/icons complementing color.
+
+Refer to [Visual Design Principles](visual_design_principles.md). A palette has **not yet** been selected.
