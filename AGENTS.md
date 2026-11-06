@@ -164,3 +164,109 @@ For every substantive implementation, perform a proportional self-review in addi
 Do not assume that passing tests means the implementation is correct or secure. Identify plausible failure modes that existing tests might not cover, and address material issues within the approved scope. Report other concerns separately rather than silently expanding the task.
 
 For high-risk changes involving authentication, authorization, destructive database operations, or migrations, recommend an independent review before production deployment.
+
+# Angular Architecture and Development Conventions
+
+## Architectural philosophy
+
+Follow a pragmatic Smart/Dumb (container/presentational) component pattern inspired by Josh Morony's AngularStart approach.
+
+The goal is clear separation of responsibilities, reusable UI components, predictable state management, and maintainable application architecture.
+
+Do not apply these patterns mechanically or introduce unnecessary abstractions.
+
+## Smart components
+
+Smart components coordinate application behavior.
+
+They may:
+
+- Inject feature stores and application services.
+- Read application state.
+- Coordinate asynchronous operations.
+- Handle application-level events.
+- Transform domain data into presentation data.
+- Pass data into presentational components.
+- Respond to outputs emitted by presentational components.
+
+Prefer keeping application orchestration near feature pages or designated container components.
+
+## Presentational (Dumb) components
+
+Presentational components primarily handle user interaction and rendering.
+
+Prefer:
+
+- Signal-based `input()` properties for receiving data.
+- Typed `output()` events for communicating user intentions.
+- Local signals for internal UI state.
+- `computed()` signals for synchronous derived presentation state.
+- Templates based on supplied inputs rather than independent data fetching.
+
+Presentational components should not ordinarily inject feature stores or communicate directly with Supabase.
+
+A presentational component may manage local UI behavior, validation, focus, and interaction state without becoming a Smart component.
+
+## State management
+
+Use Angular signals for synchronous reactive state.
+
+Use `computed()` for derived state instead of manually synchronizing redundant properties.
+
+Use `effect()` sparingly, primarily for genuine synchronization with external systems rather than propagating state between signals.
+
+Use Promises for appropriate one-off asynchronous operations and RxJS for asynchronous streams and cancellation/composition scenarios where it adds value.
+
+Do not introduce BehaviorSubjects, additional state-management libraries, or unnecessary observable pipelines without a clear architectural justification.
+
+## Services and stores
+
+Feature stores coordinate application state and domain operations.
+
+Data access should have clear ownership and should not be duplicated across multiple UI components.
+
+As complexity grows, consider extracting repository/data-access responsibilities from stores when it provides a concrete maintainability or testing benefit.
+
+Use pure utility functions for deterministic transformations and calculations when appropriate.
+
+Do not move trivial logic into services solely to satisfy architectural conventions.
+
+## Modern Angular
+
+Use the Angular version installed in the repository and favor supported modern Angular APIs.
+
+Prefer:
+
+- Standalone components
+- Signal inputs and typed outputs
+- Signals and computed signals
+- Modern control flow: `@if`, `@else if`, `@else`, `@for`, and `@let`
+- Strong TypeScript typing
+- Dependency injection through `inject()` where appropriate
+- Existing PrimeNG components and design tokens where practical
+
+Avoid introducing legacy patterns into new code unless compatibility or a concrete technical constraint requires them.
+
+## Application-specific example
+
+For task scheduling:
+
+- `TaskRowComponent` communicates that a user wants to schedule a task.
+- `TaskSchedulerComponent` renders scheduling choices and emits the selected date and field.
+- `TasksPage` coordinates the scheduling interaction.
+- `TasksStore` performs the state mutation and persistence.
+- Pure date utilities calculate deterministic calendar values.
+
+This is the intended separation of responsibilities.
+
+## Architectural tradeoffs
+
+Before introducing a new service, abstraction, store, or component layer, consider whether it solves a real problem.
+
+Prefer the simplest architecture that preserves clear responsibilities and supports foreseeable requirements.
+
+When modifying existing code, respect established conventions unless a change is justified.
+
+Explain meaningful architectural decisions and alternatives in the completion report.
+
+Do not perform unrelated architectural refactoring during a focused feature implementation.
