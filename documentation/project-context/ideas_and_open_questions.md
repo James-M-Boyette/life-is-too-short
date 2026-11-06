@@ -67,7 +67,9 @@ Maintain distinctions between:
 - Scheduled time blocks
 - Potential start dates
 
-Open questions include overdue behavior, recurrence exceptions, and timezones.
+**Settled behavior:** Planning placement prefers `planned_date`, falling back to `due_date`; unplanned due-today tasks appear in Today, and deliberately planned future tasks may retain an overdue due-date warning. The Today view should visually distinguish intentional plans from due-only obligations; this selected feature belongs in the Roadmap, not the ideas backlog.
+
+**Still open:** Future visual hierarchy refinements, how to surface conflicts between personal plans and deadlines, recurrence exceptions, and timezone behavior. Do not redesign the settled placement rule as an exploratory task.
 
 ## Habit Tracker
 
