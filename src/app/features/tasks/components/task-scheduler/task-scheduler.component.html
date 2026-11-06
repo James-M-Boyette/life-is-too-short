@@ -30,9 +30,11 @@
             <span>Current {{ field() === 'planned_date' ? 'planned' : 'due' }} date</span>
             <strong>{{ persistedDate() ? (persistedDate() | date: 'MMM d, y') : 'None' }}</strong>
         </div>
-        <p-datepicker [inline]="true" [ngModel]="currentDate()" [defaultDate]="calendarStart()"
-            (onSelect)="chooseCalendarDate($event)" [disabled]="blocked()"
-            [ariaLabel]="field() === 'planned_date' ? 'Choose planned date' : 'Choose due date'" />
+        <div class="calendar-container">
+            <p-datepicker [inline]="true" [ngModel]="currentDate()" [defaultDate]="calendarStart()"
+                (onSelect)="chooseCalendarDate($event)" [disabled]="blocked()"
+                [ariaLabel]="field() === 'planned_date' ? 'Choose planned date' : 'Choose due date'" />
+        </div>
     </div>
 
     <div class="feedback" role="status" aria-live="polite">{{ pending() ? 'Saving date…' : '' }}</div>

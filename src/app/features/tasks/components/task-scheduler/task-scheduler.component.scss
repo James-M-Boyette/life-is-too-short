@@ -22,6 +22,10 @@
     &__check { width: 1rem; font-size: 0.8rem; }
 }
 .calendar-section { border-top: 1px solid var(--p-content-border-color); padding-top: 1rem; }
+.calendar-container {
+    display: flex;
+    justify-content: center;
+}
 .current-date { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; font-size: 0.8rem; color: var(--text-secondary); strong { color: var(--text-primary); } }
 .feedback { min-height: 1.25rem; font-size: 0.85rem; color: var(--text-secondary); }
 .save-error { display: flex; align-items: center; gap: 0.5rem; color: var(--p-red-700); font-size: 0.85rem; }
