@@ -31,6 +31,7 @@ import {
 } from '@/shared/utils/date.util';
 import type { TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
 import { CdkDrag, CdkDragHandle, } from '@angular/cdk/drag-drop';
+import { TaskDescriptionEditorComponent } from '../task-description-editor/task-description-editor.component';
 import { TaskDescriptionComponent } from '@/features/tasks/components/task-description/task-description.component';
 import type { TaskDescriptionChange, TaskDescriptionFeedback } from '@/features/tasks/models/task-description.model';
 
@@ -47,6 +48,7 @@ import type { TaskDescriptionChange, TaskDescriptionFeedback } from '@/features/
         CdkDrag,
         CdkDragHandle,
         TaskDescriptionComponent,
+        TaskDescriptionEditorComponent,
     ],
     selector: 'app-task-row',
     templateUrl: './task-row.component.html',
@@ -55,7 +57,8 @@ import type { TaskDescriptionChange, TaskDescriptionFeedback } from '@/features/
 export class TaskRowComponent {
     disabled = input<boolean>(false);
     readonly descriptionFeedback = input<TaskDescriptionFeedback | null>(null);
-    private readonly descriptionTextarea = viewChild<ElementRef<HTMLTextAreaElement>>('descriptionTextarea');
+    private readonly titleInput = viewChild<ElementRef<HTMLInputElement>>('titleInput');
+    private readonly titleButton = viewChild<ElementRef<HTMLButtonElement>>('titleButton');
     private readonly moreActionsButton = viewChild<ElementRef<HTMLButtonElement>>('moreActionsButton');
     private readonly descriptionEditBaseline = signal(0);
     protected readonly descriptionError = computed(() => {
@@ -95,11 +98,18 @@ export class TaskRowComponent {
         let wasEditing = false;
         afterRenderEffect(() => {
             const editing = this.editingDescription();
-            const textarea = this.descriptionTextarea();
             const button = this.moreActionsButton();
-            if (editing && !wasEditing) textarea?.nativeElement.focus();
             if (!editing && wasEditing) button?.nativeElement.focus();
             wasEditing = editing;
+        });
+        let wasEditingTitle = false;
+        afterRenderEffect(() => {
+            const editing = this.editing();
+            const input = this.titleInput();
+            const button = this.titleButton();
+            if (editing && !wasEditingTitle) input?.nativeElement.focus();
+            if (!editing && wasEditingTitle) button?.nativeElement.focus();
+            wasEditingTitle = editing;
         });
     }
 
@@ -169,6 +179,7 @@ export class TaskRowComponent {
     }
 
     protected commitEdit() {
+        if (this.disabled() || !this.editing()) return;
         const title = this.draftTitle().trim();
         this.editing.set(false);
 
@@ -199,11 +210,9 @@ export class TaskRowComponent {
     readonly editDescription = output<TaskDescriptionChange>();
 
     protected readonly editingDescription = signal(false);
-    protected readonly draftDescription = signal('');
 
     protected startDescriptionEdit() {
         if (this.disabled() || this.descriptionFeedback()?.pending || this.editingDescription()) return;
-        this.draftDescription.set(this.task().description ?? '');
         this.descriptionEditBaseline.set(this.descriptionFeedback()?.attemptId ?? 0);
         this.editingDescription.set(true);
     }
@@ -213,24 +222,12 @@ export class TaskRowComponent {
         this.editingDescription.set(false);
     }
 
-    protected commitDescriptionEdit() {
+    protected commitDescriptionEdit(description: string | null) {
         if (this.disabled() || this.descriptionFeedback()?.pending) return;
-        const value = this.draftDescription();
-        const description = value.trim() ? value : null;
         if (description === this.task().description) {
             this.editingDescription.set(false);
             return;
         }
         this.editDescription.emit({ task: this.task(), description });
-    }
-
-    protected onDescriptionInput(event: Event) {
-        const el = event.target as HTMLTextAreaElement;
-        this.draftDescription.set(el.value);
-    }
-
-    protected onDescriptionSubmit(event: SubmitEvent) {
-        event.preventDefault();
-        this.commitDescriptionEdit();
     }
 }

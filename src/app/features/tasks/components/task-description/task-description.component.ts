@@ -1,4 +1,4 @@
-import { Component, ViewEncapsulation, computed, input, signal } from '@angular/core';
+import { Component, ViewEncapsulation, computed, input, output, signal } from '@angular/core';
 import { TooltipModule } from 'primeng/tooltip';
 import { taskMarkdown } from '@/features/tasks/utils/task-markdown.util';
 
@@ -14,6 +14,17 @@ import { taskMarkdown } from '@/features/tasks/utils/task-markdown.util';
 export class TaskDescriptionComponent {
     readonly source = input.required<string>();
     readonly taskId = input.required<string>();
+    readonly editable = input(false);
+    readonly editRequested = output<void>();
+
+    protected requestEdit(event: MouseEvent): void {
+        const target = event.target;
+        if (!this.editable() || !(target instanceof Element) ||
+            target.closest('a, button, input, textarea, select, [role="button"]') ||
+            !window.getSelection()?.isCollapsed) return;
+        this.editRequested.emit();
+    }
+
     protected readonly content = computed(() => taskMarkdown(this.source()));
     private readonly expandedSource = signal<string | null>(null);
     protected readonly expanded = computed(() => this.expandedSource() === this.source());

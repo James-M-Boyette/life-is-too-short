@@ -36,7 +36,7 @@
             @if (!editing()) {
                 <button
                     type="button"
-                    class="title-btn"
+                    #titleButton class="title-btn"
                     [class.done]="task().is_done"
                     (click)="startEdit()"
                     [disabled]="disabled()"
@@ -47,48 +47,18 @@
                 </button>
             } @else {
                 <form
-                    class="edit-title-form"
+                    class="edit-title-form" [id]="'title-form-' + task().id"
+                    (keydown.escape)="$event.stopPropagation(); cancelEdit()"
                     (submit)="onSubmit($event)"
                     >
                     <input
-                        type="text"
+                        #titleInput type="text"
                         [value]="draftTitle()"
                         (input)="onDraftInput($event)"
                         [disabled]="disabled()"
                         aria-label="Task title"
-                        autofocus
                     />
 
-                    <div class="edit-title-actions">
-                        <button
-                            type="submit"
-                            class="task-action-btn"
-                            pTooltip="Save title"
-                            tooltipPosition="bottom"
-                            aria-label="Save task title"
-                            [disabled]="disabled()"
-                        >
-                            <i
-                                class="pi pi-check"
-                                aria-hidden="true"
-                            ></i>
-                        </button>
-
-                        <button
-                            type="button"
-                            class="task-action-btn"
-                            pTooltip="Cancel editing"
-                            tooltipPosition="bottom"
-                            aria-label="Cancel editing task title"
-                            (click)="cancelEdit()"
-                            [disabled]="disabled()"
-                        >
-                            <i
-                                class="pi pi-times"
-                                aria-hidden="true"
-                            ></i>
-                        </button>
-                    </div>
                 </form>
             }
         </div>
@@ -125,72 +95,60 @@
     <section class="task-secondary-section">
         <div class="description">
             @if (editingDescription()) {
-                <form
-                    class="edit-description-form"
-                    (submit)="onDescriptionSubmit($event)"
-                    (keydown.escape)="$event.stopPropagation(); cancelDescriptionEdit()"
-                >
-                    <label [for]="'description-source-' + task().id">Description (Markdown)</label>
-                    <textarea #descriptionTextarea [id]="'description-source-' + task().id"
-                        rows="6" [value]="draftDescription()" (input)="onDescriptionInput($event)"
-                        [disabled]="disabled() || !!descriptionFeedback()?.pending"
-                        [attr.aria-describedby]="'description-help-' + task().id"></textarea>
-                    <div class="description-toolbar">
-                        <div class="description-actions">
-                            <button pButton type="submit" class="description-icon-button" aria-label="Save description"
-                                pTooltip="Save description" tooltipPosition="bottom"
-                                [disabled]="disabled() || !!descriptionFeedback()?.pending"><i class="pi pi-check" aria-hidden="true"></i></button>
-                            <button pButton [text]="true" type="button" class="description-icon-button" aria-label="Cancel editing description"
-                                pTooltip="Cancel editing" tooltipPosition="bottom" (click)="cancelDescriptionEdit()"
-                                [disabled]="!!descriptionFeedback()?.pending"><i class="pi pi-times" aria-hidden="true"></i></button>
-                            <button pButton [text]="true" type="button" class="description-icon-button" aria-label="Clear draft; save to apply"
-                                pTooltip="Clear draft; save to apply" tooltipPosition="bottom" (click)="draftDescription.set('')"
-                                [disabled]="disabled() || !!descriptionFeedback()?.pending"><i class="pi pi-trash" aria-hidden="true"></i></button>
-                        </div>
-                        <details class="description-help">
-                            <summary aria-label="Markdown help" pTooltip="Markdown help" tooltipPosition="bottom"><i class="pi pi-question-circle" aria-hidden="true"></i></summary>
-                            <p [id]="'description-help-' + task().id">Markdown: **bold**, *italic*, - bullets, 1. numbered lists, [link](https://example.com).</p>
-                        </details>
-                    </div>
-                    @if (descriptionFeedback()?.pending) {
-                        <p role="status">Saving description…</p>
-                    }
-                    @if (descriptionError(); as message) {
-                        <p role="alert">{{ message }} Your draft is still here; choose Save to retry.</p>
-                    }
-                </form>
+                <app-task-description-editor [source]="task().description ?? ''" [formId]="'description-form-' + task().id"
+                    [disabled]="disabled()" [pending]="!!descriptionFeedback()?.pending" [error]="descriptionError()"
+                    (saved)="commitDescriptionEdit($event)" (cancelled)="cancelDescriptionEdit()" />
             } @else {
                 @if (task().description; as description) {
-                    <app-task-description [source]="description" [taskId]="task().id" />
+                    <app-task-description [source]="description" [taskId]="task().id" [editable]="!disabled()" (editRequested)="startDescriptionEdit()" />
                 }
             }
         </div>
-        <div class="meta">
-            <p-treeselect
-                [options]="projectOptions()"
-                [ngModel]="selectedProjectNode()"
-                (ngModelChange)="onProjectChange($event)"
-                placeholder="No Project"
-                [showClear]="true"
-            />
+        <div class="meta-row">
+            <div class="meta">
+                <p-treeselect
+                    [options]="projectOptions()"
+                    [ngModel]="selectedProjectNode()"
+                    (ngModelChange)="onProjectChange($event)"
+                    placeholder="No Project"
+                    [showClear]="true"
+                />
 
-            <div class="task-date-tags">
-                @if (plannedDate(); as date) {
-                    <p-tag
-                        severity="secondary"
-                        [value]="'Planned: ' + (date | date: 'MMM d')"
-                        icon="pi pi-calendar"
-                    />
-                }
+                <div class="task-date-tags">
+                    @if (plannedDate(); as date) {
+                        <p-tag
+                            severity="secondary"
+                            [value]="'Planned: ' + (date | date: 'MMM d')"
+                            icon="pi pi-calendar"
+                        />
+                    }
 
-                @if (dueDate(); as date) {
-                    <p-tag
-                        [severity]="isDueOverdue() ? 'danger' : 'secondary'"
-                        [value]="'Due: ' + (date | date: 'MMM d')"
-                        icon="pi pi-flag"
-                    />
-                }
+                    @if (dueDate(); as date) {
+                        <p-tag
+                            [severity]="isDueOverdue() ? 'danger' : 'secondary'"
+                            [value]="'Due: ' + (date | date: 'MMM d')"
+                            icon="pi pi-flag"
+                        />
+                    }
+                </div>
             </div>
+            @if (editing()) {
+                <div class="edit-actions" role="group" aria-label="Title editing actions">
+                    <button pButton type="button" [text]="true" class="edit-icon-button" aria-label="Cancel editing task title"
+                        pTooltip="Cancel editing title" tooltipPosition="bottom" (click)="cancelEdit()" [disabled]="disabled()"><i class="pi pi-times" aria-hidden="true"></i></button>
+                    <button pButton type="submit" [attr.form]="'title-form-' + task().id" class="edit-icon-button" aria-label="Save task title"
+                        pTooltip="Save task title" tooltipPosition="bottom" [disabled]="disabled()"><i class="pi pi-check" aria-hidden="true"></i></button>
+                </div>
+            }
+            @if (editingDescription()) {
+                <div class="edit-actions" role="group" aria-label="Description editing actions">
+                    <button pButton type="button" [text]="true" class="edit-icon-button" aria-label="Cancel editing description"
+                        pTooltip="Cancel editing description" tooltipPosition="bottom" (click)="cancelDescriptionEdit()"
+                        [disabled]="!!descriptionFeedback()?.pending"><i class="pi pi-times" aria-hidden="true"></i></button>
+                    <button pButton type="submit" [attr.form]="'description-form-' + task().id" class="edit-icon-button" aria-label="Save description"
+                        pTooltip="Save description" tooltipPosition="bottom" [disabled]="disabled() || !!descriptionFeedback()?.pending"><i class="pi pi-check" aria-hidden="true"></i></button>
+                </div>
+            }
         </div>
     </section>
 </li>

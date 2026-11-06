@@ -1,3 +1,5 @@
+@use '../task-editing' as editing;
+
 :host {
     li.row {
         display: flex;
@@ -132,18 +134,8 @@
                     min-width: 0;
                     flex: 1;
 
-                    input {
-                        min-width: 0;
-                        flex: 1;
-                    }
+                    input { @include editing.field; flex: 1; }
 
-                    div.edit-title-actions {
-                        display: flex;
-                        align-items: center;
-                        gap: var(--space-1);
-
-                        flex: 0 0 auto;
-                    }
                 }
             }
         }
@@ -172,45 +164,20 @@
     }
 }
 
-.edit-description-form {
-    display: grid;
-    gap: var(--space-2);
-    min-width: 0;
-    font-size: 0.875rem;
-
-    textarea {
-        box-sizing: border-box;
-        width: 100%;
-        min-width: 0;
-        resize: vertical;
-        padding: var(--space-2);
-        font: inherit;
-        white-space: pre-wrap;
-        overflow-wrap: anywhere;
-    }
-}
-.description-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
-.description-actions { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3); min-width: 0; }
+.meta { min-width: 0; flex: 1 1 auto; }
+.meta p-treeselect { min-width: 0; max-width: 100%; }
+.edit-actions { display: flex; flex: 0 0 auto; gap: var(--space-1); margin-left: auto; }
 .more-actions-btn,
-.description-icon-button,
-.description-help summary { width: 2.5rem; height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
-.description-help { color: var(--text-secondary); font-size: 0.8rem; max-width: 65%; }
-.description-help summary { cursor: pointer; border-radius: var(--radius-sm); list-style: none; margin-left: auto; }
-.description-help summary::-webkit-details-marker { display: none; }
-.description-help summary:hover { background: var(--color-surface-hover); }
-.description-help p { margin-block: var(--space-2) 0; overflow-wrap: anywhere; }
-.description-help summary:focus-visible,
-.more-actions-btn:focus-visible,
-.edit-description-form button:focus-visible,
-.edit-description-form textarea:focus-visible { outline: 2px solid var(--p-primary-color); outline-offset: 2px; }
+.edit-icon-button { width: 2.5rem; height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: var(--radius-md); }
+.edit-icon-button:focus-visible,
+.more-actions-btn:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
 
 .task-actions {
     display: flex;
     align-items: center;
     gap: var(--space-2);
     flex: 0 0 auto;
-
-
 }
 
 

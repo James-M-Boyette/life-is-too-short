@@ -1,4 +1,4 @@
-<div [id]="'task-description-view-' + taskId()">
+<div [class.editable-description]="editable()" (click)="requestEdit($event)" [id]="'task-description-view-' + taskId()">
     @if (content().compact && !expanded()) {
         <p class="description-excerpt">{{ content().preview }}</p>
     } @else {

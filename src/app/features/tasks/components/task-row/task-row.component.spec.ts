@@ -60,7 +60,7 @@ describe('TaskRowComponent description editing', () => {
     }
 
     function submit(fixture: ReturnType<typeof TestBed.createComponent<TaskRowComponent>>) {
-        fixture.nativeElement.querySelector('.edit-description-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        fixture.nativeElement.querySelector('button[aria-label="Save description"]').click();
     }
 
     it('adds Markdown from an empty description and closes only after a confirmed save', async () => {
@@ -104,11 +104,118 @@ describe('TaskRowComponent description editing', () => {
         expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
     });
 
+    it('clicks description text to edit while keeping links and expansion independent', async () => {
+        const source = '**Description** ' + 'text '.repeat(70) + '[Example](https://example.com)';
+        const { fixture, changed } = await setup(source);
+        fixture.nativeElement.querySelector('[aria-label="Cancel editing description"]').click();
+        fixture.detectChanges();
+        const expand = fixture.nativeElement.querySelector('[aria-label="Expand full description"]');
+        expand.click();
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
+        const link = fixture.nativeElement.querySelector('.markdown-content a');
+        link.addEventListener('click', (event: Event) => event.preventDefault());
+        link.click();
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
+        const selection = window.getSelection()!;
+        const range = document.createRange();
+        range.selectNodeContents(fixture.nativeElement.querySelector('.markdown-content strong'));
+        selection.removeAllRanges();
+        selection.addRange(range);
+        fixture.nativeElement.querySelector('.markdown-content strong').click();
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
+        selection.removeAllRanges();
+        fixture.nativeElement.querySelector('.markdown-content strong').click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(fixture.nativeElement.querySelector('textarea').value).toBe(source);
+        expect(document.activeElement).toBe(fixture.nativeElement.querySelector('textarea'));
+        expect(changed).not.toHaveBeenCalled();
+        fixture.nativeElement.querySelector('[aria-label="Cancel editing description"]').click();
+        fixture.componentRef.setInput('disabled', true);
+        fixture.detectChanges();
+        fixture.nativeElement.querySelector('.description-excerpt').click();
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('textarea')).toBeNull();
+    });
+
+    it('submits and cancels titles with metadata-row controls, preserving focus and unchanged behavior', async () => {
+        const { fixture } = await setup(null);
+        fixture.nativeElement.querySelector('[aria-label="Cancel editing description"]').click();
+        fixture.detectChanges();
+        const rename = vi.fn();
+        fixture.componentInstance.rename.subscribe(rename);
+        const edit = () => fixture.nativeElement.querySelector('[aria-label="Edit task title"]');
+        edit().click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        const input = fixture.nativeElement.querySelector('input[aria-label="Task title"]');
+        expect(document.activeElement).toBe(input);
+        input.value = 'New title';
+        input.dispatchEvent(new Event('input'));
+        const save = fixture.nativeElement.querySelector('[aria-label="Save task title"]');
+        expect(save.form).toBe(fixture.nativeElement.querySelector('.edit-title-form'));
+        expect(save.closest('.meta-row')).toBeTruthy();
+        save.click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(rename).toHaveBeenCalledExactlyOnceWith({ task: fixture.componentInstance.task(), title: 'New title' });
+        expect(document.activeElement).toBe(edit());
+        edit().click();
+        fixture.detectChanges();
+        fixture.nativeElement.querySelector('[aria-label="Cancel editing task title"]').click();
+        fixture.detectChanges();
+        expect(rename).toHaveBeenCalledTimes(1);
+        expect(fixture.nativeElement.querySelector('.edit-title-form')).toBeNull();
+        edit().click();
+        fixture.detectChanges();
+        fixture.nativeElement.querySelector('.edit-title-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        fixture.detectChanges();
+        expect(rename).toHaveBeenCalledTimes(1);
+        expect(fixture.nativeElement.querySelector('.edit-title-form')).toBeNull();
+        expect(getComputedStyle(fixture.nativeElement.querySelector('.meta-row')).flexWrap).toBe('wrap');
+        expect(getComputedStyle(fixture.nativeElement.querySelector('.meta')).minWidth).toBe('0');
+    });
+
+    it('opens compact Markdown help and dismisses it with Escape without cancelling the draft', async () => {
+        const { fixture, changed } = await setup('Original');
+        type(fixture, 'Unsaved draft');
+        const trigger = fixture.nativeElement.querySelector('[aria-label="Markdown help"]');
+        trigger.focus();
+        trigger.click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(trigger.getAttribute('aria-expanded')).toBe('true');
+        const help = document.querySelector('.markdown-help')!;
+        expect(help.querySelectorAll('dl > div')).toHaveLength(6);
+        expect(help.textContent).toContain('**text**');
+        expect(help.textContent).toContain('`code`');
+        const close = help.querySelector('button')!;
+        close.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(trigger.getAttribute('aria-expanded')).toBe('false');
+        expect(document.activeElement).toBe(trigger);
+        expect(fixture.nativeElement.querySelector('textarea').value).toBe('Unsaved draft');
+        expect(changed).not.toHaveBeenCalled();
+        const save = fixture.nativeElement.querySelector('[aria-label="Save description"]');
+        expect(save.form).toBe(fixture.nativeElement.querySelector('.edit-description-form'));
+        expect(save.closest('.meta-row')).toBeTruthy();
+        trigger.click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        (document.querySelector('.markdown-help button') as HTMLButtonElement).click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    });
+
     it('clears only on Save and keeps failed drafts editable for retry', async () => {
         const { fixture, changed } = await setup('**Existing**');
-        const clear = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
-            .find(button => button.getAttribute('aria-label') === 'Clear draft; save to apply')!;
-        clear.click();
+        expect(fixture.nativeElement.querySelector('[aria-label="Clear draft; save to apply"]')).toBeNull();
+        type(fixture, '');
         fixture.detectChanges();
         expect(changed).not.toHaveBeenCalled();
         expect(fixture.nativeElement.querySelector('textarea').value).toBe('');
@@ -156,7 +263,7 @@ describe('TaskRowComponent More actions', () => {
         await fixture.whenStable();
         const textarea = fixture.nativeElement.querySelector('textarea');
         expect(document.activeElement).toBe(textarea);
-        for (const label of ['Save description', 'Cancel editing description', 'Clear draft; save to apply']) {
+        for (const label of ['Save description', 'Cancel editing description']) {
             expect(fixture.nativeElement.querySelector(`button[aria-label="${label}"]`)).toBeTruthy();
         }
         textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
