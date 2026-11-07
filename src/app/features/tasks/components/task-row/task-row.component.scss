@@ -18,6 +18,7 @@ li.row {
     padding: var(--space-3);
     &.is-draggable { cursor: var(--task-drag-cursor, grab); }
     &.is-draggable:active { cursor: grabbing; }
+    margin-left: 1rem;
 }
 .task-card-content, app-task-content-editor { width: 100%; min-width: 0; }
 .task-primary-section, .left-column, .task-actions, .meta-row, .meta, .task-date-tags { display: flex; align-items: center; }
@@ -44,7 +45,7 @@ button:disabled { cursor: not-allowed; }
 }
 .task-drag-handle {
     // Keep the icon inside the existing 16px main/column clearance, outside the card border.
-    position: absolute; inset-inline-end: calc(100% + var(--space-3) + 1px);
+    position: absolute; inset-inline-end: calc(100% + var(--space-3) + .5rem);
     top: 50%; translate: 0 -50%; width: var(--space-4); padding: var(--space-2) 0;
     display: inline-flex; align-items: center; justify-content: center;
     color: var(--color-text-muted); cursor: inherit;
