@@ -108,12 +108,14 @@ button:disabled { cursor: not-allowed; }
     .compact-schedule-control { background: transparent; border: 0; border-radius: var(--radius-sm); }
     // Projected row controls retain this component's scope; editor-owned layout lives in its SCSS.
     .row.is-editing {
-        .schedule-task-btn, .task-drag-handle, .project-selector { display: none; }
-        .task-actions { gap: 0; }
-        .meta { width: 100%; gap: var(--space-2); font-size: 0.8rem; }
-        .compact-edit-project { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; max-width: 100%; color: var(--color-text-secondary); }
-        .compact-edit-project span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .date-control:disabled, .compact-schedule-control:disabled { opacity: 1; }
+        app-task-content-editor {
+            .schedule-task-btn, .task-drag-handle, .project-selector { display: none; }
+            .task-actions { gap: 0; }
+            .meta { width: 100%; gap: var(--space-2); font-size: 0.8rem; }
+            .compact-edit-project { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; max-width: 100%; color: var(--color-text-secondary); }
+            .compact-edit-project span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .date-control:disabled, .compact-schedule-control:disabled { opacity: 1; }
+        }
     }
     .task-card-content {
         .task-primary-section { gap: var(--space-1); align-items: flex-start; }
