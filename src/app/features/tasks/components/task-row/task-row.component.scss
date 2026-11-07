@@ -119,7 +119,7 @@ button:disabled { cursor: not-allowed; }
         .task-primary-section { gap: var(--space-1); align-items: flex-start; }
         .left-column { align-items: flex-start; }
         .title-btn { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; line-height: 1.5; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
-        .edit-task-btn, .schedule-task-btn, .task-drag-handle { display: none; }
+        .edit-task-btn, .schedule-task-btn { display: none; }
         .task-actions { gap: 0; }
         .complete-toggle { width: 1.25rem; height: 1.25rem; margin-top: .2rem; }
         .description { margin-left: 0; }
