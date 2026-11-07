@@ -1,16 +1,7 @@
-<li class="row" [class.is-editing]="editing()" cdkDrag [cdkDragStartDelay]="dragStartDelay" [cdkDragData]="task()" [cdkDragDisabled]="!draggable() || disabled() || editing() || movingProject()">
+<li class="row" [class.is-draggable]="draggable() && !disabled() && !editing() && !movingProject()" [class.is-editing]="editing()" cdkDrag [cdkDragStartDelay]="dragStartDelay" [cdkDragData]="task()" [cdkDragDisabled]="!draggable() || disabled() || editing() || movingProject()">
     <ng-template #leading>
             @if (draggable()) {
-                <button
-                    type="button"
-                    class="task-drag-handle"
-                    [disabled]="disabled() || editing()"
-                    [attr.aria-label]="'Drag task: ' + task().title"
-                    pTooltip="Drag to schedule"
-                    tooltipPosition="bottom"
-                >
-                    <i class="pi pi-bars" aria-hidden="true"></i>
-                </button>
+                <span class="task-drag-handle" aria-hidden="true"><i class="pi pi-bars"></i></span>
             }
             <button
                 type="button"
@@ -70,7 +61,15 @@
                     (ngModelChange)="onProjectChange($event)"
                     placeholder="No Project"
                     [showClear]="true"
-                />
+                >
+                    <ng-template #dropdownicon><i class="pi pi-chevron-down project-chevron" aria-hidden="true"></i></ng-template>
+                    <ng-template #clearicon>
+                        <button type="button" class="project-clear" aria-label="Move task to Inbox"
+                            pTooltip="Move to Inbox" tooltipPosition="bottom" [disabled]="disabled() || editing()">
+                            <i class="pi pi-times" aria-hidden="true"></i>
+                        </button>
+                    </ng-template>
+                </p-treeselect>
                 </div>
 
                 <div class="task-date-tags">
@@ -114,7 +113,6 @@
                 </a>
             </div>
     </ng-template>
-    <div class="task-card-content" (mousedown)="protectCardInteraction($event)" (touchstart)="protectCardInteraction($event)">
     @if (editing()) {
         <app-task-content-editor [content]="task()" [taskId]="task().id" [initialFocus]="initialFocus()"
             [disabled]="disabled()" [pending]="!!contentFeedback()?.pending" [error]="contentError()"
@@ -124,6 +122,7 @@
             <ng-container taskMetadata [ngTemplateOutlet]="metadata" />
         </app-task-content-editor>
     } @else {
+    <div class="task-card-content" (mousedown)="protectCardInteraction($event)" (touchstart)="protectCardInteraction($event)">
         <section class="task-primary-section">
             <div class="left-column">
                 <ng-container [ngTemplateOutlet]="leading" />
@@ -141,6 +140,6 @@
             }
             <div class="meta-row"><ng-container [ngTemplateOutlet]="metadata" /></div>
         </section>
-    }
     </div>
+    }
 </li>

@@ -76,3 +76,5 @@
     border-color: var(--color-action-primary);
     background: var(--color-surface-hover);
 }
+
+.list.cdk-drop-list-dragging { --task-drag-cursor: grabbing; cursor: grabbing; }

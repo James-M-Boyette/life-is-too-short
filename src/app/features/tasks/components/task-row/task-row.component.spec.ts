@@ -107,6 +107,11 @@ describe('Card-surface drag initiation', () => {
         fixture.nativeElement.querySelector('.task-drag-handle').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
         expect(starts).toHaveBeenCalledTimes(2);
         expect(drag.disabled).toBe(false);
+        const handle = fixture.nativeElement.querySelector('.task-drag-handle');
+        expect(handle.tagName).toBe('SPAN');
+        expect(handle.getAttribute('aria-hidden')).toBe('true');
+        expect(handle.hasAttribute('tabindex')).toBe(false);
+        expect(getComputedStyle(root).cursor).toContain('grab');
         expect(drag.dragStartDelay).toEqual({ mouse: 0, touch: 200 });
         document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
     });
@@ -606,5 +611,11 @@ describe('Responsive task card interactions', () => {
         expect(moved).toHaveBeenCalledExactlyOnceWith({ task: fixture.componentInstance.task(), projectId: 'destination' });
         expect(fixture.nativeElement.querySelector('.project-selector').classList.contains('is-moving')).toBe(false);
         expect(document.activeElement).toBe(fixture.nativeElement.querySelector('.more-actions-btn'));
+        // The custom native clear button still bubbles to PrimeNG's original clear handler.
+        const clear = fixture.nativeElement.querySelector('[aria-label="Move task to Inbox"]');
+        clear.click();
+        fixture.detectChanges();
+        expect(moved).toHaveBeenLastCalledWith({ task: fixture.componentInstance.task(), projectId: null });
+        expect(moved).toHaveBeenCalledTimes(2);
     });
 });
