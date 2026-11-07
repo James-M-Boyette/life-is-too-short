@@ -1,6 +1,11 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { CdkPortalOutlet, DomPortal } from '@angular/cdk/portal';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DrawerModule, Drawer } from 'primeng/drawer';
+import { AccountControlsComponent } from './account-controls/account-controls.component';
+import { Component, computed, effect, inject, signal, afterNextRender, ElementRef, Injector, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
 
 import { ButtonModule } from 'primeng/button';
 import { AuthStore } from '@/shared/supabase/auth.store';
@@ -27,7 +32,7 @@ import { CalendarClockService } from '@/shared/services/calendar-clock.service';
     standalone: true,
     selector: 'app-shell',
     imports: [
-        CommonModule,
+        CommonModule, DrawerModule, CdkPortalOutlet, AccountControlsComponent,
         RouterOutlet,
         ButtonModule,
         TopBarComponent,
@@ -43,6 +48,42 @@ import { CalendarClockService } from '@/shared/services/calendar-clock.service';
 export class AppShellComponent {
     protected readonly auth = inject(AuthStore);
     private readonly router = inject(Router);
+
+    private readonly injector = inject(Injector);
+    private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
+    private readonly breakpoints = inject(BreakpointObserver);
+    // One sidebar instance is relocated by CDK, retaining its signal-based expansion state.
+    private readonly sidebarElement = viewChild.required<ElementRef<HTMLElement>>('sidebarContent');
+    private readonly navigationDrawer = viewChild<Drawer>('navigationDrawer');
+    protected readonly sidebarPortal = signal<DomPortal | null>(null);
+    protected readonly mobile = signal(this.breakpoints.isMatched('(width < 768px)'));
+    protected readonly navigationOpen = signal(false);
+    protected readonly drawerStyle = { width: 'min(80vw, 20rem)', height: '100dvh', maxHeight: '100dvh', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' };
+
+    protected openNavigation(): void { if (this.mobile()) this.navigationOpen.set(true); }
+    protected closeNavigation(): void {
+        if (!this.navigationOpen()) return;
+        this.navigationOpen.set(false);
+        afterNextRender(() => this.restoreNavigationFocus(), { injector: this.injector });
+    }
+    protected navigationShown(): void {
+        this.navigationDrawer()?.container?.querySelector<HTMLElement>('[aria-label="Close navigation"]')?.focus();
+    }
+    private restoreNavigationFocus(): void {
+        // Do not steal focus from a task/project dialog opened from the drawer.
+        if (this.taskDialogVisible() || this.createProjectDialogVisible() || this.projectToDelete()) return;
+        const target = this.mobile()
+            ? this.element.nativeElement.querySelector<HTMLElement>('[aria-label="Show navigation"]')
+            : this.sidebarElement().nativeElement.querySelector<HTMLElement>('a.active, a');
+        target?.focus();
+    }
+
+    private restoreMobileActionFocus(label = 'Show navigation'): void {
+        if (!this.mobile()) return;
+        afterNextRender(() => {
+            if (this.mobile()) this.element.nativeElement.querySelector<HTMLElement>(`[aria-label="${label}"]`)?.focus();
+        }, { injector: this.injector });
+    }
 
     protected readonly userEmail = computed(() => this.auth.user()?.email ?? null);
 
@@ -84,6 +125,7 @@ export class AppShellComponent {
     }
 
     protected openTaskDialog(): void {
+        this.closeNavigation();
         if (this.taskDialogVisible() || this.creatingTask()) {
             return;
         }
@@ -97,11 +139,13 @@ export class AppShellComponent {
 
         this.taskCreateDialog.close();
         this.taskCreateError.set(null);
+        this.restoreMobileActionFocus('Add task');
     }
 
     private closeTaskDialogAfterSave(): void {
         this.taskCreateDialog.close();
         this.taskCreateError.set(null);
+        this.restoreMobileActionFocus('Add task');
     }
 
     protected async createTask(payload: CreateTaskPayload): Promise<void> {
@@ -155,6 +199,15 @@ export class AppShellComponent {
     });
 
     constructor() {
+        afterNextRender(() => this.sidebarPortal.set(new DomPortal(this.sidebarElement())));
+        this.breakpoints.observe('(width < 768px)').pipe(takeUntilDestroyed()).subscribe(result => {
+            this.mobile.set(result.matches);
+            this.closeNavigation();
+            this.isResizingSidebar.set(false);
+        });
+        this.router.events.pipe(takeUntilDestroyed()).subscribe(event => {
+            if (event instanceof NavigationEnd) this.closeNavigation();
+        });
         // Keep shell protected even if someone deep-links into /tasks
         effect(() => {
             if (!this.auth.isAuthed()) void this.router.navigateByUrl('/login');
@@ -162,12 +215,14 @@ export class AppShellComponent {
     }
 
     protected openCreateProjectDialog(): void {
+        this.closeNavigation();
         this.editingProject.set(null);
         this.createProjectError.set(null);
         this.createProjectDialogVisible.set(true);
     }
 
     protected openEditProjectDialog(projectId: string): void {
+        this.closeNavigation();
         const project = this.projectsStore.getProject(projectId);
 
         if (!project) {
@@ -219,9 +274,11 @@ export class AppShellComponent {
 
     protected closeCreateProjectDialog(): void {
         this.createProjectDialogVisible.set(false);
+        this.restoreMobileActionFocus();
     }
 
     protected openDeleteProjectDialog(projectId: string): void {
+        this.closeNavigation();
         const project = this.projectsStore.getProject(projectId);
 
         if (!project) return;
@@ -235,6 +292,7 @@ export class AppShellComponent {
 
         this.projectToDelete.set(null);
         this.deleteProjectError.set(null);
+        this.restoreMobileActionFocus();
     }
 
     protected async confirmDeleteProject(): Promise<void> {
@@ -260,6 +318,7 @@ export class AppShellComponent {
         // Deletion succeeded. Close the dialog.
         this.projectToDelete.set(null);
         this.deletingProject.set(false);
+        this.restoreMobileActionFocus();
 
         // Reconcile task state with the database.
         await this.tasksStore.refreshTasks();
@@ -271,6 +330,7 @@ export class AppShellComponent {
     }
 
     protected async signOut() {
+        this.closeNavigation();
         await this.auth.signOut();
         await this.router.navigateByUrl('/login');
     }

@@ -1,32 +1,14 @@
 <header class="app-top-bar">
     <div class="left">
-        <div class="brand">
-            <span class="app-name">Life is too short</span>
-        </div>
-    </div>
-
-    <div class="right">
-        <div class="palette-preview">
-            <label for="palette-preview-select">Palette preview</label>
-            <select
-                id="palette-preview-select"
-                [value]="paletteService.palette()"
-                (change)="changePalette($event)"
-                aria-label="Preview color palette"
-            >
-                @for (option of paletteOptions; track option.id) {
-                    <option [value]="option.id">{{ option.label }}</option>
-                }
-            </select>
-        </div>
-
-        @if (userEmail()) {
-            <span class="user-email">{{ userEmail() }}</span>
+        @if (mobile()) {
+            <button type="button" class="icon-button" aria-label="Show navigation" aria-controls="mobile-navigation"
+                [attr.aria-expanded]="navigationOpen()" (click)="showNavigation.emit()"><i class="pi pi-bars" aria-hidden="true"></i></button>
         }
-
-        <button pButton type="button" (click)="signOut.emit()">
-            <i class="pi pi-sign-out" pButtonIcon></i>
-            <span pButtonLabel>Sign Out</span>
-        </button>
+        <span class="app-name">Life is too short</span>
     </div>
+    @if (mobile()) {
+        <button type="button" class="icon-button" aria-label="Add task" (click)="createTask.emit()"><i class="pi pi-plus" aria-hidden="true"></i></button>
+    } @else {
+        <app-account-controls [userEmail]="userEmail()" (signOut)="signOut.emit()" />
+    }
 </header>
