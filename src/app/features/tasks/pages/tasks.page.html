@@ -394,6 +394,7 @@
 <p-popover #schedulePopover ariaLabelledBy="schedule-task-heading" (onHide)="onScheduleHidden()">
     @for (task of activeScheduleTask() ? [activeScheduleTask()!] : []; track task.id) {
         <app-task-scheduler
+            [entryField]="scheduleEntryField()"
             [task]="task"
             [persistedTask]="persistedScheduleTask() ?? task"
             [today]="calendarClock.today()"

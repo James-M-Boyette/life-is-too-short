@@ -46,3 +46,6 @@ Thumbs.db
 /src/environments/environment.development.ts
 
 .+_DATA_BACKUPS/
+
+# Local-only browser acceptance workspace (including Angular/Vite caches)
+/.task-card-acceptance/

@@ -9,4 +9,5 @@ export interface TaskScheduleRequest {
     taskId: string;
     event: Event;
     anchor: HTMLElement;
+    field?: TaskDateField;
 }
