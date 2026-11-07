@@ -6,6 +6,7 @@
 
 // Content scoping survives CDK's body-appended clone; no component-host ancestor is required.
 li.row {
+    position: relative;
     container: task-card / inline-size;
     min-width: 0;
     display: flex;
@@ -23,7 +24,7 @@ li.row {
 .task-card-content, app-task-content-editor { width: 100%; min-width: 0; }
 .task-primary-section, .left-column, .task-actions, .meta-row, .meta, .task-date-tags { display: flex; align-items: center; }
 .task-primary-section { justify-content: space-between; gap: var(--space-4); width: 100%; }
-.left-column { position: relative; gap: var(--space-2); min-width: 0; flex: 1; }
+.left-column { gap: var(--space-2); min-width: 0; flex: 1; }
 .title-btn {
     min-width: 0; flex: 1; padding: 0; border: 0; background: transparent;
     color: var(--color-text-primary); font: inherit; font-weight: 500; text-align: left;
@@ -37,7 +38,8 @@ li.row {
 .meta-row { flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3); min-width: 0; }
 .meta { min-width: 0; flex: 1 1 auto; flex-wrap: wrap; gap: var(--space-4); }
 .task-date-tags { flex-wrap: wrap; gap: var(--space-2); }
-.more-actions-btn, .edit-task-btn { width: 2.5rem; height: 2.5rem; display: inline-flex; align-items: start; justify-content: center; padding: 0; border-radius: var(--radius-md); }
+.more-actions-btn, .edit-task-btn { width: 2.5rem; height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: var(--radius-md); }
+.more-actions-btn { align-items: start }
 button:not(.title-btn), a, p-treeselect { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 .title-btn, .edit-task-btn, .more-actions-btn, .date-control, .compact-schedule-control, .compact-project-link, .project-clear {
@@ -45,11 +47,22 @@ button:disabled { cursor: not-allowed; }
 }
 .task-drag-handle {
     // Keep the icon inside the existing 16px main/column clearance, outside the card border.
-    position: absolute; inset-inline-end: calc(100% + var(--space-3) + .5rem);
-    top: 50%; translate: 0 -50%; width: var(--space-4); padding: var(--space-2) 0;
-    display: inline-flex; align-items: center; justify-content: center;
+    position: absolute;
+    // Position outside the card's left border
+    inset-inline-end: calc(100% + var(--space-2));
+    // Center vertically relative to the entire card
+    top: 50%;
+    translate: 0 -50%;
+    width: var(--space-4);
+    padding: var(--space-2) 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: var(--color-text-muted); cursor: inherit;
-    opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 120ms ease;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 120ms ease;
 }
 .row.is-draggable:hover .task-drag-handle, .row.is-draggable:focus-within .task-drag-handle { opacity: 1; visibility: visible; pointer-events: auto; }
 .row:not(.is-draggable) .task-drag-handle, .cdk-drag-preview .task-drag-handle { display: none; }
