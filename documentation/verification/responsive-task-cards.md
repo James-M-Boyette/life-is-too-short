@@ -60,3 +60,34 @@ Additional real-browser acceptance — pending:
 These checks require real pointer/touch/browser layout; synthetic component events verify only start-event gating, click outputs, disabled state, and cloned markup/style structure.
 
 Follow-up verification: the full 18-file suite passes (207 tests), including existing cross-column/subgroup ordering, exact insertion, scheduling preservation, and rollback tests. Production build passes with the task-row and existing sidebar stylesheet warnings. Browser acceptance remains pending.
+
+
+## Follow-up: consistent insertion boxes and compact editing (2026-11-07)
+
+The accidental `.task-card-acceptance/` workspace/cache tracking has been removed. The entire root directory is now ignored; any remaining local fixture is verification-only and is not part of the application or PR.
+
+### Measured drag-spacing cause and correction
+
+An isolated fixture used the real TaskList/TaskRow components with Today Planned/Due headings, the special planning insertion target, and connected Overdue/Unscheduled lists. No backend or production task data was used.
+
+CDK's single-axis enter strategy inserts a foreign placeholder before a destination drag root inside its `app-task-row` parent, or appends it directly to the drop list. With a boxed row host, two cards inside one host had no flex gap, whereas direct list children had the list's gap. An empty source host could also retain an unwanted flex gap. This is insertion-position-dependent, not a task-source rule.
+
+| Same pointer destination before Today A | Before | After |
+| --- | --- | --- |
+| Unscheduled → Today | ghost bottom 432px, next card top 432px: 0px gap | ghost bottom 432px, next card top 444px: 12px gap |
+| Overdue → Today | same 0px gap with the same entry position | same 12px gap |
+
+`app-task-row` now uses `display: contents`. Its existing `li[cdkDrag]`, foreign placeholders, headings, and planning target participate in the list's one flex layout. The default cloned ghost height remained 205.6px; preview width remained 320px and rotation 1.5deg. During Due-only → Planned sorting, the sampled ghost bottom was 359.2px and adjacent task top 371.6px (approximately 12px), with CDK transforms active. Group headings remain separate non-draggable elements and all drop indices/predicates/mutation code are unchanged. No source-specific margins or new drag implementation were added.
+
+### Compact-only editing
+
+The existing shared 32rem card-container breakpoint controls these rules. At 320px, browser computed styles showed `nowrap` on the editor header, no header calendar, hidden wide TreeSelect, no horizontal overflow, and a separate editing footer below metadata. Save precedes Cancel. At 800px, the existing `wrap` header, calendar, TreeSelect, flex metadata/actions layout, and lack of footer separator remain unchanged.
+
+Compact editing shows the existing disabled date controls as readable metadata, or one Schedule fallback when neither date exists; the generic header calendar is hidden. The project is read-only text during the content draft, matching the existing editing guard against reassignment/navigation discarding unsaved content. Normal compact project navigation/Move to project and wide editing are unchanged. No content-save, scheduling, or database behavior was modified.
+
+These browser checks establish the measured insertion cases and compact/wide editor geometry in an isolated local fixture. Production-integrated board behavior and physical touch-device testing remain manual acceptance items. The Windows-browser URL-verification limitation from the earlier attempt was avoided by using the in-app browser with an explicit localhost URL.
+
+
+Final follow-up verification: targeted TaskRow/TaskList tests pass (36 tests), and the full suite passes (209 tests across 18 files). Production build passes after consolidating duplicated compact date styling rather than increasing budgets. Current stylesheet warnings are task-row 7.58kB / 4kB and the existing sidebar 4.14kB / 4kB; the 8kB error threshold is unchanged. Git lists zero tracked acceptance-workspace files and the root ignore rule covers its generated caches.
+
+Final compact metadata measurement after consolidation: at 320px the metadata bottom was 505.4px and the separate action footer began at 525.4px. The no-date case exposed exactly one visible Schedule fallback and no date chips. Save/Cancel order remained unchanged. Wide editing was checked again at 800px with its original header/calendar/TreeSelect and inline flex metadata/actions presentation.

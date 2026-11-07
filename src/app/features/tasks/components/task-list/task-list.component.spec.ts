@@ -57,6 +57,11 @@ describe('TaskListComponent', () => {
         expect(fixture.nativeElement.querySelectorAll('h3')).toHaveLength(2);
         expect(list.data.map(task => task.id)).toEqual(['p1', 'p2', 'd1', 'd2']);
         expect(list.getSortedItems().map(drag => drag.data.id)).toEqual(['p1', 'p2', 'd1', 'd2']);
+        // A foreign CDK placeholder may be inserted inside any destination row host.
+        // Hosts must not create a second layout box that swallows the list's gap.
+        for (const host of fixture.nativeElement.querySelectorAll('app-task-row')) {
+            expect(getComputedStyle(host).display).toBe('contents');
+        }
     });
 
     it('blocks internal sorting across sections and emits subgroup-relative reorder indices and neighbors', () => {

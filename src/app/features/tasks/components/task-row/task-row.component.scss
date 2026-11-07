@@ -1,5 +1,9 @@
 @use '../task-card-layout' as layout;
 
+// CDK inserts a foreign placeholder either inside this host or directly into the list.
+// Flatten its layout box so both paths participate in the list's single flex gap.
+:host { display: contents; }
+
 // Content scoping survives CDK's body-appended clone; no component-host ancestor is required.
 li.row {
     container: task-card / inline-size;
@@ -75,15 +79,29 @@ button:disabled { cursor: not-allowed; }
 .project-selector:hover .project-chevron, .project-selector:focus-within .project-chevron { opacity: 1; }
 .project-clear { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border: 0; padding: 0; background: transparent; color: var(--color-text-secondary); border-radius: var(--radius-sm); }
 .date-control { display: inline-flex; align-items: center; border: 0; padding: 0; background: transparent; font: inherit; border-radius: var(--radius-sm); }
-.compact-date-label, .compact-schedule-control, .compact-project-link { display: none; }
+.compact-date-label, .compact-schedule-control, .compact-project-link, .compact-edit-project { display: none; }
 .date-control:disabled, .compact-schedule-control:disabled { opacity: 0.55; }
 
 @container task-card (width < #{layout.$compact-width}) {
+    .expanded-date-tag { display: none; }
+    .date-control, .compact-schedule-control { min-height: 2.5rem; padding-inline: var(--space-1); color: var(--color-text-secondary); font-size: 0.8rem; }
+    .date-control.overdue { color: var(--color-status-danger); }
+    .compact-date-label, .compact-schedule-control { display: inline-flex; align-items: center; gap: var(--space-1); }
+    .compact-schedule-control { background: transparent; border: 0; border-radius: var(--radius-sm); }
+    // Projected row controls retain this component's scope; editor-owned layout lives in its SCSS.
+    .row.is-editing {
+        .schedule-task-btn, .task-drag-handle, .project-selector { display: none; }
+        .task-actions { gap: 0; }
+        .meta { width: 100%; gap: var(--space-2); font-size: 0.8rem; }
+        .compact-edit-project { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; max-width: 100%; color: var(--color-text-secondary); }
+        .compact-edit-project span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .date-control:disabled, .compact-schedule-control:disabled { opacity: 1; }
+    }
     .task-card-content {
         .task-primary-section { gap: var(--space-1); align-items: flex-start; }
         .left-column { align-items: flex-start; }
         .title-btn { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; line-height: 1.5; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
-        .edit-task-btn, .schedule-task-btn, .task-drag-handle, .expanded-date-tag { display: none; }
+        .edit-task-btn, .schedule-task-btn, .task-drag-handle { display: none; }
         .task-actions { gap: 0; }
         .complete-toggle { width: 1.25rem; height: 1.25rem; margin-top: .2rem; }
         .description { margin-left: 0; }
@@ -91,11 +109,7 @@ button:disabled { cursor: not-allowed; }
         .meta { flex-direction: column; align-items: stretch; gap: var(--space-1); width: 100%; }
         .project-selector { display: none; }
         .project-selector.is-moving { display: block; }
-        .date-control, .compact-schedule-control, .compact-project-link { min-height: 2.5rem; padding-inline: var(--space-1); color: var(--color-text-secondary); font-size: 0.8rem; }
-        .date-control.overdue { color: var(--color-status-danger); }
-        .compact-date-label, .compact-schedule-control, .compact-project-link { display: inline-flex; align-items: center; gap: var(--space-1); }
-        .compact-schedule-control { background: transparent; border: 0; border-radius: var(--radius-sm); }
-        .compact-project-link { align-self: flex-start; max-width: 100%; min-width: 0; gap: var(--space-2); text-decoration: none; border-radius: var(--radius-sm); }
+        .compact-project-link { display: inline-flex; align-items: center; min-height: 2.5rem; padding-inline: var(--space-1); color: var(--color-text-secondary); font-size: 0.8rem; align-self: flex-start; max-width: 100%; min-width: 0; gap: var(--space-2); text-decoration: none; border-radius: var(--radius-sm); }
         .compact-project-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
         .compact-project-link.is-moving { display: none; }
         .date-control:hover:not(:disabled), .compact-schedule-control:hover:not(:disabled), .compact-project-link:hover { background: var(--color-surface-hover); }

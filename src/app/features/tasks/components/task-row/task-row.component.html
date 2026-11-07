@@ -72,6 +72,12 @@
                 </p-treeselect>
                 </div>
 
+                @if (editing()) {
+                    <span class="compact-edit-project">
+                        <i [class]="task().project_id ? 'pi pi-folder' : 'pi pi-inbox'" aria-hidden="true"></i>
+                        <span>{{ projectName() }}</span>
+                    </span>
+                }
                 <div class="task-date-tags">
                     @if (plannedDate(); as date) {
                         <button type="button" class="date-control" [disabled]="disabled() || editing()"

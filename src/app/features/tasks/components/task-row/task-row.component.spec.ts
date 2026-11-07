@@ -553,6 +553,33 @@ describe('Responsive task card interactions', () => {
         expect(completed).toHaveBeenCalledExactlyOnceWith(fixture.componentInstance.task());
     });
 
+    it.each([false, true])('retains one editor/action pair and compact metadata without duplicate date fallback (scheduled: %s)', async scheduled => {
+        const fixture = setup(scheduled ? { planned_date: '2026-11-07', due_date: '2026-11-05' } : {});
+        const removed = vi.fn();
+        fixture.componentInstance.remove.subscribe(removed);
+        fixture.nativeElement.querySelector('.title-btn').click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        const editor = fixture.nativeElement.querySelector('app-task-content-editor');
+        expect(fixture.nativeElement.querySelectorAll('app-task-content-editor')).toHaveLength(1);
+        expect(editor.querySelector('textarea')).toBeTruthy();
+        expect(editor.querySelector('.compact-edit-project').textContent.trim()).toBe('Inbox');
+        expect(editor.querySelectorAll('.date-control')).toHaveLength(scheduled ? 2 : 0);
+        expect(editor.querySelectorAll('.compact-schedule-control')).toHaveLength(scheduled ? 0 : 1);
+        expect(Array.from(editor.querySelectorAll('.edit-actions button')).map((button: any) => button.getAttribute('aria-label')))
+            .toEqual(['Save task', 'Cancel editing task']);
+        expect(editor.querySelector('.editor-title-row .edit-actions')).toBeNull();
+        expect(editor.querySelector('.edit-task-btn')).toBeNull();
+        editor.querySelector('.more-actions-btn').click();
+        fixture.detectChanges();
+        const deleteItem = Array.from(document.querySelectorAll('[role="menuitem"]'))
+            .find(item => item.textContent?.includes('Delete task'))!;
+        expect(deleteItem.getAttribute('aria-disabled')).toBe('true');
+        (deleteItem.querySelector('a') as HTMLElement).click();
+        expect(removed).not.toHaveBeenCalled();
+        expect(editor.querySelector('textarea')).toBeTruthy();
+    });
+
     it('edits the compact plain-text preview and falls back to More actions if Pencil is hidden after resizing', async () => {
         const fixture = setup({ description: '**Bold** [Link](https://example.com)' });
         const excerpt = fixture.nativeElement.querySelector('.compact-description-excerpt');
