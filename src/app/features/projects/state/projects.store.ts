@@ -1,7 +1,7 @@
-import { Injectable, computed, effect, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
 
 import { AuthStore } from '@/shared/supabase/auth.store';
-import { supabase } from '@/shared/supabase/supabase.client';
+import { SUPABASE_CLIENT } from '@/shared/supabase/supabase.client';
 import type { Project } from '@/features/projects/models/project.model';
 import { buildProjectTree } from '@/features/projects/utils/project-tree.util';
 
@@ -15,6 +15,8 @@ export type UpdateProjectInput = {
     name: string;
     parentProjectId: string | null;
 };
+
+type ProjectSession = { userId: string | null; generation: number };
 
 @Injectable({ providedIn: 'root' })
 export class ProjectsStore {
@@ -32,41 +34,72 @@ export class ProjectsStore {
         return new Map(projects.map((project) => [project.id, project])); // .find() scans the array every time; Map builds a lookup once (when the projects change) and allows individual lookups in O(1) time.
     });
 
+    private readonly supabase = inject(SUPABASE_CLIENT);
+    private owner: string | null | undefined;
+    private generation = 0;
+    private requestId = 0;
+    private latestRefresh = 0;
+    private latestErrorOwner = 0;
+
+    // Synchronize at public entry points too, before Angular's auth effect may run.
+    private session(): ProjectSession {
+        const userId = this.auth.userId();
+        if (userId !== this.owner) {
+            this.owner = userId;
+            this.generation++;
+            this.projects.set([]);
+            this.error.set(null);
+            this.loading.set(false);
+        }
+        return { userId, generation: this.generation };
+    }
+
+    private isCurrent(session: ProjectSession) {
+        return session.generation === this.generation && session.userId === this.auth.userId();
+    }
+
+    private beginRequest() {
+        const id = ++this.requestId;
+        this.latestErrorOwner = id;
+        this.error.set(null);
+        return id;
+    }
+
+    private recordError(session: ProjectSession, id: number, error: unknown) {
+        if (this.isCurrent(session) && id === this.latestErrorOwner) {
+            this.error.set(error instanceof Error ? error.message : 'Project operation failed');
+        }
+    }
+
     constructor(private readonly auth: AuthStore) {
         effect(() => {
-            const userId = this.auth.userId();
-
-            if (!userId) {
-                // If the user loggs out, etc. clear the projects list and don't try to fetch them.
-                this.projects.set([]);
-                return;
+            const session = this.session();
+            if (session.userId) {
+                void this.refresh().catch(() => {
+                    // refresh already records failures belonging to the current request.
+                });
             }
-
-            void this.refresh(); // But if the user is logged in, fetch the projects for them.
-            // Note: `void` is used here to ignore the returned Promise, since we don't need to await it in this effect.
-            // IOW we don't care about the result of the refresh() call here, since it will update the state signals when it completes.
         });
     }
 
-    async refresh() {
-        // Fetch the list of projects for the current user
+    async refresh(): Promise<void> {
+        const session = this.session();
+        if (!session.userId) return;
+        const id = this.beginRequest();
+        this.latestRefresh = id;
         this.loading.set(true);
-        this.error.set(null);
-
         try {
-            const { data, error } = await supabase
-                .from('projects')
-                .select('*')
-                .order('name', { ascending: true });
-
+            const { data, error } = await this.supabase
+                .from('projects').select('*').order('name', { ascending: true });
             if (error) throw error;
-
-            this.projects.set((data ?? []) as Project[]);
-        } catch (e: unknown) {
-            this.error.set(e instanceof Error ? e.message : 'Failed to load projects');
-            throw e; // re-throw the error so that the caller can handle it if they want to
+            if (this.isCurrent(session) && id === this.latestRefresh) {
+                this.projects.set((data ?? []) as Project[]);
+            }
+        } catch (error: unknown) {
+            this.recordError(session, id, error);
+            throw error;
         } finally {
-            this.loading.set(false);
+            if (this.isCurrent(session) && id === this.latestRefresh) this.loading.set(false);
         }
     }
 
@@ -79,7 +112,8 @@ export class ProjectsStore {
     }
 
     async createProject(input: CreateProjectInput): Promise<Project> {
-        const userId = this.auth.userId();
+        const session = this.session();
+        const userId = session.userId;
 
         if (!userId) {
             throw new Error('User is not authenticated');
@@ -99,35 +133,39 @@ export class ProjectsStore {
             throw new Error('Selected parent project does not exist');
         }
 
-        this.error.set(null);
+        const requestId = this.beginRequest();
+        try {
+            const { data, error } = await this.supabase
+                .from('projects')
+                .insert({
+                    user_id: userId,
+                    name,
+                    parent_project_id: input.parentProjectId,
+                })
+                .select('*')
+                .single();
 
-        const { data, error } = await supabase
-            .from('projects')
-            .insert({
-                user_id: userId,
-                name,
-                parent_project_id: input.parentProjectId,
-            })
-            .select('*')
-            .single();
+            if (error) {
+                throw error;
+            }
 
-        if (error) {
-            this.error.set(error.message);
+            const createdProject = data as Project;
+
+            if (this.isCurrent(session)) this.projects.update(projects => [
+                ...projects,
+                createdProject,
+            ]);
+
+            return createdProject;
+        } catch (error: unknown) {
+            this.recordError(session, requestId, error);
             throw error;
         }
-
-        const createdProject = data as Project;
-
-        this.projects.update(projects => [
-            ...projects,
-            createdProject,
-        ]);
-
-        return createdProject;
     }
 
     async updateProject(input: UpdateProjectInput): Promise<Project> {
-        const userId = this.auth.userId();
+        const session = this.session();
+        const userId = session.userId;
 
         if (!userId) {
             throw new Error('User is not authenticated');
@@ -178,39 +216,43 @@ export class ProjectsStore {
             }
         }
 
-        this.error.set(null);
+        const requestId = this.beginRequest();
+        try {
+            const { data, error } = await this.supabase
+                .from('projects')
+                .update({
+                    name,
+                    parent_project_id: parentId,
+                })
+                .eq('id', project.id)
+                .eq('user_id', userId)
+                .select('*')
+                .single();
 
-        const { data, error } = await supabase
-            .from('projects')
-            .update({
-                name,
-                parent_project_id: parentId,
-            })
-            .eq('id', project.id)
-            .eq('user_id', userId)
-            .select('*')
-            .single();
+            if (error) {
+                throw error;
+            }
 
-        if (error) {
-            this.error.set(error.message);
+            const updatedProject = data as Project;
+
+            if (this.isCurrent(session)) this.projects.update(projects =>
+                projects.map(existing =>
+                    existing.id === updatedProject.id
+                        ? updatedProject
+                        : existing
+                )
+            );
+
+            return updatedProject;
+        } catch (error: unknown) {
+            this.recordError(session, requestId, error);
             throw error;
         }
-
-        const updatedProject = data as Project;
-
-        this.projects.update(projects =>
-            projects.map(existing =>
-                existing.id === updatedProject.id
-                    ? updatedProject
-                    : existing
-            )
-        );
-
-        return updatedProject;
     }
 
     async deleteProject(projectId: string): Promise<void> {
-        const userId = this.auth.userId();
+        const session = this.session();
+        const userId = session.userId;
 
         if (!userId) {
             throw new Error('User is not authenticated');
@@ -222,27 +264,30 @@ export class ProjectsStore {
             throw new Error('Project does not exist');
         }
 
-        this.error.set(null);
+        const requestId = this.beginRequest();
+        try {
+            const { error } = await this.supabase.rpc('delete_project', {
+                p_project_id: projectId,
+            });
 
-        const { error } = await supabase.rpc('delete_project', {
-            p_project_id: projectId,
-        });
+            if (error) {
+                throw error;
+            }
 
-        if (error) {
-            this.error.set(error.message);
+            // The database operation succeeded. Remove the deleted project
+            // from our local state so the sidebar updates immediately.
+            if (this.isCurrent(session)) this.projects.update(projects =>
+                projects
+                    .filter(existing => existing.id !== projectId)
+                    .map(existing =>
+                        existing.parent_project_id === projectId
+                            ? { ...existing, parent_project_id: null }
+                            : existing
+                    )
+            );
+        } catch (error: unknown) {
+            this.recordError(session, requestId, error);
             throw error;
         }
-
-        // The database operation succeeded. Remove the deleted project
-        // from our local state so the sidebar updates immediately.
-        this.projects.update(projects =>
-            projects
-                .filter(existing => existing.id !== projectId)
-                .map(existing =>
-                    existing.parent_project_id === projectId
-                        ? { ...existing, parent_project_id: null }
-                        : existing
-                )
-        );
     }
 }
