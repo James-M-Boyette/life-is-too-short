@@ -1,7 +1,8 @@
-import { Component, signal, computed, effect, input, output } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, signal, computed, effect, input, output, inject } from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { TreeModule } from 'primeng/tree';
-// import type { TreeNode } from 'primeng/api';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs';
 
 import type { ProjectNode } from '@/features/projects/models/project.model';
 import { toProjectTreeNodes } from '@/features/projects/utils/project-tree-node.util';
@@ -18,7 +19,35 @@ import { TooltipModule } from 'primeng/tooltip';
 export class AppSidebarComponent {
     readonly projects = input<ProjectNode[]>([]);
 
-    // protected readonly projectNodes = computed(() => toProjectTreeNodes(this.projects()));
+    private readonly router = inject(Router);
+    private readonly navigationUrl = toSignal(
+        this.router.events.pipe(
+            filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+            map(event => event.urlAfterRedirects),
+        ),
+        { initialValue: this.router.url },
+    );
+    private readonly activeProjectId = computed(() => {
+        const segments = this.router.parseUrl(this.navigationUrl()).root.children['primary']?.segments;
+        return segments?.length === 3 && segments[0].path === 'tasks' && segments[1].path === 'project'
+            ? segments[2].path
+            : null;
+    });
+    // Stable paths avoid reopening a manually collapsed branch on unrelated data updates.
+    private readonly activeAncestorPath = computed(() => {
+        const find = (nodes: ProjectNode[]): string[] | null => {
+            for (const node of nodes) {
+                if (node.project.id === this.activeProjectId()) return [];
+                const descendants = find(node.children);
+                if (descendants) return [node.project.id, ...descendants];
+            }
+            return null;
+        };
+        return find(this.projects()) ?? [];
+    }, {
+        equal: (previous, next) => previous.length === next.length &&
+            previous.every((id, index) => id === next[index]),
+    });
 
     protected readonly expandedProjectIds = signal<Set<string>>(new Set());
 
@@ -30,8 +59,18 @@ export class AppSidebarComponent {
     readonly createTask = output<void>();
 
     readonly createProject = output<void>();
-    readonly editProject = output<string>();
-    readonly deleteProject = output<string>();
+
+    protected onProjectControlKeydown(event: KeyboardEvent): void {
+        // Let native links/buttons activate once; retain the tree's arrow and Tab handling.
+        if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+    }
+
+    protected onNavigationClick(event: MouseEvent): void {
+        event.stopPropagation();
+        if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+            this.navigated.emit();
+        }
+    }
 
     protected collapseAll(): void {
         this.expandedProjectIds.set(new Set());
@@ -100,6 +139,12 @@ export class AppSidebarComponent {
     } | null>(null);
 
     constructor() {
+        effect(() => {
+            this.activeProjectId();
+            const ancestors = this.activeAncestorPath();
+            if (!ancestors.length) return;
+            this.expandedProjectIds.update(ids => new Set([...ids, ...ancestors]));
+        });
         effect(() => {
             const request = this.expandProjectRequest();
 
