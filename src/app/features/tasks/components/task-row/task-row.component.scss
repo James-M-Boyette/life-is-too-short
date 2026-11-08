@@ -34,16 +34,18 @@ li.row {
 }
 .task-secondary-section { width: 100%; display: flex; flex-direction: column; }
 .description { margin: var(--space-2) 0 0 1.9rem; min-width: 0; cursor: text; }
-.task-actions { gap: var(--space-2); flex: 0 0 auto; }
+.task-actions { gap: var(--space-2); flex: none; }
 .meta-row { flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3); min-width: 0; }
-.meta { min-width: 0; flex: 1 1 auto; flex-wrap: wrap; gap: var(--space-4); }
+.meta { min-width: 0; flex: auto; flex-wrap: wrap; gap: var(--space-4); }
 .task-date-tags { flex-wrap: wrap; gap: var(--space-2); }
-.more-actions-btn, .edit-task-btn { width: 2.5rem; height: 2.5rem; display: inline-flex; align-items: center; justify-content: center; padding: 0; border-radius: var(--radius-md); }
+.more-actions-btn, .edit-task-btn, .task-drag-handle { display: inline-flex; align-items: center; justify-content: center; }
+.more-actions-btn, .edit-task-btn { width: 2.5rem; height: 2.5rem; padding: 0; border-radius: var(--radius-md); }
 .more-actions-btn { align-items: start }
 button:not(.title-btn), a, p-treeselect { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
-.title-btn, .edit-task-btn, .more-actions-btn, .date-control, .compact-schedule-control, .compact-project-link, .project-clear {
-    &:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+// Equal-specificity :is() groups avoid repeating full scoped selectors.
+:is(.title-btn, .edit-task-btn, .more-actions-btn, .date-control, .compact-schedule-control, .compact-project-link, .project-clear):focus-visible {
+    outline: 2px solid var(--color-focus-ring); outline-offset: 2px;
 }
 .task-drag-handle {
     // Keep the icon inside the existing 16px main/column clearance, outside the card border.
@@ -55,28 +57,23 @@ button:disabled { cursor: not-allowed; }
     translate: 0 -50%;
     width: var(--space-4);
     padding: var(--space-2) 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     color: var(--color-text-muted); cursor: inherit;
     opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
+    visibility: hidden; // Also removes hidden handles from pointer hit-testing.
     transition: opacity 120ms ease;
 }
-.row.is-draggable:hover .task-drag-handle, .row.is-draggable:focus-within .task-drag-handle { opacity: 1; visibility: visible; pointer-events: auto; }
+.row.is-draggable:is(:hover, :focus-within) .task-drag-handle { opacity: 1; visibility: visible; }
 .row:not(.is-draggable) .task-drag-handle, .cdk-drag-preview .task-drag-handle { display: none; }
 @media (prefers-reduced-motion: reduce) { .task-drag-handle { transition: none; } }
 .complete-toggle {
-    width: 1.35rem; height: 1.35rem; flex: 0 0 auto; position: relative;
+    width: 1.35rem; height: 1.35rem; flex: none; position: relative;
     padding: 0; border: 2px solid var(--color-text-muted); border-radius: var(--radius-pill);
     background: transparent; display: grid; place-items: center;
     &:focus-visible { outline: 3px solid color-mix(in srgb, var(--color-focus-ring) 35%, transparent); outline-offset: 2px; }
-    &::after { content: ''; width: 0.35rem; height: 0.7rem; border-right: 2px solid var(--color-text-secondary); border-bottom: 2px solid var(--color-text-secondary); transform: rotate(45deg); opacity: 0; transition: opacity 120ms ease; }
+    &::after { content: ''; width: 0.35rem; height: 0.7rem; border: solid var(--color-text-secondary); border-width: 0 2px 2px 0; transform: rotate(45deg); opacity: 0; transition: opacity 120ms ease; }
     &:hover::after { opacity: 0.35; }
     &.done { border-color: var(--color-action-primary); background: color-mix(in srgb, var(--color-action-primary) 9%, transparent); }
     &.done::after { opacity: 1; border-color: var(--color-action-primary); }
-    &:disabled { opacity: 0.55; }
 }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .project-selector {
@@ -90,38 +87,38 @@ button:disabled { cursor: not-allowed; }
     --p-treeselect-padding-x: .25rem;
     --p-treeselect-padding-y: .375rem;
     --p-treeselect-dropdown-width: 1.5rem;
-    &:hover, &:focus-within { --p-treeselect-background: var(--color-surface-hover); }
+    &:is(:hover, :focus-within) { --p-treeselect-background: var(--color-surface-hover); }
     p-treeselect { min-width: 0; max-width: 100%; }
 }
 .project-chevron { opacity: 0; transition: opacity 120ms ease; font-size: .75rem; }
-.project-selector:hover .project-chevron, .project-selector:focus-within .project-chevron { opacity: 1; }
-.project-clear { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border: 0; padding: 0; background: transparent; color: var(--color-text-secondary); border-radius: var(--radius-sm); }
-.date-control { display: inline-flex; align-items: center; border: 0; padding: 0; background: transparent; font: inherit; border-radius: var(--radius-sm); }
+.project-selector:is(:hover, :focus-within) .project-chevron { opacity: 1; }
+.project-clear, .date-control, .compact-schedule-control { border: 0; background: transparent; border-radius: var(--radius-sm); }
+.project-clear { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; padding: 0; color: var(--color-text-secondary); }
+.date-control { display: inline-flex; align-items: center; padding: 0; font: inherit; }
 .compact-date-label, .compact-schedule-control, .compact-project-link, .compact-edit-project { display: none; }
-.date-control:disabled, .compact-schedule-control:disabled { opacity: 0.55; }
+:is(.complete-toggle, .date-control, .compact-schedule-control):disabled { opacity: 0.55; }
 
 @container task-card (width < #{layout.$compact-width}) {
     .expanded-date-tag { display: none; }
-    .date-control, .compact-schedule-control { min-height: 2.5rem; padding-inline: var(--space-1); color: var(--color-text-secondary); font-size: 0.8rem; }
+    .date-control, .compact-schedule-control, .task-card-content .compact-project-link { min-height: 2.5rem; padding-inline: var(--space-1); color: var(--color-text-secondary); font-size: 0.8rem; }
     .date-control.overdue { color: var(--color-status-danger); }
-    .compact-date-label, .compact-schedule-control { display: inline-flex; align-items: center; gap: var(--space-1); }
-    .compact-schedule-control { background: transparent; border: 0; border-radius: var(--radius-sm); }
+    .compact-date-label, .compact-schedule-control, .task-card-content .compact-project-link { display: inline-flex; align-items: center; gap: var(--space-1); }
     // Projected row controls retain this component's scope; editor-owned layout lives in its SCSS.
     .row.is-editing {
         app-task-content-editor {
-            .schedule-task-btn, .task-drag-handle, .project-selector { display: none; }
+            :is(.schedule-task-btn, .project-selector) { display: none; }
             .task-actions { gap: 0; }
             .meta { width: 100%; gap: var(--space-2); font-size: 0.8rem; }
             .compact-edit-project { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; max-width: 100%; color: var(--color-text-secondary); }
             .compact-edit-project span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-            .date-control:disabled, .compact-schedule-control:disabled { opacity: 1; }
+            :is(.date-control, .compact-schedule-control):disabled { opacity: 1; }
         }
     }
     .task-card-content {
         .task-primary-section { gap: var(--space-1); align-items: flex-start; }
         .left-column { align-items: flex-start; }
         .title-btn { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; line-height: 1.5; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
-        .edit-task-btn, .schedule-task-btn { display: none; }
+        :is(.edit-task-btn, .schedule-task-btn) { display: none; }
         .task-actions { gap: 0; }
         .complete-toggle { width: 1.25rem; height: 1.25rem; margin-top: .2rem; }
         .description { margin-left: 0; }
@@ -129,10 +126,10 @@ button:disabled { cursor: not-allowed; }
         .meta { flex-direction: column; align-items: stretch; gap: var(--space-1); width: 100%; }
         .project-selector { display: none; }
         .project-selector.is-moving { display: block; }
-        .compact-project-link { display: inline-flex; align-items: center; min-height: 2.5rem; padding-inline: var(--space-1); color: var(--color-text-secondary); font-size: 0.8rem; align-self: flex-start; max-width: 100%; min-width: 0; gap: var(--space-2); text-decoration: none; border-radius: var(--radius-sm); }
+        .compact-project-link { align-self: flex-start; max-width: 100%; min-width: 0; gap: var(--space-2); text-decoration: none; border-radius: var(--radius-sm); }
         .compact-project-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
         .compact-project-link.is-moving { display: none; }
-        .date-control:hover:not(:disabled), .compact-schedule-control:hover:not(:disabled), .compact-project-link:hover { background: var(--color-surface-hover); }
+        :is(.date-control, .compact-schedule-control):hover:not(:disabled), .compact-project-link:hover { background: var(--color-surface-hover); }
     }
 }
 li.row.cdk-drag-preview { box-sizing: border-box; list-style: none; rotate: 1.5deg; cursor: grabbing; box-shadow: 0 12px 28px color-mix(in srgb, var(--color-text-primary) 22%, transparent); }
