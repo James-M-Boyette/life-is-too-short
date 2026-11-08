@@ -1,117 +1,37 @@
 # Short-Term Goals — Life Is Too Short
 
-*Last reviewed: November 5, 2026*
+*Reviewed November 8, 2026.*
 
-## Objective
+## Outcome
 
-Develop a reliable, secure, appealing daily task manager suitable for a small invitation-only friends-and-family beta.
+A safe, dependable and visually coherent personal task manager ready for a small invitation-only friends-and-family beta.
 
-## Existing baseline
+## Implemented baseline
 
-The repository already includes:
+Main already includes task/project CRUD and nested projects; unified Markdown content editing; planned-versus-due scheduling, Today/Upcoming, ordering and desktop dragging; compact/expanded cards; a mobile drawer; a collapsible desktop rail; account Appearance/logout; and mobile drag disabling. Validate and polish these rather than rebuilding them.
 
-- Task and project CRUD
-- Nested projects
-- Authentication
-- Today and Upcoming views
-- Planned dates
-- Drag-and-drop scheduling
-- Manual task ordering
-- Today focus/planning mode
+## Immediate priorities
 
-These should be validated and refined rather than assumed missing.
+**1. Complete project navigation.** Finish the open sidebar PR #61 with an accessible More actions menu restoring Edit/Delete. Follow with a separate upper-right project-page actions menu reusing the existing dialogs and store. Keep the click-to-navigate and independent child-project chevron behavior.
 
-## Priority 1 — Validate current functionality
+**2. Deliberate on mobile task flows.** Design Today/Upcoming and mobile tasks around planned intentions versus due obligations. Verify dialogs, scheduling, layout, tap targets, safe areas and scroll behavior on real devices. Mobile dragging remains disabled by design.
 
-Review:
+**3. Security and database authorization (continuous beta gate).** Validate invitation-only Auth, RLS, cross-user denial and the project deletion RPC. Never rely on Angular guards, UI visibility or user-editable Auth metadata for authorization.
 
-- Create/edit/delete task operations
-- Create/edit/delete project operations
-- Nested project management and reparenting
-- Inbox/project assignment
-- Project deletion behavior
-- Scheduling and ordering
-- Optimistic mutations and Realtime reconciliation
+**4. Data reliability and operational safety (continuous beta gate).** Restore a production backup in an isolated environment; review migrations, failure recovery, Realtime/session races, quotas, rate limits, cost controls and alerts.
 
-Ensure errors are visible and recoverable.
+**5. Accessibility, style and practical QoL.** Resolve meaningful defects and relevant WCAG issues. Preserve user-friendly editing, keyboard/touch paths and production CSS budgets while refining quick capture and navigation.
 
-## Priority 2 — Secure the application
+## Next major features
 
-Before onboarding more users:
+After the immediate improvements and safety work: recurring tasks; second broad UI/UX/palette/token polish; Habit Tracker; then calendar-versus-whiteboard exploration.
 
-- Disable unrestricted signup
-- Verify invitation mechanisms
-- Audit RLS for all task and project operations
-- Test hostile cross-account requests
-- Audit `delete_project` RPC
-- Verify client credential handling
-- Establish resource limits and cost monitoring
+## Not current scope
 
-## Priority 3 — Data reliability
+Sections, recurring projects, archiving/duplication, full nested tasks, travel/fitness, data export/import, E2E encryption, extensive roles, payments, public signup and a full custom component-library rewrite.
 
-- Validate production backups
-- Test restoration into a safe environment
-- Document recovery steps
-- Maintain repeatable migrations
-- Protect production against accidental local seed execution
-- Add automated tests for destructive operations
+## Beta expansion criteria
 
-## Priority 4 — Styling, responsiveness and accessibility
+Confirmed invite restrictions, cross-user security, data recovery, bounded cost exposure, basic mobile/accessibility acceptance and transparent privacy/support expectations.
 
-- Refine PrimeNG appearance
-- Improve design-token consistency
-- Review desktop and mobile layouts
-- Fix major keyboard and focus problems
-- Address WCAG A/AA requirements
-- Maintain clear visual feedback for application operations
-
-## Priority 5 — Scheduling polish
-
-- Verify planned versus due-date behavior
-- Improve Today and Upcoming
-- Refine overdue and unscheduled presentation
-- Test drag-and-drop and ordering edge cases
-- Validate timezone and daylight-saving transitions
-- Prevent conflicting asynchronous changes
-
-## Priority 6 — Initial quality-of-life improvements
-
-Improve the speed and clarity of:
-
-- Capturing tasks
-- Editing tasks
-- Navigating projects
-- Scheduling work
-- Reviewing daily priorities
-
-Prefer small improvements with clear acceptance criteria.
-
-## Readiness criteria for beta expansion
-
-- Invitation-only access enforced
-- Authorization verified at database level
-- Backup/restore tested
-- Critical data-integrity issues resolved
-- Core workflows functional on desktop and mobile
-- Major accessibility problems addressed
-- Privacy and beta expectations documented
-
-## Explicit exclusions
-
-Do not prioritize the following yet:
-
-- Full Habit Tracker
-- Recurring projects
-- Travel and fitness domains
-- Custom PrimeNG replacement
-- Data export/import
-- End-to-end encryption
-- Payment infrastructure
-- Public signup
-- Full administrative dashboard
-
-## Codex instruction
-
-First identify gaps in current functionality and infrastructure. Recommend narrowly scoped changes on reviewable branches.
-
-Do not begin major new features until the relevant current-state audit and dependencies are understood.
+An open PR is not deployed functionality. Codex must review current main, PRs and tests before implementation.

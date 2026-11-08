@@ -1,14 +1,14 @@
 # Visual Palette Preview — implementation notes
 
-*November 6, 2026 — experimental styling branch*
+*Originated November 6, 2026; updated November 8, 2026*
 
 This is a reversible first styling iteration, **not** a final palette decision or a production accessibility sign-off.
 
 ## Current preview
 
-A small native select control in the top bar switches among five palettes: Maritime & Coral (default), Botanical & Citrus, Indigo & Copper, Mediterranean, and Ink & Marigold. Selection is stored in browser localStorage under `life-is-too-short.palette-preview`; the document root exposes `data-palette`.
+Five palettes are available via **Account → Appearance** in the sidebar account popover: Maritime & Coral, Botanical & Citrus, Indigo & Copper, Mediterranean, and Ink & Marigold. The old top-bar selector is no longer current.
 
-The selector is a **developer preview**, not a final user-facing settings feature. No task records or Supabase preferences are affected.
+The existing ThemePaletteService persists selection in browser localStorage under `life-is-too-short.palette-preview`; the document root exposes `data-palette`. This is still client-side appearance configuration, not a Supabase preference or an accessibility sign-off.
 
 ## Architecture
 
@@ -22,17 +22,17 @@ The selector is a **developer preview**, not a final user-facing settings featur
 ## Local evaluation checklist
 
 1. Open Inbox, All Tasks, Today (focus and planning modes), Upcoming, and a project.
-2. Change palettes and check the app shell, sidebar, task rows, planner columns, date tags, PrimeNG buttons and dialogs.
+2. Open Account → Appearance, change palettes and check the app shell, sidebar, task rows, planner columns, date tags, PrimeNG buttons and dialogs.
 3. Test task completion, scheduling, drag-and-drop, and the delete confirmation. Check that color hasn't obscured interactions.
-4. After merging the Markdown task-description branch, check editing and viewing descriptions for any lost or conflicting styles.
+4. Check Markdown display and the unified task-content editor at compact and expanded widths.
 5. Check narrow/mobile widths, keyboard focus, and system-dark-mode behavior.
 6. Run `pnpm install --frozen-lockfile`, `pnpm run build`, and `pnpm run testNoWatch`.
 
 Do not treat successful compilation as a complete visual or WCAG audit. Contrast and dark palettes need a follow-up design pass.
 
-## Merge note
+## Integration note
 
-The Markdown task-description branch and this branch both touch `task-row.component.scss`. Preserve description styles from that branch and the theme styling from this branch if a manual conflict resolution is needed. No database or behavioral task code was modified by this palette branch.
+The original theme and Markdown branches have already merged. The account popover now owns palette selection UI, and ThemePaletteService owns appearance state/persistence. The older merge instructions are historical rather than pending work.
 
 ## Design language
 
