@@ -1,6 +1,6 @@
 # Settled Decisions and Reasoning — Life Is Too Short
 
-*Last reviewed: November 5, 2026*
+*Last reviewed: November 8, 2026*
 
 These decisions represent agreed architectural and product directions. They do not necessarily indicate that implementation is complete.
 
@@ -143,6 +143,34 @@ Prioritize security, outages, and data loss ahead of minor defects and feature r
 **Reasoning:** Preserves extensibility and prevents inappropriate data coupling.
 
 **Avoid:** Forcing fundamentally different concepts into the task schema.
+
+## D15 — Planned intent versus due obligations in Today
+
+**Decision:** Due dates represent obligations, while planned dates represent intended work. Today can show planned-today tasks and due-only unplanned tasks. Overdue work stays identifiable even when deliberately planned for a future day.
+
+## D16 — Atomic task-content editing
+
+**Decision:** Edit task title and Markdown description in one session and persist both atomically. Preserve safe Markdown rendering and avoid accidental draft loss.
+
+## D17 — Responsive cards versus mobile drag
+
+**Decision:** Task cards respond to container width independently of the mobile viewport. Desktop cards (including compact ones) support CDK drag, while mobile layout (<768px) disables task drag and removes its handle/gutter to support touch scrolling.
+
+## D18 — Project navigation and actions
+
+**Decision:** Project names navigate and a distinct chevron expands/collapses nested children. Project Edit/Delete must remain accessible through action menus that reuse existing dialogs and store operations.
+
+**Status:** PR #61 now has the sidebar actions menu but is not merged; review the final icon ordering and accessibility. A project-page More actions menu is a separate next PR.
+
+## D19 — Shell and privilege distinction
+
+**Decision:** Desktop/mobile share one sidebar, mobile uses a drawer and desktop offers a collapsible navigation rail. Account appearance and logout are grouped under the sidebar account popover. Realtime status is an optional development-mode diagnostic—not an admin role.
+
+## D20 — Project sections are not child projects
+
+**Decision:** Preserve distinct concepts. Nested child projects are separate navigable projects; sections would group tasks *inside* a project.
+
+**Status:** Section behavior and data modeling remain exploratory, not authorized implementation.
 
 ## Not settled decisions
 
