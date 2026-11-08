@@ -12,7 +12,7 @@ Main already includes task/project CRUD and nested projects; unified Markdown co
 
 ## Immediate priorities
 
-**1. Complete project navigation.** Finish the open sidebar PR #61 with an accessible More actions menu restoring Edit/Delete. Follow with a separate upper-right project-page actions menu reusing the existing dialogs and store. Keep the click-to-navigate and independent child-project chevron behavior.
+**1. Complete project navigation.** Sidebar PR #61 is merged with accessible More actions and Edit/Delete. Review the separate upper-right project-page actions implementation on `codex/project-page-actions` (not yet merged), reusing the existing dialogs and store. Keep the click-to-navigate and independent child-project chevron behavior.
 
 **2. Deliberate on mobile task flows.** Design Today/Upcoming and mobile tasks around planned intentions versus due obligations. Verify dialogs, scheduling, layout, tap targets, safe areas and scroll behavior on real devices. Mobile dragging remains disabled by design.
 

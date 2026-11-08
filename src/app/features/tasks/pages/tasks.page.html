@@ -7,7 +7,16 @@
         [errorText]="tasksStore.error()"
         [disabled]="tasksStore.mutating()"
         (signOut)="signOut()"
-    />
+    >
+        @if (viewedProject(); as project) {
+            <button page-actions pButton [text]="true" [rounded]="true" severity="secondary" type="button" class="project-page-more" aria-haspopup="menu"
+                aria-controls="project-page-actions" [attr.aria-expanded]="projectMenuOpen()"
+                [attr.aria-label]="'More actions for project ' + project.name" title="Project actions"
+                (click)="toggleProjectMenu($event)"><i pButtonIcon class="pi pi-ellipsis-h" aria-hidden="true"></i></button>
+        }
+    </app-tasks-header>
+    <p-menu #projectPageMenu id="project-page-actions" [model]="projectMenuItems" [popup]="true"
+        appendTo="body" ariaLabel="Project actions" (onHide)="projectMenuHidden()" />
 
     @if (scheduleError(); as message) {
         <div class="schedule-save-error" role="alert">

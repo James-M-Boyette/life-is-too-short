@@ -1,6 +1,6 @@
 # Current Status — Life Is Too Short
 
-*Reviewed November 8, 2026. GitHub main baseline: `899b78d`. Verify current branch and PR state before acting.*
+*Reviewed November 8, 2026. GitHub main baseline: `0fa6788` (PR #61 merged). Verify current branch and PR state before acting.*
 
 ## Product and stack
 
@@ -16,6 +16,8 @@ Life Is Too Short is a deployed early-beta Angular 21 / PrimeNG 21 / TypeScript 
 - Separate planned dates (intentions) and due dates (obligations), with a two-tab quick-date/inline-calendar scheduler.
 - Today and Upcoming, Overdue and Unscheduled groups, and planned versus due-only Today grouping. Due-only unplanned tasks may appear in Today; overdue warnings remain when tasks are intentionally planned later.
 - Desktop drag-to-plan, drag-to-clear and reorder interactions, including floating card previews and insertion placeholders.
+
+- Project sidebar actions are merged in PR #61: name-click navigation, independent nested chevrons, active ancestor expansion, and one shared Edit/Delete menu reusing AppShell dialogs.
 
 ### Responsive experience
 
@@ -35,9 +37,7 @@ Life Is Too Short is a deployed early-beta Angular 21 / PrimeNG 21 / TypeScript 
 
 ## Work in progress, not merged
 
-**PR #61 — `codex/project-sidebar-navigation`** currently implements name-click navigation, separate nested-project chevrons and active ancestor expansion. Its initial revision removed Edit/Delete access without replacement. It must gain a working sidebar three-dot menu before merge.
-
-A **separate subsequent PR** is planned for the project page's upper-right three-dot menu, reusing the existing project Edit/Delete dialogs and confirmation.
+**Project-page More actions — `codex/project-page-actions`:** implemented on this feature branch, not yet merged. The project header offers Edit/Delete through a shell-scoped request coordinator and the existing AppShell dialogs/persistence. Review and acceptance remain pending.
 
 **Mobile Today and Upcoming** design should follow these project interactions. Current mobile shell and card responsiveness do not mean their complete mobile user experience has been redesigned.
 
@@ -54,8 +54,8 @@ Do not expand invited users until security, recovery, cost and honest beta/priva
 
 ## Next steps
 
-1. Finish and review PR #61's sidebar project actions without losing nested navigation.
-2. Implement project-page More actions in its own focused PR; reuse existing dialogs and persistence.
+1. Sidebar project actions are complete and merged in PR #61.
+2. Review the project-page More actions feature branch; it reuses existing dialogs and persistence and is not yet on main.
 3. Design mobile Today/Upcoming information hierarchy, interaction and navigation; retain planned/due distinctions.
 4. Continuously address security, backups, accessibility, resource abuse, reliability and test coverage.
 5. Complete initial quality-of-life improvements, then recurring tasks, second UI/UX polish and Habit Tracker.

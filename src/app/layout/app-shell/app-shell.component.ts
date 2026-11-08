@@ -1,3 +1,4 @@
+import { ProjectDialogService, type ProjectDialogRequest } from '@/features/projects/services/project-dialog.service';
 import { MOBILE_LAYOUT_QUERY } from '@/shared/utils/mobile-layout';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CdkPortalOutlet, DomPortal } from '@angular/cdk/portal';
@@ -6,7 +7,7 @@ import { DrawerModule, Drawer } from 'primeng/drawer';
 import { AccountControlsComponent } from './account-controls/account-controls.component';
 import { Component, computed, effect, inject, signal, afterNextRender, ElementRef, Injector, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterOutlet, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
+import { Router, RouterOutlet, RouterLink, RouterLinkActive, NavigationEnd, NavigationStart } from '@angular/router';
 
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
@@ -43,13 +44,32 @@ import { CalendarClockService } from '@/shared/services/calendar-clock.service';
         ProjectEditorComponent,
         TaskCreateComponent,
     ],
-    providers: [TaskCreateDialogService],
+    providers: [TaskCreateDialogService, ProjectDialogService],
     templateUrl: './app-shell.component.html',
     styleUrls: ['./app-shell.component.scss'],
 })
 export class AppShellComponent {
     protected readonly auth = inject(AuthStore);
     private readonly router = inject(Router);
+    private readonly projectDialogs = inject(ProjectDialogService);
+    private readonly pageProjectDialog = signal<ProjectDialogRequest | null>(null);
+
+    private restoreProjectActionFocus(): void {
+        const context = this.pageProjectDialog();
+        this.pageProjectDialog.set(null);
+        if (context?.trigger.isConnected && context.userId === this.auth.userId() && !context.trigger.closest('[hidden], [inert]')) {
+            afterNextRender(() => {
+                if (context.trigger.isConnected && context.userId === this.auth.userId()) context.trigger.focus({ preventScroll: true });
+            }, { injector: this.injector });
+        } else this.restoreMobileActionFocus();
+    }
+
+    private dismissPageProjectDialog(): void {
+        this.createProjectDialogVisible.set(false);
+        this.projectToDelete.set(null);
+        this.editingProject.set(null);
+        this.pageProjectDialog.set(null);
+    }
 
     private readonly injector = inject(Injector);
     private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -229,6 +249,19 @@ export class AppShellComponent {
     });
 
     constructor() {
+        this.projectDialogs.requests.pipe(takeUntilDestroyed()).subscribe(request => {
+            const project = this.projectsStore.getProject(request.projectId);
+            if (!project || project.user_id !== request.userId || this.auth.userId() !== request.userId || this.router.url !== request.sourceUrl ||
+                this.createProjectDialogVisible() || this.projectToDelete() || this.creatingProject() || this.deletingProject()) return;
+            if (request.action === 'edit') this.openEditProjectDialog(request.projectId);
+            else this.openDeleteProjectDialog(request.projectId);
+            this.pageProjectDialog.set(request);
+        });
+        effect(() => {
+            const userId = this.auth.userId();
+            const context = this.pageProjectDialog();
+            if (context && (context.userId !== userId || (!this.deletingProject() && !this.projectsStore.getProject(context.projectId)))) this.dismissPageProjectDialog();
+        });
         afterNextRender(() => this.sidebarPortal.set(new DomPortal(this.sidebarElement())));
         this.breakpoints.observe(MOBILE_LAYOUT_QUERY).pipe(takeUntilDestroyed()).subscribe(result => {
             const changed = this.mobile() !== result.matches;
@@ -243,6 +276,7 @@ export class AppShellComponent {
             }
         });
         this.router.events.pipe(takeUntilDestroyed()).subscribe(event => {
+            if (event instanceof NavigationStart && this.pageProjectDialog()) this.dismissPageProjectDialog();
             if (event instanceof NavigationEnd) this.closeNavigation();
         });
         // Keep shell protected even if someone deep-links into /tasks
@@ -253,12 +287,14 @@ export class AppShellComponent {
 
     protected openCreateProjectDialog(): void {
         this.closeNavigation();
+        this.pageProjectDialog.set(null);
         this.editingProject.set(null);
         this.createProjectError.set(null);
         this.createProjectDialogVisible.set(true);
     }
 
     protected openEditProjectDialog(projectId: string): void {
+        this.pageProjectDialog.set(null);
         this.closeNavigation();
         const project = this.projectsStore.getProject(projectId);
 
@@ -280,6 +316,9 @@ export class AppShellComponent {
             return;
         }
 
+        const owner = this.auth.userId();
+        const context = this.pageProjectDialog();
+        if (context && (context.userId !== owner || context.sourceUrl !== this.router.url || !this.projectsStore.getProject(context.projectId))) return;
         this.creatingProject.set(true);
         this.createProjectError.set(null);
 
@@ -293,6 +332,7 @@ export class AppShellComponent {
                   })
                 : await this.projectsStore.createProject(payload);
 
+            if (owner !== this.auth.userId() || context !== this.pageProjectDialog()) return;
             if (savedProject.parent_project_id) {
                 this.expandProjectRequest.set({
                     projectId: savedProject.parent_project_id,
@@ -301,6 +341,7 @@ export class AppShellComponent {
 
             this.closeCreateProjectDialog();
         } catch (error: unknown) {
+            if (owner !== this.auth.userId() || context !== this.pageProjectDialog()) return;
             this.createProjectError.set(
                 error instanceof Error ? error.message : 'Failed to save project',
             );
@@ -311,10 +352,11 @@ export class AppShellComponent {
 
     protected closeCreateProjectDialog(): void {
         this.createProjectDialogVisible.set(false);
-        this.restoreMobileActionFocus();
+        this.restoreProjectActionFocus();
     }
 
     protected openDeleteProjectDialog(projectId: string): void {
+        this.pageProjectDialog.set(null);
         this.closeNavigation();
         const project = this.projectsStore.getProject(projectId);
 
@@ -329,7 +371,7 @@ export class AppShellComponent {
 
         this.projectToDelete.set(null);
         this.deleteProjectError.set(null);
-        this.restoreMobileActionFocus();
+        this.restoreProjectActionFocus();
     }
 
     protected async confirmDeleteProject(): Promise<void> {
@@ -337,6 +379,9 @@ export class AppShellComponent {
 
         if (!project || this.deletingProject()) return;
 
+        const owner = this.auth.userId();
+        const context = this.pageProjectDialog();
+        if (context && (context.userId !== owner || context.sourceUrl !== this.router.url || !this.projectsStore.getProject(context.projectId))) return;
         this.deletingProject.set(true);
         this.deleteProjectError.set(null);
 
@@ -344,6 +389,10 @@ export class AppShellComponent {
             // Only this operation determines whether deletion succeeded.
             await this.projectsStore.deleteProject(project.id);
         } catch (error: unknown) {
+            if (owner !== this.auth.userId() || context !== this.pageProjectDialog()) {
+                this.deletingProject.set(false);
+                return;
+            }
             this.deleteProjectError.set(
                 error instanceof Error ? error.message : 'Failed to delete project',
             );
@@ -352,13 +401,19 @@ export class AppShellComponent {
             return;
         }
 
-        // Deletion succeeded. Close the dialog.
-        this.projectToDelete.set(null);
         this.deletingProject.set(false);
-        this.restoreMobileActionFocus();
+        if (owner !== this.auth.userId()) return;
 
-        // Reconcile task state with the database.
+        // Dialog cleanup belongs only to the still-current interaction.
+        if (context === this.pageProjectDialog()) {
+            this.projectToDelete.set(null);
+            this.restoreProjectActionFocus();
+        }
+
+        // Successful persistence still needs reconciliation after same-account navigation.
+        // refreshTasks retains its existing session protections for an account change in flight.
         await this.tasksStore.refreshTasks();
+        if (owner !== this.auth.userId()) return;
 
         // Navigate away if the deleted project was being viewed.
         if (this.router.url.split('?')[0] === `/tasks/project/${project.id}`) {

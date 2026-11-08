@@ -160,7 +160,7 @@ Prioritize security, outages, and data loss ahead of minor defects and feature r
 
 **Decision:** Project names navigate and a distinct chevron expands/collapses nested children. Project Edit/Delete must remain accessible through action menus that reuse existing dialogs and store operations.
 
-**Status:** PR #61 now has the sidebar actions menu but is not merged; review the final icon ordering and accessibility. A project-page More actions menu is a separate next PR.
+**Status:** PR #61 is merged, with name → optional chevron → More actions ordering. Project-page More actions is implemented separately on `codex/project-page-actions`, pending review and merge; it reuses the existing AppShell dialogs through a shell-scoped request coordinator.
 
 ## D19 — Shell and privilege distinction
 

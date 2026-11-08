@@ -10,8 +10,8 @@ Task and nested-project CRUD; authenticated shell; manual task ordering; Markdow
 
 ## Current UI/UX work — Projects
 
-1. **Project sidebar, in progress in PR #61:** name-click navigation, separate child expansion chevrons and an accessible per-project three-dot menu with Edit/Delete. The menu must restore CRUD access before merge.
-2. **Project page, next separate PR:** upper-right three-dot project actions, reusing the same editing dialog, deletion confirmation and store.
+1. **Project sidebar, merged in PR #61:** name-click navigation, separate child expansion chevrons and an accessible shared three-dot menu with Edit/Delete.
+2. **Project page, implemented on `codex/project-page-actions`, not yet merged:** upper-right three-dot project actions, reusing the same editing dialog, deletion confirmation and store.
 3. Preserve deeply nested project navigation, accessible keyboard/touch behavior and mobile drawer focus.
 
 Project **sections** are *not* child projects and are not authorized in these PRs.

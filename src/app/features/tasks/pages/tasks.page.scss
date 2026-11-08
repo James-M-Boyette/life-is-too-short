@@ -267,3 +267,9 @@ section.tasks-page {
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
+.project-page-more {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0;
+}
