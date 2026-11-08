@@ -22,11 +22,11 @@ The branch starts from `origin/main` at `468cd90`, after PR #55 merged.
 - `git diff --check`: passes.
 - `node node_modules/@angular/cli/bin/ng.js build --configuration development`: passes.
 
-## Production-build blocker inherited from main
+## Production build — resolved after main integration
 
-`node node_modules/@angular/cli/bin/ng.js build --configuration production` was run and **fails the existing task-row SCSS size budget**: 8.11kB against an 8kB error threshold (105 bytes over). Its 4kB warning and the sidebar warning (now 4.39kB) are also reported. There are no TypeScript or Angular template compilation errors.
+The initial mobile implementation inherited main's 8.11kB TaskRow stylesheet, exceeding its existing 8kB error threshold. PR #57 resolved that independently. Latest main (`6e5e60b`) has now been merged into this branch without conflicts, preserving the completed mobile implementation.
 
-The task-row stylesheet is untouched: both the working file hash and `origin/main:src/app/features/tasks/components/task-row/task-row.component.scss` are `7fe4fb8e3325f6e1946aca061fee98a69c199697`. No budgets were increased and no unrelated task-card CSS was changed to mask this baseline problem. This must be resolved before deployment.
+`pnpm exec ng build --configuration production` now **passes**. TaskRow is 7.49kB; the sidebar is 4.36kB. Both still exceed the 4kB warning threshold, but neither exceeds the unchanged 8kB error threshold. This follow-up does not alter TaskRow styles or budgets.
 
 ## Browser verification
 
@@ -42,3 +42,22 @@ Checks used the real AppShell, TopBar, AppSidebar, TasksPage and task components
 ## Remaining acceptance
 
 Physical iPhone/Safari checks remain for safe-area insets, browser chrome expanding/collapsing, on-screen keyboard, touch scrolling/taps and VoiceOver. Also verify ordinary authenticated workflows against a disposable development account; browser checks above used synthetic stores and did not submit task/project mutations. Today Planning and Upcoming retain their existing board layouts and are deliberately deferred from this shell PR.
+
+## Navigation background follow-up
+
+The desktop grid stretches `.desktop-navigation` to the available shell height, but only its content-sized `.sidebar-navigation` previously painted the sidebar color. The new wrapper/portal relationship also left a chain of percentage heights that could push mobile account controls below an unnecessarily full-height navigation block.
+
+The full-height desktop wrapper and body-appended drawer now own the sidebar background. The relocated `aside.app-sidebar` has a border-box minimum height of 100% of its available navigation surface and can grow with content. The sidebar component and inner nav use their natural content height. Only the desktop wrapper or PrimeNG drawer content owns vertical scrolling. No arbitrary 100vh overrides or extra portal instances were introduced.
+
+Real Chromium measurements with synthetic data and real components:
+
+- Desktop, 1280×900 requested: short navigation, aside and shell all end at y=908. The navigation surface is 836px high while tall main content scrolls through 3239px. With an empty Inbox main view, the same surface still reaches the shell bottom.
+- Long desktop project tree: wrapper scrollHeight 1372px versus clientHeight 836px. Scrolling navigation to 536.8px leaves main scrollTop at 0. ArrowRight resizing still changes width to 270px.
+- Mobile 390×844: short navigation has content scrollHeight equal to clientHeight (759px), so no unnecessary scroll. The account area ends at y=736.4 with the same sidebar surface continuing below it. Long navigation has scrollHeight 1916px and independently scrolls to Sign Out; Shift+Tab/Tab remains trapped within the drawer.
+- Desktop, aside and drawer backgrounds resolve to the same semantic sidebar color (`rgb(234, 242, 241)` in Maritime & Coral). There is one sidebar instance; expanded child projects survive the mobile-to-desktop portal transition. Background inertness is removed on that transition.
+
+Final integration checks: `pnpm exec ng test --watch=false` passes all 214 tests across 18 files; production build and `git diff --check` pass. No new CSS-only tests were added: existing navigation/portal interaction coverage and actual browser geometry checks cover this presentation correction.
+
+### Deferred design guidance
+
+Keep current account controls and the application top bar in this PR. The conceptual desktop/mobile screenshots guide hierarchy, not literal styling: persistent desktop navigation; minimal mobile navigation/Add Task controls with the page title beneath. In the future account-menu design, use `pi pi-chart-line` in place of the second initials badge. Names and initials in the reference are illustrative, not assumed authentication data. That redesign is deferred to a separate PR.

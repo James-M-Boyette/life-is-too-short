@@ -16,11 +16,7 @@
         //     var(--app-sidebar-width)
         //     minmax(0, 1fr);
 
-        .desktop-navigation { min-height: 0; overflow-y: auto; }
-        aside.app-sidebar {
-            min-width: 0;
-            overflow-y: auto;
-        }
+        .desktop-navigation { min-width: 0; min-height: 0; overflow-y: auto; background: var(--surface-sidebar); }
 
         div.sidebar-resize-handle {
             width: 6px;
@@ -72,7 +68,8 @@
 }
 
 // Also applies after CDK relocates the same aside into PrimeNG's body-appended drawer.
-.app-sidebar { min-width: 0; }
+// The grid wrapper / drawer content owns scrolling; this surface can grow with its content.
+.app-sidebar { min-width: 0; min-height: 100%; box-sizing: border-box; background: var(--surface-sidebar); }
 .mobile-account { padding: var(--space-4); border-top: 1px solid var(--color-border-subtle); background: var(--surface-sidebar); }
 .mobile-account h2 { margin: 0 0 var(--space-3); font-size: .875rem; }
 :host .app-shell.is-mobile {

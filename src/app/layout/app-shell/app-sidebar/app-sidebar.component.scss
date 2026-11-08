@@ -1,6 +1,5 @@
 :host {
     display: block;
-    height: 100%;
 }
 
 .sidebar-navigation {
@@ -8,7 +7,7 @@
     flex-direction: column;
     gap: var(--space-6);
 
-    min-height: 100%;
+    // The shell/drawer owns the full-height surface; navigation keeps its natural content height.
     padding: var(--space-3);
 
     background: var(--surface-sidebar);

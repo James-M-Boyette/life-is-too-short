@@ -58,7 +58,7 @@ export class AppShellComponent {
     protected readonly sidebarPortal = signal<DomPortal | null>(null);
     protected readonly mobile = signal(this.breakpoints.isMatched('(width < 768px)'));
     protected readonly navigationOpen = signal(false);
-    protected readonly drawerStyle = { width: 'min(80vw, 20rem)', height: '100dvh', maxHeight: '100dvh', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' };
+    protected readonly drawerStyle = { background: 'var(--surface-sidebar)', width: 'min(80vw, 20rem)', height: '100dvh', maxHeight: '100dvh', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' };
 
     protected openNavigation(): void { if (this.mobile()) this.navigationOpen.set(true); }
     protected closeNavigation(): void {
