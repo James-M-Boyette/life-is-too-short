@@ -1,10 +1,16 @@
 # Medium-Term Goals — Life Is Too Short
 
-*Last reviewed: November 5, 2026*
+*Last reviewed: November 8, 2026*
 
 ## Objective
 
 Evolve the reliable core into a useful, enjoyable everyday planning application without creating unnecessary architectural or operational complexity.
+
+## Current prerequisites
+
+The mobile shell, account popover, collapsible desktop sidebar, compact/expanded cards, Markdown descriptions, combined editing and planned/due scheduling already exist on main. The immediate UI priority is completing project sidebar/page actions followed by a deliberate mobile Today/Upcoming redesign, alongside continuous security/backup readiness work.
+
+Project **sections** remain distinct from nested child projects and are not yet approved for implementation.
 
 ## 1. Recurring tasks
 
