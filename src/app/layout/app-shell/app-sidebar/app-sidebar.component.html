@@ -10,7 +10,7 @@
         </button>
 
         <a
-            (click)="navigated.emit()" routerLink="/tasks"
+            (click)="onNavigationClick($event)" routerLink="/tasks"
             routerLinkActive="active"
             [routerLinkActiveOptions]="{ exact: true }"
             pTooltip="A comprehensive view across every project, including unassigned tasks"
@@ -19,7 +19,7 @@
             All Tasks
         </a>
         <a
-            (click)="navigated.emit()" routerLink="/tasks/inbox"
+            (click)="onNavigationClick($event)" routerLink="/tasks/inbox"
             routerLinkActive="active"
             pTooltip="Start here: tasks that haven't been assigned a project or due date yet"
             tooltipPosition="bottom"
@@ -27,9 +27,9 @@
             Inbox
         </a>
 
-        <a (click)="navigated.emit()" routerLink="/tasks/today" routerLinkActive="active"> Today </a>
+        <a (click)="onNavigationClick($event)" routerLink="/tasks/today" routerLinkActive="active"> Today </a>
 
-        <a (click)="navigated.emit()" routerLink="/tasks/upcoming" routerLinkActive="active"> Upcoming </a>
+        <a (click)="onNavigationClick($event)" routerLink="/tasks/upcoming" routerLinkActive="active"> Upcoming </a>
     </section>
 
     <section class="project-navigation">
@@ -62,31 +62,31 @@
         >
             <ng-template pTemplate="default" let-node>
                 <div class="project-tree-item">
-                    <a (click)="navigated.emit()" [routerLink]="['/tasks/project', node.key]" routerLinkActive="active"
-                        (dblclick)="toggleProjectChildren(node)">
-                        {{ node.label }}
+                    <a (click)="onNavigationClick($event)" (keydown)="onProjectControlKeydown($event)"
+                        [routerLink]="['/tasks/project', node.key]" routerLinkActive="active"
+                        ariaCurrentWhenActive="page">
+                        <span>{{ node.label }}</span>
                     </a>
-
-                    <div class="action-buttons-container">
-                        <button
-                            type="button"
-                            class="edit-project-btn"
-                            [attr.aria-label]="'Edit ' + node.label"
-                            (click)="editProject.emit(node.key)"
-                        >
-                            <i class="pi pi-pencil" aria-hidden="true"></i>
+                    @if (node.children?.length) {
+                        <button type="button" class="project-toggle"
+                            [attr.aria-label]="(node.expanded ? 'Collapse ' : 'Expand ') + node.label"
+                            [attr.aria-expanded]="!!node.expanded"
+                            (keydown)="onProjectControlKeydown($event)"
+                            (click)="$event.stopPropagation(); toggleProjectChildren(node)">
+                            <i [class]="node.expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" aria-hidden="true"></i>
                         </button>
-                        <button
-                            type="button"
-                            class="delete-project-btn"
-                            [attr.aria-label]="'Delete ' + node.label"
-                            (click)="deleteProject.emit(node.key)"
-                        >
-                            <i class="pi pi-trash" aria-hidden="true"></i>
-                        </button>
-                    </div>
+                    }
+                    <button type="button" class="project-more" aria-haspopup="menu" aria-controls="sidebar-project-actions"
+                        [attr.aria-label]="'More actions for ' + node.label" [pTooltip]="'More actions for ' + node.label"
+                        [attr.aria-expanded]="menuOpen() && selectedProjectId() === node.key"
+                        (keydown)="onProjectControlKeydown($event)" (click)="openProjectMenu($event, node.key)">
+                        <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
+                    </button>
                 </div>
             </ng-template>
         </p-tree>
     </section>
 </nav>
+
+<p-menu #projectMenu id="sidebar-project-actions" [model]="menuItems" [popup]="true"
+    [appendTo]="overlayParent()" ariaLabel="Project actions" (onShow)="menuShown()" (onHide)="menuHidden()" />

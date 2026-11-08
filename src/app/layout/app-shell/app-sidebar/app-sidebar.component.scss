@@ -172,58 +172,63 @@
     }
 }
 
-div.project-tree-item {
+.project-toggle, .project-more {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 2.25rem;
+    min-height: 2.25rem;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+
+    &[aria-expanded='true'] {
+        color: var(--text-primary);
+    }
+
+    &:hover {
+        background: var(--color-surface-hover);
+    }
+}
+
+.project-tree-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-2);
     width: 100%;
+    border-radius: var(--radius-md);
 
-    a {
-        flex: 1;
-        min-width: 0;
+    &:hover {
+        background: var(--color-surface-hover);
     }
 
-    div.action-buttons-container {
-        display: flex;
+    &:has(a.active) {
+        background: var(--color-surface-selected);
+    }
 
-        button.edit-project-btn,
-        button.delete-project-btn {
-            display: grid;
-            place-items: center;
-            width: 1.75rem;
-            height: 1.75rem;
-            flex-shrink: 0;
+    a span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
-            color: var(--text-secondary);
-            background: transparent;
-            border: 0;
-            border-radius: var(--radius-md);
-            cursor: pointer;
-
-            &:hover {
-                color: var(--text-primary);
-                background: var(--color-surface-hover);
-            }
-
-            &:focus-visible {
-                outline: 2px solid var(--color-focus-ring);
-                outline-offset: 2px;
-            }
-        }
-
-        button.delete-project-btn {
-            color: var(--color-status-danger);
-
-            &:hover {
-                color: var(--color-status-danger-hover);
-            }
-        }
+    a:focus-visible,
+    button:focus-visible {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: -2px;
     }
 }
 
 :host ::ng-deep {
     p-tree {
+
+        // Custom sibling button supplies ARIA state and native keyboard activation.
+        .p-tree-node-toggle-button {
+            display: none;
+        }
 
         .p-tree-node-content {
             width: 100%;
@@ -238,7 +243,20 @@ div.project-tree-item {
 
 @media (width < 768px) {
     .focus-navigation > a, .focus-navigation > button, .project-navigation a,
-    .project-tree-actions button { min-height: 2.75rem; }
+    .project-tree-actions button {
+        min-height: 2.75rem;
+    }
     .project-navigation button.add-project-btn,
-    .action-buttons-container button { min-width: 2.75rem; min-height: 2.75rem; }
+    .project-toggle {
+        min-width: 2.75rem;
+        min-height: 2.75rem;
+    }
+}
+
+// Reserve the action slot even when its icon is subdued; names never move on hover.
+.project-more { opacity: 0; transition: opacity 120ms ease; }
+.project-tree-item:is(:hover, :focus-within) .project-more,
+.project-more[aria-expanded='true'] { opacity: 1; }
+@media (hover: none), (pointer: coarse), (width < 768px) {
+    .project-more { opacity: 1; min-width: 2.75rem; min-height: 2.75rem; }
 }

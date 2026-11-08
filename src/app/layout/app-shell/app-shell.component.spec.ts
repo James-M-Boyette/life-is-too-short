@@ -91,6 +91,27 @@ describe('responsive AppShellComponent', () => {
         }
     });
 
+    it('keeps the mobile drawer open for chevrons and modified links, with the same interactions on desktop', async () => {
+        await open();
+        button('Expand Parent').click(); await settle();
+        expect(button('Show navigation').getAttribute('aria-expanded')).toBe('true');
+        expect(TestBed.inject(Router).url).toBe('/');
+        const child = () => document.querySelector('.app-sidebar a[href="/tasks/project/Child"]') as HTMLAnchorElement;
+        child().dispatchEvent(new MouseEvent('click', { ctrlKey: true, bubbles: true, cancelable: true }));
+        await settle();
+        expect(button('Show navigation').getAttribute('aria-expanded')).toBe('true');
+        expect(TestBed.inject(Router).url).toBe('/');
+        child().click(); await settle();
+        expect(button('Show navigation').getAttribute('aria-expanded')).toBe('false');
+        expect(TestBed.inject(Router).url).toBe('/tasks/project/Child');
+        await resize(false);
+        button('Collapse Parent').click(); await settle();
+        expect(child()).toBeNull();
+        button('Expand Parent').click(); await settle();
+        expect(child()).toBeTruthy();
+        expect(TestBed.inject(Router).url).toBe('/tasks/project/Child');
+    });
+
     it('closes navigation when routing is initiated outside the sidebar', async () => {
         await open();
         await TestBed.inject(Router).navigateByUrl('/tasks/upcoming'); await settle();
@@ -234,17 +255,23 @@ describe('responsive AppShellComponent', () => {
         expect(signOut).toHaveBeenCalledTimes(2);
     });
 
-    it('opens existing project dialogs from the drawer without leaving it active', async () => {
+    it('routes sidebar menu actions into existing project dialogs and closes the mobile drawer', async () => {
         await open(); button('Create a project').click(); await settle();
         expect(button('Show navigation').getAttribute('aria-expanded')).toBe('false');
         expect(document.querySelector('app-project-editor')).toBeTruthy();
         button('Cancel').click(); await settle();
         expect(document.activeElement).toBe(button('Show navigation'));
-        await open(); button('Edit Parent').click(); await settle();
+        await open();
+        button('More actions for Parent').click(); await settle();
+        expect(document.querySelector('.p-drawer [role="menu"]')).toBeTruthy();
+        expect(button('Show navigation').getAttribute('aria-expanded')).toBe('true');
+        (Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"] a')).find(item => item.textContent?.trim() === 'Edit project'))!.click(); await settle();
         expect((document.querySelector('app-project-editor input') as HTMLInputElement).value).toBe('Parent');
         expect(button('Show navigation').getAttribute('aria-expanded')).toBe('false');
         button('Cancel').click(); await settle();
-        await open(); button('Delete Parent').click(); await settle();
+        await open();
+        button('More actions for Parent').click(); await settle();
+        (Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"] a')).find(item => item.textContent?.trim() === 'Delete project'))!.click(); await settle();
         expect(document.body.textContent).toContain('Delete project?');
         expect(button('Show navigation').getAttribute('aria-expanded')).toBe('false');
         button('Cancel').click(); await settle();

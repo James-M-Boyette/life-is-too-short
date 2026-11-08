@@ -30,11 +30,12 @@
             <app-sidebar
                 [projects]="projectsStore.projectTree()"
                 [expandProjectRequest]="expandProjectRequest()"
+                [available]="mobile() ? navigationOpen() : !desktopCollapsed()" [mobile]="mobile()"
+                (editProject)="openEditProjectDialog($event)"
+                (deleteProject)="openDeleteProjectDialog($event)"
                 (navigated)="closeNavigation()"
                 (createTask)="openTaskDialog()"
                 (createProject)="openCreateProjectDialog()"
-                (editProject)="openEditProjectDialog($event)"
-                (deleteProject)="openDeleteProjectDialog($event)"
             />
         </aside></div>
 
