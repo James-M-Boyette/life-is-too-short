@@ -122,7 +122,7 @@
                     [projects]="projectsStore.projectTree()"
                     [contentFeedback]="contentFeedback()"
                     [disabled]="tasksStore.mutating()"
-                    [draggable]="true"
+                    [draggable]="draggingAvailable()"
                     [sortable]="true"
                     (taskReordered)="onTaskReordered($event)"
                     dropListId="board-today"
@@ -180,14 +180,16 @@
                     @if (unscheduledRescheduleError(); as message) {
                         <p role="alert">{{ message }}</p>
                     }
-                    <p class="schedule-drop-hint">Drop to clear the planned date; due dates still apply.</p>
+                    @if (draggingAvailable()) {
+                        <p class="schedule-drop-hint">Drop to clear the planned date; due dates still apply.</p>
+                    }
 
                     <app-task-list
                         [tasks]="unscheduledTasks()"
                         [projects]="projectsStore.projectTree()"
                         [contentFeedback]="contentFeedback()"
                         [disabled]="tasksStore.mutating()"
-                        [draggable]="true"
+                        [draggable]="draggingAvailable()"
                         dropListId="board-unscheduled"
                         [connectedDropLists]="todayDropLists"
                         [destinationDate]="null"
@@ -227,7 +229,7 @@
                         [projects]="projectsStore.projectTree()"
                         [contentFeedback]="contentFeedback()"
                         [disabled]="tasksStore.mutating()"
-                        [draggable]="true"
+                        [draggable]="draggingAvailable()"
                         dropListId="board-overdue"
                         [connectedDropLists]="todayDropLists"
                         [acceptsDrops]="false"
@@ -282,7 +284,7 @@
                         [projects]="projectsStore.projectTree()"
                         [contentFeedback]="contentFeedback()"
                         [disabled]="tasksStore.mutating()"
-                        [draggable]="true"
+                        [draggable]="draggingAvailable()"
                         [sortable]="true"
                         (taskReordered)="onTaskReordered($event)"
                         [dropListId]="'board-upcoming-' + i"
@@ -332,7 +334,7 @@
                     [projects]="projectsStore.projectTree()"
                     [contentFeedback]="contentFeedback()"
                     [disabled]="tasksStore.mutating()"
-                    [draggable]="view() === 'inbox' || view() === 'project'"
+                    [draggable]="draggingAvailable() && (view() === 'inbox' || view() === 'project')"
                     [sortable]="view() === 'inbox' || view() === 'project'"
                     orderField="project_position"
                     [dropListId]="view() === 'inbox' ? 'tasks-inbox' : 'tasks-project'"

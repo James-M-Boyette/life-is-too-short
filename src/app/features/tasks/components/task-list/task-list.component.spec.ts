@@ -51,6 +51,33 @@ describe('TaskListComponent', () => {
         return { listElement, list, drags, planned, due };
     }
 
+    it('rejects late CDK drops while disabled and restores existing desktop sorting', () => {
+        const { listElement, list, drags } = groupedList();
+        const reordered = vi.fn();
+        const dropped = vi.fn();
+        component.taskReordered.subscribe(reordered);
+        component.taskDropped.subscribe(dropped);
+        fixture.componentRef.setInput('draggable', false);
+        fixture.detectChanges();
+        expect(list.disabled).toBe(true);
+        expect(list.sortingDisabled).toBe(true);
+        expect(drags.every(drag => drag.disabled)).toBe(true);
+        expect(list.enterPredicate(drags[0], list)).toBe(false);
+        expect(list.sortPredicate(1, drags[0], list)).toBe(false);
+        const event = { item: drags[0], previousContainer: list, container: list, previousIndex: 0, currentIndex: 1 };
+        listElement.triggerEventHandler('cdkDropListDropped', event);
+        listElement.triggerEventHandler('cdkDropListDropped', { ...event, previousContainer: { id: 'external' } });
+        expect(reordered).not.toHaveBeenCalled();
+        expect(dropped).not.toHaveBeenCalled();
+        fixture.componentRef.setInput('draggable', true);
+        fixture.detectChanges();
+        expect(list.disabled).toBe(false);
+        expect(drags.every(drag => !drag.disabled)).toBe(true);
+        listElement.triggerEventHandler('cdkDropListDropped', event);
+        expect(reordered).toHaveBeenCalledTimes(1);
+        expect(dropped).not.toHaveBeenCalled();
+    });
+
     it('renders visual headings within one drop list while keeping each section in its supplied order', () => {
         const { list } = groupedList();
         expect(fixture.debugElement.queryAll(By.directive(CdkDropList))).toHaveLength(1);

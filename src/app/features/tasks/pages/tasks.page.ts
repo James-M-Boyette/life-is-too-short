@@ -1,3 +1,7 @@
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
+import { MOBILE_LAYOUT_QUERY } from '@/shared/utils/mobile-layout';
 /* ToDo:
     [x] Extract 'TaskView'
 
@@ -52,6 +56,12 @@ import type { TaskDateField, TaskDateSelection, TaskScheduleRequest } from '@/fe
     styleUrls: ['./tasks.page.scss'],
 })
 export class TasksPage {
+    private readonly breakpoints = inject(BreakpointObserver);
+    // One viewport subscription per page; rows/lists receive the effective capability.
+    protected readonly draggingAvailable = toSignal(
+        this.breakpoints.observe(MOBILE_LAYOUT_QUERY).pipe(map(state => !state.matches)),
+        { initialValue: !this.breakpoints.isMatched(MOBILE_LAYOUT_QUERY) },
+    );
     protected readonly contentFeedback = signal<Partial<Record<string, TaskContentFeedback>>>({});
     private contentAttempt = 0;
     private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -388,6 +398,7 @@ export class TasksPage {
     ];
 
     protected async onTaskDropped(event: TaskScheduleDrop): Promise<void> {
+        if (!this.draggingAvailable()) return;
         if (event.placement && this.tasksStore.mutating()) return;
         if (event.task.planned_date === event.plannedDate && !event.placement) {
             return;
@@ -406,6 +417,7 @@ export class TasksPage {
     }
 
     protected async onTaskReordered(event: TaskReorder): Promise<void> {
+        if (!this.draggingAvailable()) return;
         const { task, previousIndex, currentIndex, tasks, field } = event;
 
         // Work on a copy. Never mutate a signal-derived input array.

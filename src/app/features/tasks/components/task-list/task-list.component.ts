@@ -29,6 +29,7 @@ export class TaskListComponent {
     readonly planningTransition = input<TaskGroupPlanningTransition | null>(null);
     private readonly planningInsertionTarget = viewChild<ElementRef<HTMLElement>>('planningInsertionTarget');
     protected readonly planningTarget = computed(() => {
+        if (!this.draggable()) return null;
         const transition = this.planningTransition();
         if (!transition) return null;
         const source = this.groups().find(group => group.id === transition.sourceGroupId);
@@ -74,9 +75,10 @@ export class TaskListComponent {
 
     readonly taskReordered = output<TaskReorder>();
 
-    protected readonly canEnter = () => this.acceptsDrops();
+    protected readonly canEnter = () => this.draggable() && this.acceptsDrops();
 
     protected readonly canSort = (index: number, drag: CdkDrag<Task>, drop: CdkDropList<Task[]>): boolean => {
+        if (!this.draggable()) return false;
         // Entering from another column still changes scheduling, not just manual order.
         if (drag.dropContainer !== drop || !this.groups().length) return true;
         const group = this.groupByTask().get(drag.data.id);
@@ -87,7 +89,7 @@ export class TaskListComponent {
     };
 
     protected onDrop(event: CdkDragDrop<Task[]>): void {
-        if (this.disabled() || event.isPointerOverContainer === false) return;
+        if (!this.draggable() || this.disabled() || event.isPointerOverContainer === false) return;
         const task = event.item.data as Task;
 
         // A drop within the same list changes manual ordering.

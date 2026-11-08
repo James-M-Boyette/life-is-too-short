@@ -12,7 +12,7 @@
     transition: transform 180ms ease;
 }
 
-.list.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+.list.cdk-drop-list-dragging:not(.cdk-drop-list-disabled) .cdk-drag:not(.cdk-drag-placeholder) {
     transition: transform 180ms ease;
 }
 
@@ -72,9 +72,9 @@
     }
 }
 
-.list.cdk-drop-list-dragging .list__planning-target:hover {
+.list.cdk-drop-list-dragging:not(.cdk-drop-list-disabled) .list__planning-target:hover {
     border-color: var(--color-action-primary);
     background: var(--color-surface-hover);
 }
 
-.list.cdk-drop-list-dragging { --task-drag-cursor: grabbing; cursor: grabbing; }
+.list.cdk-drop-list-dragging:not(.cdk-drop-list-disabled) { --task-drag-cursor: grabbing; cursor: grabbing; }
