@@ -1,6 +1,5 @@
 :host {
     display: block;
-    height: 100%;
 }
 
 .sidebar-navigation {
@@ -8,7 +7,7 @@
     flex-direction: column;
     gap: var(--space-6);
 
-    min-height: 100%;
+    // The shell/drawer owns the full-height surface; navigation keeps its natural content height.
     padding: var(--space-3);
 
     background: var(--surface-sidebar);
@@ -235,4 +234,11 @@ div.project-tree-item {
             min-width: 0;
         }
     }
+}
+
+@media (width < 768px) {
+    .focus-navigation > a, .focus-navigation > button, .project-navigation a,
+    .project-tree-actions button { min-height: 2.75rem; }
+    .project-navigation button.add-project-btn,
+    .action-buttons-container button { min-width: 2.75rem; min-height: 2.75rem; }
 }

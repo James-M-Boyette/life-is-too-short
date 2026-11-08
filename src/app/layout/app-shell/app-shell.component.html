@@ -1,38 +1,30 @@
-<!-- App Decomp:
-    - (Left) App's Name (currently a simple div + span)
-        > ToDo:
-            [] Make this a component
-            [] Make it stand out as a hero, etc.
-    - (Center) Navigation (currently a simple nav with links)
-        > ToDo:
-            [] Make this a component
-            [] Add dropdowns, etc.
-    - (Right) User Info (currently just their name + "log out" button)
-        > ToDo:
-            [] Make this a component
-            [] Add user avatar, "Settings" etc.
-
--->
-<div class="app-shell">
+<div class="app-shell" [class.is-mobile]="mobile()" [attr.inert]="navigationOpen() ? '' : null">
     <!-- App Header -->
-    <app-top-bar [userEmail]="userEmail()" (signOut)="signOut()" />
+    <app-top-bar [userEmail]="userEmail()" [mobile]="mobile()" [navigationOpen]="navigationOpen()" (showNavigation)="openNavigation()" (createTask)="openTaskDialog()" (signOut)="signOut()" />
 
-    <div class="app-body" [style.grid-template-columns]="sidebarWidth() + 'px 6px minmax(0, 1fr)'">
+    <div class="app-body" [style.grid-template-columns]="mobile() ? 'minmax(0, 1fr)' : sidebarWidth() + 'px 6px minmax(0, 1fr)'">
         <!-- App Sidebar -->
-        <aside class="app-sidebar">
+        <div class="desktop-navigation" [hidden]="mobile()"><aside #sidebarContent class="app-sidebar">
             <app-sidebar
                 [projects]="projectsStore.projectTree()"
                 [expandProjectRequest]="expandProjectRequest()"
+                (navigated)="closeNavigation()"
                 (createTask)="openTaskDialog()"
                 (createProject)="openCreateProjectDialog()"
                 (editProject)="openEditProjectDialog($event)"
                 (deleteProject)="openDeleteProjectDialog($event)"
             />
-        </aside>
+            @if (mobile()) {
+                <section class="mobile-account" aria-label="Account and appearance">
+                    <h2>Account &amp; appearance</h2>
+                    <app-account-controls [userEmail]="userEmail()" (signOut)="signOut()" />
+                </section>
+            }
+        </aside></div>
 
         <!-- Vertical Border Handle (for re-sizing) -->
         <div
-            class="sidebar-resize-handle"
+            class="sidebar-resize-handle" [hidden]="mobile()"
             role="separator"
             aria-label="Resize sidebar"
             aria-orientation="vertical"
@@ -55,6 +47,14 @@
         </main>
     </div>
 </div>
+
+<p-drawer #navigationDrawer [visible]="mobile() && navigationOpen()" (visibleChange)="!$event && closeNavigation()"
+    header="Navigation" ariaCloseLabel="Close navigation" [modal]="true" [blockScroll]="true"
+    [dismissible]="true" [closeOnEscape]="true" [style]="drawerStyle" appendTo="body"
+    [pt]="{ root: { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Navigation', id: 'mobile-navigation' } }"
+    (onShow)="navigationShown()">
+    <ng-template #content><ng-template [cdkPortalOutlet]="mobile() ? sidebarPortal() : null" /></ng-template>
+</p-drawer>
 
 <p-dialog
     header="Add Task"
@@ -91,7 +91,7 @@
     [header]="projectDialogTitle()"
     [modal]="true"
     [visible]="createProjectDialogVisible()"
-    (visibleChange)="createProjectDialogVisible.set($event)"
+    (visibleChange)="!$event && closeCreateProjectDialog()"
     [closable]="!creatingProject()"
     [closeOnEscape]="!creatingProject()"
     [dismissableMask]="false"

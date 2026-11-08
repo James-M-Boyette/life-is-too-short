@@ -10,7 +10,7 @@
         </button>
 
         <a
-            routerLink="/tasks"
+            (click)="navigated.emit()" routerLink="/tasks"
             routerLinkActive="active"
             [routerLinkActiveOptions]="{ exact: true }"
             pTooltip="A comprehensive view across every project, including unassigned tasks"
@@ -19,7 +19,7 @@
             All Tasks
         </a>
         <a
-            routerLink="/tasks/inbox"
+            (click)="navigated.emit()" routerLink="/tasks/inbox"
             routerLinkActive="active"
             pTooltip="Start here: tasks that haven't been assigned a project or due date yet"
             tooltipPosition="bottom"
@@ -27,9 +27,9 @@
             Inbox
         </a>
 
-        <a routerLink="/tasks/today" routerLinkActive="active"> Today </a>
+        <a (click)="navigated.emit()" routerLink="/tasks/today" routerLinkActive="active"> Today </a>
 
-        <a routerLink="/tasks/upcoming" routerLinkActive="active"> Upcoming </a>
+        <a (click)="navigated.emit()" routerLink="/tasks/upcoming" routerLinkActive="active"> Upcoming </a>
     </section>
 
     <section class="project-navigation">
@@ -62,7 +62,7 @@
         >
             <ng-template pTemplate="default" let-node>
                 <div class="project-tree-item">
-                    <a [routerLink]="['/tasks/project', node.key]" routerLinkActive="active"
+                    <a (click)="navigated.emit()" [routerLink]="['/tasks/project', node.key]" routerLinkActive="active"
                         (dblclick)="toggleProjectChildren(node)">
                         {{ node.label }}
                     </a>

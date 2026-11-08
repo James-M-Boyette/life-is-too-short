@@ -1,27 +1,15 @@
-import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
-import { ButtonModule } from 'primeng/button';
-import { PALETTE_OPTIONS, type PaletteId } from '@/shared/theme/theme-palette';
-import { ThemePaletteService } from '@/shared/theme/theme-palette.service';
-
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { AccountControlsComponent } from '../account-controls/account-controls.component';
 @Component({
-    selector: 'app-top-bar',
-    standalone: true,
-    imports: [ButtonModule],
-    templateUrl: './top-bar.component.html',
-    styleUrl: './top-bar.component.scss',
+    selector: 'app-top-bar', standalone: true, imports: [AccountControlsComponent],
+    templateUrl: './top-bar.component.html', styleUrl: './top-bar.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TopBarComponent {
     readonly userEmail = input<string | null>(null);
+    readonly mobile = input(false);
+    readonly navigationOpen = input(false);
+    readonly showNavigation = output<void>();
+    readonly createTask = output<void>();
     readonly signOut = output<void>();
-
-    protected readonly paletteService = inject(ThemePaletteService);
-    protected readonly paletteOptions = PALETTE_OPTIONS;
-
-    protected changePalette(event: Event): void {
-        const value = (event.target as HTMLSelectElement).value as PaletteId;
-        if (this.paletteOptions.some((option) => option.id === value)) {
-            this.paletteService.setPalette(value);
-        }
-    }
 }

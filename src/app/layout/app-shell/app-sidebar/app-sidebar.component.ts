@@ -26,6 +26,7 @@ export class AppSidebarComponent {
         toProjectTreeNodes(this.projects(), this.expandedProjectIds()),
     );
 
+    readonly navigated = output<void>();
     readonly createTask = output<void>();
 
     readonly createProject = output<void>();

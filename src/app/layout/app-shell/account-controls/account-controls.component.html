@@ -1,0 +1,22 @@
+<div class="palette-preview">
+    <label for="palette-preview-select">Palette preview</label>
+    <select
+        id="palette-preview-select"
+        [value]="paletteService.palette()"
+        (change)="changePalette($event)"
+        aria-label="Preview color palette"
+    >
+        @for (option of paletteOptions; track option.id) {
+            <option [value]="option.id">{{ option.label }}</option>
+        }
+    </select>
+</div>
+
+@if (userEmail()) {
+    <span class="user-email">{{ userEmail() }}</span>
+}
+
+<button pButton type="button" (click)="signOut.emit()">
+    <i class="pi pi-sign-out" pButtonIcon></i>
+    <span pButtonLabel>Sign Out</span>
+</button>

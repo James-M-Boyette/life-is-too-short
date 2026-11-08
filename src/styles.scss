@@ -11,3 +11,6 @@ body {
     background: var(--color-surface-page);
     color: var(--color-text-primary);
 }
+
+// The mobile shell owns its viewport; avoid the browser's default body margin.
+@media (width < 768px) { body { margin: 0; } }
