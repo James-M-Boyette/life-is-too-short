@@ -5,7 +5,8 @@
     div.app-shell {
         height: 100%;
         display: grid;
-        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr);
+        &.is-mobile { grid-template-rows: auto minmax(0, 1fr); }
     }
 
     div.app-body {
@@ -70,8 +71,6 @@
 // Also applies after CDK relocates the same aside into PrimeNG's body-appended drawer.
 // The grid wrapper / drawer content owns scrolling; this surface can grow with its content.
 .app-sidebar { min-width: 0; min-height: 100%; box-sizing: border-box; background: var(--surface-sidebar); }
-.mobile-account { padding: var(--space-4); border-top: 1px solid var(--color-border-subtle); background: var(--surface-sidebar); }
-.mobile-account h2 { margin: 0 0 var(--space-3); font-size: .875rem; }
 :host .app-shell.is-mobile {
     .app-main { padding: var(--space-3); padding-bottom: max(var(--space-3), env(safe-area-inset-bottom)); padding-left: max(var(--space-3), env(safe-area-inset-left)); padding-right: max(var(--space-3), env(safe-area-inset-right)); }
     .sidebar-resize-handle, .desktop-navigation { display: none; }

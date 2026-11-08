@@ -14,6 +14,7 @@ import type { ProjectNode } from '@/features/projects/models/project.model';
 import { TaskCreateComponent } from '@/features/tasks/components/task-create/task-create.component';
 import { CalendarClockService } from '@/shared/services/calendar-clock.service';
 import { ThemePaletteService } from '@/shared/theme/theme-palette.service';
+import { AccountControlsComponent } from './account-controls/account-controls.component';
 import { PALETTE_OPTIONS } from '@/shared/theme/theme-palette';
 
 @Component({ standalone: true, template: '<h1>Test task page</h1>' })
@@ -109,7 +110,9 @@ describe('responsive AppShellComponent', () => {
         expect(fixture.debugElement.query(By.directive(AppSidebarComponent)).componentInstance).toBe(sidebar);
         expect(fixture.nativeElement.querySelector('.desktop-navigation .app-sidebar a[href="/tasks/project/Child"]')).toBeTruthy();
         expect(button('Show navigation')).toBeUndefined();
-        expect(fixture.nativeElement.querySelector('.app-top-bar app-account-controls')?.textContent).toContain('test@example.com');
+        expect(fixture.nativeElement.querySelector('app-top-bar')).toBeNull();
+        expect(fixture.nativeElement.querySelectorAll('app-account-controls')).toHaveLength(1);
+        expect(fixture.nativeElement.querySelector('.desktop-navigation .account-trigger')?.textContent).toContain('test');
         const separator = fixture.nativeElement.querySelector('[role="separator"]');
         separator.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); await settle();
         expect(separator.getAttribute('aria-valuenow')).toBe('270');
@@ -128,13 +131,40 @@ describe('responsive AppShellComponent', () => {
         expect(document.querySelector('app-task-create')).toBeNull();
         expect(document.activeElement).toBe(button('Add task'));
         await open();
-        expect(document.querySelector('.mobile-account')?.textContent).toContain('test@example.com');
-        const select = document.querySelector('.mobile-account select') as HTMLSelectElement;
-        select.value = PALETTE_OPTIONS[1].id; select.dispatchEvent(new Event('change')); await settle();
+        const account = fixture.debugElement.query(By.directive(AccountControlsComponent)).componentInstance;
+        button('Account menu').click(); await settle();
+        expect(document.querySelector('.p-popover')?.textContent).toContain('test@example.com');
+        expect(document.querySelector('.p-popover')?.closest('.p-drawer')).toBeTruthy();
+        button('Appearance').click(); await settle();
+        (document.querySelector(`input[value="${PALETTE_OPTIONS[1].id}"]`) as HTMLInputElement).click(); await settle();
+        const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+        (document.querySelector('.account-panel') as HTMLElement).dispatchEvent(escape); await settle();
+        expect(button('Show navigation').getAttribute('aria-expanded')).toBe('true');
+        expect(document.activeElement).toBe(button('Account menu'));
+        await resize(false);
+        expect(fixture.debugElement.query(By.directive(AccountControlsComponent)).componentInstance).toBe(account);
+        expect(fixture.nativeElement.querySelectorAll('app-account-controls')).toHaveLength(1);
+        button('Account menu').click(); await settle();
         expect(TestBed.inject(ThemePaletteService).palette()).toBe(PALETTE_OPTIONS[1].id);
-        button('Sign Out').click(); await settle();
+        button('Log out').click(); await settle();
         expect(signOut).toHaveBeenCalledTimes(1);
         await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/login'));
+    });
+
+    it('keeps sign-out failures visible for retry and prevents duplicate requests', async () => {
+        let reject!: (error: Error) => void;
+        signOut.mockImplementationOnce(() => new Promise<void>((_resolve, fail) => { reject = fail; }));
+        await open(); button('Account menu').click(); await settle();
+        button('Log out').click(); button('Log out').click(); await settle();
+        expect(signOut).toHaveBeenCalledTimes(1);
+        expect(button('Logging out…').disabled).toBe(true);
+        reject(new Error('network')); await settle();
+        expect(document.querySelector('.account-error')?.textContent).toContain('Could not log out');
+        expect(button('Show navigation').getAttribute('aria-expanded')).toBe('true');
+        expect(button('Account menu').getAttribute('aria-expanded')).toBe('true');
+        button('Log out').click(); await settle();
+        await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/login'));
+        expect(signOut).toHaveBeenCalledTimes(2);
     });
 
     it('opens existing project dialogs from the drawer without leaving it active', async () => {

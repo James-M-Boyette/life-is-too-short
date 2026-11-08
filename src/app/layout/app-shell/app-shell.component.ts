@@ -54,6 +54,7 @@ export class AppShellComponent {
     private readonly breakpoints = inject(BreakpointObserver);
     // One sidebar instance is relocated by CDK, retaining its signal-based expansion state.
     private readonly sidebarElement = viewChild.required<ElementRef<HTMLElement>>('sidebarContent');
+    private readonly accountMenu = viewChild(AccountControlsComponent);
     private readonly navigationDrawer = viewChild<Drawer>('navigationDrawer');
     protected readonly sidebarPortal = signal<DomPortal | null>(null);
     protected readonly mobile = signal(this.breakpoints.isMatched('(width < 768px)'));
@@ -63,6 +64,7 @@ export class AppShellComponent {
     protected openNavigation(): void { if (this.mobile()) this.navigationOpen.set(true); }
     protected closeNavigation(): void {
         if (!this.navigationOpen()) return;
+        this.accountMenu()?.dismiss(false);
         this.navigationOpen.set(false);
         afterNextRender(() => this.restoreNavigationFocus(), { injector: this.injector });
     }
@@ -85,7 +87,12 @@ export class AppShellComponent {
         }, { injector: this.injector });
     }
 
-    protected readonly userEmail = computed(() => this.auth.user()?.email ?? null);
+    protected readonly signingOut = signal(false);
+    private readonly signOutFailure = signal<{ owner: string | undefined; message: string } | null>(null);
+    protected readonly signOutError = computed(() => {
+        const failure = this.signOutFailure();
+        return failure?.owner === this.auth.user()?.id ? failure?.message ?? null : null;
+    });
 
     protected readonly projectsStore = inject(ProjectsStore);
     protected readonly tasksStore = inject(TasksStore);
@@ -330,9 +337,20 @@ export class AppShellComponent {
     }
 
     protected async signOut() {
-        this.closeNavigation();
-        await this.auth.signOut();
-        await this.router.navigateByUrl('/login');
+        if (this.signingOut()) return;
+        const owner = this.auth.user()?.id;
+        this.signingOut.set(true);
+        this.signOutFailure.set(null);
+        try {
+            await this.auth.signOut();
+            this.accountMenu()?.dismiss(false);
+            this.closeNavigation();
+            await this.router.navigateByUrl('/login');
+        } catch {
+            if (this.auth.user()?.id === owner) this.signOutFailure.set({ owner, message: 'Could not log out. Please try again.' });
+        } finally {
+            this.signingOut.set(false);
+        }
     }
 
     private readonly defaultSidebarWidth = 260;
