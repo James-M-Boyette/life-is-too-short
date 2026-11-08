@@ -41,7 +41,7 @@ Test output still includes the existing reactive-form disabled-attribute warning
 
 Used the real shell/sidebar/tasks-page components with synthetic Auth/project/task stores in the ignored local acceptance workspace. No production data, credentials or backend writes were used.
 
-- Desktop (1280px requested): no top bar, page heading begins at y=24, one account instance and avatar, first-name trigger and full-name/email popover. Popup contains no avatar. Continuous sidebar background remains.
+- Desktop (1280px requested): no top bar, page heading retains the main-content padding (outer body gutter removed in the follow-up below), one account instance and avatar, first-name trigger and full-name/email popover. Popup contains no avatar. Continuous sidebar background remains.
 - Mobile 375×812: expanded Appearance popup is 304px wide and within the viewport. It is a child of the drawer root, visually above the drawer/backdrop, not clipped by scrolling navigation. Keyboard Tab/Down selects a palette immediately. Escape closes only the account panel and restores trigger focus; the drawer stays open.
 - Mobile 320×568, intentionally long identity: body width remains 320px. Popup bounds approximately x=2.4–290.4 and y=154.8–556.4. The panel scrolls internally (376px client / 642px content), and no horizontal identity overflow occurs. Shift+Tab reaches Log out; Tab wraps to Appearance within the panel.
 - Mobile 390px: email-only accounts show a local-part trigger and neutral avatar. Outside-clicking the drawer header dismisses only the account menu; clicking the backdrop closes both and restores Navigation focus. Long project expansion survives responsive relocation.
@@ -53,3 +53,16 @@ Used the real shell/sidebar/tasks-page components with synthetic Auth/project/ta
 ## Remaining acceptance
 
 Physical iPhone/Safari checks remain for VoiceOver, touch taps/scrolling, safe-area/browser-chrome behavior and viewport changes. Chromium tests cannot establish those behaviors. Verify ordinary real-auth sign-out and palette persistence in a disposable development session before deployment; no production account was used for automated verification. No account-management or Analytics functionality was introduced.
+
+## Follow-up: global body margin reset
+
+The body margin reset now applies globally rather than only below 768px. The desktop shell uses 100dvh; the browser's default 8px body margin previously added an outer gutter and document overflow. No overflow suppression, sidebar collapse, role changes or diagnostics were introduced. Shell/main/navigation sizing and overflow rules are unchanged.
+
+Verification in an isolated standards-mode browser fixture (CSS1Compat, matching production's doctype), with real shell/login components and synthetic stores:
+
+- Desktop 1280×900: shell bounds are exactly (0,0)–(1280,900); document scrollHeight and viewport clientHeight are both 900px. Long tasks scroll inside main (sample scrollTop 900px), and long projects scroll inside navigation (502.4px), while document scrollTop remains 0.
+- Normal body overflow remains visible. PrimeNG Add Task applies its own temporary p-overflow-hidden class / hidden overflow during the modal, then removes the class and restores visible overflow after Cancel. Margin remains 0 throughout and no document scrollbar is introduced.
+- Mobile 390×844: shell/drawer fit the viewport, margin stays 0, drawer scroll locking applies and clears after Escape, and focus returns to Show navigation.
+- Real LoginPage was checked at desktop and mobile widths without submitting credentials. On a short 375×430 viewport, the page retains normal document scrolling (approximately 534px content, 103px sampled scroll), visible overflow and no horizontal overflow. No drawer/dialog masks remain after navigation to login.
+
+Relevant shell/account tests: 13 pass. Full suite: 225 tests across 20 files pass. Production build and git diff --check pass; the existing TaskRow 7.49kB and sidebar 4.36kB warning thresholds remain unchanged. No new tests were added for this CSS-only reset: existing overlay interactions and real-browser layout measurements provide proportionate verification. Physical-device/Safari acceptance remains as listed above.
