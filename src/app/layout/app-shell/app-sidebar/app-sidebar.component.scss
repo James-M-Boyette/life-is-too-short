@@ -172,7 +172,7 @@
     }
 }
 
-.project-toggle {
+.project-toggle, .project-more {
     display: grid;
     place-items: center;
     flex-shrink: 0;
@@ -251,4 +251,12 @@
         min-width: 2.75rem;
         min-height: 2.75rem;
     }
+}
+
+// Reserve the action slot even when its icon is subdued; names never move on hover.
+.project-more { opacity: 0; transition: opacity 120ms ease; }
+.project-tree-item:is(:hover, :focus-within) .project-more,
+.project-more[aria-expanded='true'] { opacity: 1; }
+@media (hover: none), (pointer: coarse), (width < 768px) {
+    .project-more { opacity: 1; min-width: 2.75rem; min-height: 2.75rem; }
 }
