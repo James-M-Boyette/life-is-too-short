@@ -1,6 +1,6 @@
 # Ideas, Questions and Concerns — Life Is Too Short
 
-*Last reviewed: November 5, 2026*
+*Last reviewed: November 8, 2026*
 
 **This document is a brainstorming catalog, not an implementation backlog.**
 
@@ -23,6 +23,14 @@ Ideas collected here require deliberate selection, design, and acceptance criter
 - Search and filtering
 - Saved views
 - Cross-project planning groups
+
+### Sections within projects
+
+Potentially group tasks inside a single project, unlike nested subprojects (separately navigable). Questions: section ordering and task ownership; when to use section versus subproject; deleting a section; relationships to subtask nesting, project templates and recurrence. **Ideas only; not part of project-sidebar PR #61.**
+
+### Mobile Today and Upcoming
+
+The mobile drawer, compact task cards and no-drag policy are implemented. Still to design: a coherent narrow-screen planned/due-only/overdue grouping, navigation between days, scheduling and editing overlays, quick capture, safe-area scrolling, and accessible non-drag ordering alternatives. Physical iPhone/Safari checks remain appropriate.
 
 ### Subtasks
 
