@@ -5,9 +5,10 @@ import { DrawerModule, Drawer } from 'primeng/drawer';
 import { AccountControlsComponent } from './account-controls/account-controls.component';
 import { Component, computed, effect, inject, signal, afterNextRender, ElementRef, Injector, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
+import { Router, RouterOutlet, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
 
 import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { TopBarComponent } from '@/layout/app-shell/top-bar/top-bar.component';
 import { AppSidebarComponent } from '@/layout/app-shell/app-sidebar/app-sidebar.component';
@@ -33,7 +34,7 @@ import { CalendarClockService } from '@/shared/services/calendar-clock.service';
     selector: 'app-shell',
     imports: [
         CommonModule, DrawerModule, CdkPortalOutlet, AccountControlsComponent,
-        RouterOutlet,
+        RouterOutlet, RouterLink, RouterLinkActive, TooltipModule,
         ButtonModule,
         TopBarComponent,
         AppSidebarComponent,
@@ -59,6 +60,25 @@ export class AppShellComponent {
     protected readonly sidebarPortal = signal<DomPortal | null>(null);
     protected readonly mobile = signal(this.breakpoints.isMatched('(width < 768px)'));
     protected readonly navigationOpen = signal(false);
+    protected readonly desktopCollapsed = signal(false);
+    protected readonly desktopHidden = computed(() => !this.mobile() && this.desktopCollapsed());
+    protected readonly shellColumns = computed(() => this.mobile() ? 'minmax(0, 1fr)'
+        : this.desktopCollapsed() ? '4rem minmax(0, 1fr)' : this.sidebarWidth() + 'px 6px minmax(0, 1fr)');
+    protected readonly railDestinations = [
+        { label: 'Inbox', route: '/tasks/inbox', icon: 'pi pi-inbox' },
+        { label: 'Today', route: '/tasks/today', icon: 'pi pi-calendar' },
+        { label: 'Upcoming', route: '/tasks/upcoming', icon: 'pi pi-calendar-plus' },
+    ] as const;
+
+    protected setDesktopCollapsed(collapsed: boolean): void {
+        if (this.mobile()) return;
+        this.accountMenu()?.dismiss(false);
+        this.isResizingSidebar.set(false);
+        this.desktopCollapsed.set(collapsed);
+        afterNextRender(() => {
+            if (!this.mobile()) this.element.nativeElement.querySelector<HTMLElement>(collapsed ? '.expand-navigation' : '.collapse-navigation')?.focus();
+        }, { injector: this.injector });
+    }
     protected readonly drawerStyle = { background: 'var(--surface-sidebar)', width: 'min(80vw, 20rem)', height: '100dvh', maxHeight: '100dvh', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' };
 
     protected openNavigation(): void { if (this.mobile()) this.navigationOpen.set(true); }
@@ -76,7 +96,9 @@ export class AppShellComponent {
         if (this.taskDialogVisible() || this.createProjectDialogVisible() || this.projectToDelete()) return;
         const target = this.mobile()
             ? this.element.nativeElement.querySelector<HTMLElement>('[aria-label="Show navigation"]')
-            : this.sidebarElement().nativeElement.querySelector<HTMLElement>('a.active, a');
+            : this.desktopCollapsed()
+                ? this.element.nativeElement.querySelector<HTMLElement>('.expand-navigation')
+                : this.sidebarElement().nativeElement.querySelector<HTMLElement>('a.active, a');
         target?.focus();
     }
 
@@ -208,9 +230,16 @@ export class AppShellComponent {
     constructor() {
         afterNextRender(() => this.sidebarPortal.set(new DomPortal(this.sidebarElement())));
         this.breakpoints.observe('(width < 768px)').pipe(takeUntilDestroyed()).subscribe(result => {
+            const changed = this.mobile() !== result.matches;
+            const drawerWasOpen = this.navigationOpen();
+            const focused = this.element.nativeElement.ownerDocument.activeElement;
+            const navigationHadFocus = !!focused?.closest('.desktop-navigation, .app-sidebar, #account-menu-panel, app-top-bar');
             this.mobile.set(result.matches);
             this.closeNavigation();
             this.isResizingSidebar.set(false);
+            if (changed && navigationHadFocus && !drawerWasOpen) {
+                afterNextRender(() => this.restoreNavigationFocus(), { injector: this.injector });
+            }
         });
         this.router.events.pipe(takeUntilDestroyed()).subscribe(event => {
             if (event instanceof NavigationEnd) this.closeNavigation();
@@ -364,6 +393,7 @@ export class AppShellComponent {
     private resizeStartWidth = 0;
 
     protected startSidebarResize(event: PointerEvent): void {
+        if (this.mobile() || this.desktopCollapsed()) return;
         // Only respond to the primary mouse button.
         if (event.pointerType === 'mouse' && event.button !== 0) {
             return;
@@ -413,6 +443,7 @@ export class AppShellComponent {
     }
 
     protected onSidebarResizeKeydown(event: KeyboardEvent): void {
+        if (this.mobile() || this.desktopCollapsed()) return;
         const step = event.shiftKey ? 40 : 10;
 
         switch (event.key) {
