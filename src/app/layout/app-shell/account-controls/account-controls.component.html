@@ -1,22 +1,40 @@
-<div class="palette-preview">
-    <label for="palette-preview-select">Palette preview</label>
-    <select
-        id="palette-preview-select"
-        [value]="paletteService.palette()"
-        (change)="changePalette($event)"
-        aria-label="Preview color palette"
-    >
-        @for (option of paletteOptions; track option.id) {
-            <option [value]="option.id">{{ option.label }}</option>
-        }
-    </select>
-</div>
-
-@if (userEmail()) {
-    <span class="user-email">{{ userEmail() }}</span>
-}
-
-<button pButton type="button" (click)="signOut.emit()">
-    <i class="pi pi-sign-out" pButtonIcon></i>
-    <span pButtonLabel>Sign Out</span>
+<button #trigger type="button" class="account-trigger" aria-label="Account menu" aria-haspopup="dialog"
+    [attr.aria-expanded]="menuOpen()" aria-controls="account-menu-panel" [title]="identity().name || identity().email || 'Account'"
+    (click)="toggle($event)" (keydown.escape)="escape($event)" (keydown.arrowdown)="$event.preventDefault(); !menuOpen() && toggle($event)">
+    <span class="avatar" aria-hidden="true">@if (identity().initials) { {{ identity().initials }} } @else { <i class="pi pi-user"></i> }</span>
+    <span class="trigger-label">{{ identity().label }}</span>
+    <i class="pi pi-chevron-down chevron" aria-hidden="true"></i>
 </button>
+<p-popover #accountPopover ariaLabel="Account menu" [appendTo]="overlayParent()"
+    [style]="{ width: 'min(19rem, calc(100vw - 2rem))' }" (onShow)="shown()" (onHide)="hidden()">
+    <div id="account-menu-panel" class="account-panel" pFocusTrap (keydown.escape)="escape($event)">
+        <section class="identity" aria-label="Account identity">
+            @if (identity().name) { <strong>{{ identity().name }}</strong> }
+            @if (identity().email) { <span class="email">{{ identity().email }}</span> }
+            @if (!identity().name && !identity().email) { <strong>Account</strong> }
+        </section>
+        <section class="appearance">
+            <button #appearanceButton type="button" class="menu-action" [attr.aria-expanded]="appearanceOpen()"
+                aria-controls="account-palette-options" (click)="appearanceOpen.set(!appearanceOpen())">
+                <i class="pi pi-palette" aria-hidden="true"></i><span>Appearance</span>
+                <i class="pi chevron" [class.pi-chevron-down]="!appearanceOpen()" [class.pi-chevron-up]="appearanceOpen()" aria-hidden="true"></i>
+            </button>
+            @if (appearanceOpen()) {
+                <fieldset id="account-palette-options">
+                    <legend>Color palette</legend>
+                    @for (option of paletteOptions; track option.id) {
+                        <label class="palette-option" [class.selected]="paletteService.palette() === option.id">
+                            <input type="radio" name="account-palette" [value]="option.id" [checked]="paletteService.palette() === option.id"
+                                (change)="changePalette(option.id)" />
+                            <span>{{ option.label }}</span>
+                        </label>
+                    }
+                </fieldset>
+            }
+        </section>
+        <button type="button" class="menu-action logout" [disabled]="pending()" [attr.aria-busy]="pending()" (click)="requestSignOut()">
+            <i class="pi pi-sign-out" aria-hidden="true"></i><span>{{ pending() ? 'Logging out…' : 'Log out' }}</span>
+        </button>
+        @if (error()) { <p class="account-error" role="alert">{{ error() }}</p> }
+    </div>
+</p-popover>
