@@ -67,6 +67,11 @@ Before onboarding more users:
 
 ## Priority 5 — Scheduling polish
 
+- Preserve the distinction between planned intention and due-date obligation: Today includes both deliberately planned tasks and unplanned tasks due today, with separate visual subgroups.
+- Keep the existing `planned_date ?? due_date` placement rule. Do not remove overdue deadline warnings when a task is planned for a later day.
+- Review and accept the compact Planned/Due popover (PR #46), including contextual dismissal, visible persistence failures, and keyboard interactions.
+- Complete the Today visual grouping without breaking Focus/Planning modes, manual sorting, or cross-column drag-and-drop.
+- Fix visible UI glitches after these scheduling changes are accepted.
 - Verify planned versus due-date behavior
 - Improve Today and Upcoming
 - Refine overdue and unscheduled presentation
