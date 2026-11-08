@@ -1,182 +1,71 @@
 # Product Roadmap — Life Is Too Short
 
-*Last reviewed: November 5, 2026*
+*Reviewed November 8, 2026. This is intended sequencing, not a fixed schedule or list of missing features.*
 
-This roadmap defines the intended order of work. It is not a list of entirely unimplemented features or a fixed release schedule.
+## Completed code foundation (merged, acceptance still ongoing)
 
-## Phase 0 — Core task and project functionality
+Task and nested-project CRUD; authenticated shell; manual task ordering; Markdown descriptions and unified atomic content editing; planned and due dates; Today/Upcoming/Overdue/Unscheduled; desktop drag scheduling; compact/expanded responsive cards; mobile navigation drawer; desktop collapsible sidebar and navigation rail; account Appearance/logout; and mobile no-drag behavior below 768px.
 
-**Status: Implemented in repository; verification remains**
+**Implemented** never automatically means fully audited, accessible on a physical device, or safe for wider user onboarding.
 
-- Authentication
-- Tasks CRUD
-- Projects CRUD
-- Nested projects
-- Inbox and project assignment
-- Task and project state management
+## Current UI/UX work — Projects
 
-**Exit criteria:** Core operations, especially cross-user access and destructive actions, pass appropriate tests.
+1. **Project sidebar, in progress in PR #61:** name-click navigation, separate child expansion chevrons and an accessible per-project three-dot menu with Edit/Delete. The menu must restore CRUD access before merge.
+2. **Project page, next separate PR:** upper-right three-dot project actions, reusing the same editing dialog, deletion confirmation and store.
+3. Preserve deeply nested project navigation, accessible keyboard/touch behavior and mobile drawer focus.
 
-## Phase 1 — Security and invite-only lockdown
+Project **sections** are *not* child projects and are not authorized in these PRs.
 
-**Status: Planned / completion not verified**
+## Next UX work — Mobile task views
 
-- Audit all RLS policies
-- Verify authorization in SQL functions
-- Disable unrestricted registration
-- Establish trusted invitation procedures
-- Validate ownership on nested operations
-- Review service-role credential handling
-- Add resource-abuse protections
-- Monitor infrastructure and cost exposure
+Design before implementing Today/Upcoming on phones. Preserve the difference between planned intentions, due-only obligations and overdue work; evaluate stacked groups, mobile navigation between dates, quick capture, scheduling overlays, touch targets and scrolling. Review Inbox/Project task presentation too. Do not re-enable mobile drag by default. Explore accessible non-drag manual ordering as a later option.
 
-**Exit criteria:** Security testing and invitation restrictions are confirmed.
+## Continuous prerelease gates — Security, recovery, operational readiness
 
-## Phase 2 — Initial UI, mobile, and accessibility pass
+- Audit Supabase RLS and allowed/denied cross-account requests, Auth registration/invite-only restrictions and service credentials.
+- Test destructive project RPCs, ownership validation, migrations and session-race protections.
+- Prove backup *restoration*, not only backup creation.
+- Enforce reasonable database content/count limits, creation-rate defenses and budget/usage alerts before broader invitations.
+- Complete privacy, retention, administrator-access, beta expectations and support communications.
+- Verify accessibility and actual mobile/browser behavior.
 
-**Status: In progress / verification**
+These are **not** tasks to defer behind visual polish when they block safe beta expansion.
 
-- Improve styling and layout consistency
-- Refine initial surface/design tokens
-- Improve mobile responsiveness
-- Verify keyboard navigation and focus behavior
-- Address applicable WCAG A/AA problems
-- Improve loading, error, and confirmation interactions
+## Initial quality-of-life wave
 
-## Phase 3 — Dates, scheduling, Today and Upcoming
+Continue project/task affordances, navigation, quick capture, useful keyboard interactions, reliable status/error feedback and styling/accessibility consistency. Do not expand scope with speculative tags, general collaboration, or large infrastructure.
 
-**Status: Substantially implemented on `main`; needs validation and polish**
+## Planned: Recurring tasks
 
-- Due-date and planned-date distinctions
-- Today and Upcoming
-- Overdue and unscheduled groups
-- Drag-and-drop scheduling
-- Manual task ordering
-- Today focus/planning layouts
+Distinguish calendar-anchored recurrence from completion-relative recurrence. Define skip/overdue/exception/history behavior before building.
 
-**Exit criteria:** Correctness across date boundaries, timezone changes, drag interactions, ordering, and asynchronous failures.
+## Planned: Dedicated second UI/UX assessment
 
-## Phase 4 — First quality-of-life wave
+After recurrence, revisit palettes, semantic tokens, density, usability and personalization across the whole app.
 
-**Status: In progress / planned**
+## Planned: Habit Tracker MVP
 
-- Reduce task-entry friction
-- Improve editing and navigation
-- Polish existing planning workflows
-- Address defects revealed through day-to-day usage
-- Improve clarity and responsiveness
+After the second UI pass, evaluate whether Habits is a distinct domain. Preserve recurrence rules, actual completion history and goal targets as separate information. Explore streaks, heatmaps and target progress.
 
-Prioritize high-impact improvements over speculative new features.
+## Exploratory: Calendar versus whiteboard
 
-## Phase 5 — Recurring tasks
+Evaluate calendar/time-blocking against cross-project visual planning based on user needs after Habit Tracker work.
 
-**Status: Planned**
+## Planned: Broader invited beta only after readiness
 
-Support both:
+Invite trusted friends/family with explicit data-access disclosures, support/cost expectations and practical feedback channels. No surprise charges.
 
-- Calendar-anchored recurrence
-- Completion-relative recurrence
+## Longer horizon / not currently authorized
 
-Define missed occurrences, exceptions, skips, history, and termination behavior before implementation.
+- **Sections within projects**, distinct from nested projects.
+- Subtasks or checklists; priorities; search/filtering; reminders/notifications.
+- Project archiving, duplication, reusable templates and recurring projects.
+- PWA/home screen, offline behavior and potential external calendar integration.
+- Incremental custom Angular component library replacing selected PrimeNG pieces.
+- Travel, fitness and scoped collaboration modules.
+- Portable CSV and versioned JSON export/import; optional self-hosting or perpetual-use approaches.
+- Restricted administrator diagnostics and possible client-side encryption after considering search/recovery tradeoffs.
 
-## Phase 6 — Second UI/UX reassessment
+## Continuous discipline
 
-**Status: Planned**
-
-After recurrence:
-
-- Revisit color palette
-- Refine design tokens
-- Review layout density and hierarchy
-- Improve responsive behavior
-- Explore limited personalization
-- Reassess the complete daily workflow
-
-## Phase 7 — Habit Tracker MVP
-
-**Status: Planned**
-
-- Habit definitions
-- Expected activity schedules
-- Completion/check-in history
-- Basic streaks and activity counts
-- Simple completion grid or heatmap
-- Potential goal tracking
-
-The decision about whether Habits is a separate domain remains open.
-
-## Phase 8 — Calendar or whiteboard planning
-
-**Status: Exploratory**
-
-Evaluate which planning experience offers the most value.
-
-A calendar provides time-oriented planning. A whiteboard may support flexible organization across projects.
-
-Begin with a small validated scope.
-
-## Phase 9 — Expand invited beta
-
-**Status: Planned after readiness**
-
-- Invite a limited group of friends/family
-- Provide clear privacy and support disclosures
-- Gather structured feedback through email/text or a lightweight intake process
-- Monitor reliability and cost
-- Prioritize problems supported by real usage
-
-## Phase 10 — Advanced capabilities
-
-**Status: Exploratory**
-
-Possible features include:
-
-- Global search
-- Subtasks/checklists
-- Advanced sorting and filtering
-- Reminders and notifications
-- Project archiving and duplication
-- Recurring projects
-- Collaboration
-- Travel and fitness functionality
-- External calendar integration
-- Data portability
-
-## Continuous engineering responsibilities
-
-Throughout every phase:
-
-- Authorization and security
-- Automated testing
-- Error handling
-- Database migrations
-- Backup/restore
-- Accessibility
-- Responsive design
-- Performance
-- Monitoring
-- Cost management
-
-## Recommended next iterations
-
-**Iteration A: Current-state audit**
-
-Inspect current `main`, live Supabase configuration, deployed behavior, database migrations, and existing branches.
-
-Identify missing acceptance tests, regressions, and already-completed work.
-
-**Iteration B: Blocker remediation**
-
-Resolve the highest-risk security, data integrity, backup, and core workflow issues.
-
-Then continue the first UX and quality-of-life improvements.
-
-## Dependencies
-
-- Beta expansion requires reliable authentication, authorization, recovery, abuse protection, and communications.
-- Recurring tasks precede the second UI reassessment.
-- The Habit Tracker follows that reassessment.
-- Calendar versus whiteboard is evaluated after the Habit Tracker.
-- Project archiving, duplication, and recurring projects remain later enhancements.
-
-No firm release dates are committed.
+Every phase requires proportionate tests, accurate docs, migrations, authorization, recovery, reliability, accessibility, performance and cost awareness. Follow `AGENTS.md`; confirm actual branch/PR state rather than assuming this roadmap is the deployment ledger.
