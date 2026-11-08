@@ -1,5 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs';
 import { MOBILE_LAYOUT_QUERY } from '@/shared/utils/mobile-layout';
 /* ToDo:
@@ -7,10 +7,13 @@ import { MOBILE_LAYOUT_QUERY } from '@/shared/utils/mobile-layout';
 
  */
 import { Component, signal, inject, computed, input, effect, afterRenderEffect, viewChild, ElementRef } from '@angular/core';
+import { Menu, MenuModule } from 'primeng/menu';
+import type { MenuItem } from 'primeng/api';
+import { ProjectDialogService } from '@/features/projects/services/project-dialog.service';
 import { CommonModule } from '@angular/common';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import { TasksStore } from '@/features/tasks/state/tasks.store';
-import { Router } from '@angular/router';
+import { NavigationStart, Router } from '@angular/router';
 import { TasksHeaderComponent } from '@/features/tasks/components/tasks-header/tasks-header.component';
 import { ProjectsStore } from '@/features/projects/state/projects.store';
 import { ButtonModule } from 'primeng/button';
@@ -43,7 +46,7 @@ import type { TaskDateField, TaskDateSelection, TaskScheduleRequest } from '@/fe
 @Component({
     standalone: true,
     imports: [
-        CommonModule,
+        CommonModule, MenuModule,
         ButtonModule,
         TasksHeaderComponent,
         TaskListComponent,
@@ -56,6 +59,60 @@ import type { TaskDateField, TaskDateSelection, TaskScheduleRequest } from '@/fe
     styleUrls: ['./tasks.page.scss'],
 })
 export class TasksPage {
+    private readonly projectDialogs = inject(ProjectDialogService);
+    protected readonly viewedProject = computed(() => this.view() === 'project'
+        ? this.projectsStore.projects().find(project => project.id === this.projectId() && project.user_id === this.auth.userId()) ?? null
+        : null);
+    private readonly projectMenu = viewChild<Menu>('projectPageMenu');
+    private projectMenuContext: { projectId: string; userId: string; url: string; trigger: HTMLElement } | null = null;
+    protected readonly projectMenuOpen = signal(false);
+    private restoreProjectMenuFocus = true;
+    protected readonly projectMenuItems: MenuItem[] = [
+        { label: 'Edit project', icon: 'pi pi-pencil', command: () => this.requestProjectDialog('edit') },
+        { label: 'Delete project', icon: 'pi pi-trash', command: () => this.requestProjectDialog('delete'), style: {
+            '--p-menu-item-color': 'var(--color-status-danger)',
+            '--p-menu-item-icon-color': 'var(--color-status-danger)',
+            '--p-menu-item-focus-color': 'var(--color-status-danger-hover)',
+            '--p-menu-item-icon-focus-color': 'var(--color-status-danger-hover)',
+            '--p-menu-item-focus-background': 'var(--color-status-danger-soft)',
+        } },
+    ];
+
+    protected toggleProjectMenu(event: MouseEvent): void {
+        const project = this.viewedProject();
+        const userId = this.auth.userId();
+        if (!project || !userId) return;
+        if (this.projectMenuOpen()) { this.dismissProjectMenu(); return; }
+        this.projectMenuContext = { projectId: project.id, userId, url: this.router.url, trigger: event.currentTarget as HTMLElement };
+        this.restoreProjectMenuFocus = true;
+        this.projectMenuOpen.set(true);
+        this.projectMenu()?.show(event);
+    }
+
+    private dismissProjectMenu(restore = true): void {
+        this.restoreProjectMenuFocus = restore;
+        this.projectMenu()?.hide();
+    }
+
+    protected projectMenuHidden(): void {
+        const context = this.projectMenuContext;
+        const focused = this.element.nativeElement.ownerDocument.activeElement;
+        if (this.restoreProjectMenuFocus && context?.trigger.isConnected &&
+            (focused === this.element.nativeElement.ownerDocument.body || this.projectMenu()?.container?.contains(focused))) {
+            context.trigger.focus({ preventScroll: true });
+        }
+        this.projectMenuContext = null;
+        this.projectMenuOpen.set(false);
+    }
+
+    private requestProjectDialog(action: 'edit' | 'delete'): void {
+        const context = this.projectMenuContext;
+        this.dismissProjectMenu(false);
+        if (!context || context.projectId !== this.viewedProject()?.id || context.userId !== this.auth.userId() || context.url !== this.router.url) return;
+        this.projectMenuContext = null;
+        this.projectDialogs.open({ action, projectId: context.projectId, userId: context.userId, trigger: context.trigger, sourceUrl: context.url });
+    }
+
     private readonly breakpoints = inject(BreakpointObserver);
     // One viewport subscription per page; rows/lists receive the effective capability.
     protected readonly draggingAvailable = toSignal(
@@ -89,6 +146,17 @@ export class TasksPage {
     private restoreScheduleFocus = false;
 
     constructor() {
+        this.router.events.pipe(takeUntilDestroyed()).subscribe(event => {
+            if (event instanceof NavigationStart) { this.dismissProjectMenu(false); this.projectMenuContext = null; }
+        });
+        effect(() => {
+            const project = this.viewedProject();
+            const userId = this.auth.userId();
+            if (this.projectMenuContext && (project?.id !== this.projectMenuContext.projectId || userId !== this.projectMenuContext.userId)) {
+                this.dismissProjectMenu(false);
+                this.projectMenuContext = null;
+            }
+        });
         let previousUser = this.auth.userId();
         effect(() => {
             const userId = this.auth.userId();

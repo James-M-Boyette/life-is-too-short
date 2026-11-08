@@ -37,7 +37,31 @@
 }
 
 @media (width < 768px) {
-    :host header.top { align-items: flex-start; flex-wrap: wrap; gap: var(--space-2); }
-    :host header.top h1 { min-width: 0; overflow-wrap: anywhere; font-size: 1.5rem; }
-    :host header.top div.right small.status { font-size: .7rem; }
+    :host header.top {
+        align-items: flex-start;
+        flex-wrap: nowrap;
+        gap: var(--space-2);
+    }
+
+    :host header.top h1 {
+        font-size: 1.5rem;
+    }
+
+    :host header.top div.right small.status {
+        font-size: .7rem;
+    }
+}
+
+:host header.top h1 {
+    min-width: 0;
+    flex: 1;
+    overflow-wrap: anywhere;
+}
+.heading-actions {
+    margin-inline-start: auto;
+    flex-shrink: 0;
+}
+
+.heading-actions:empty {
+    display: none;
 }
