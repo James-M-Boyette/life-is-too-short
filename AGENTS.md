@@ -270,3 +270,21 @@ When modifying existing code, respect established conventions unless a change is
 Explain meaningful architectural decisions and alternatives in the completion report.
 
 Do not perform unrelated architectural refactoring during a focused feature implementation.
+
+# Project context and status discipline
+
+For substantive changes, consult the dated `documentation/project-context/Current_status.md`, `product_roadmap.md`, and `decisions_and_rational.md` where relevant. The ideas catalog is **not** permission to implement speculative features. The checkout, migrations, tests, and current PR status take precedence over historical docs. Do not describe open PR work as merged; update docs when an accepted change materially changes product status or a settled decision.
+
+## Application-specific contracts
+
+- Planned dates express intention; due dates express obligations. Today includes planned-today and unplanned due-today work. Preserve overdue warnings even when a user deliberately plans an overdue task for later.
+- Project names navigate; a separate chevron expands nested children. Project Edit/Delete must remain accessible through explicit actions. Do not remove existing CRUD entry points without functioning replacements.
+- Task title and Markdown description share one editing session and one atomic mutation; preserve safe Markdown rendering and unsaved-draft protections.
+- Compact card container queries are different from the mobile viewport breakpoint (<768px). Mobile task drag/drop is disabled, while compact desktop cards can still be draggable.
+- `isDevMode()` is not a developer/admin user authorization check. Never use editable Supabase `user_metadata` to authorize privileged actions. Privileges must be verified by trusted server/database mechanisms.
+
+## Styling and acceptance
+
+Prefer vertically formatted CSS/SCSS declarations (one property per line) when editing styles. Reuse semantic tokens. Respect the existing Angular compiled `anyComponentStyle` limits (4 kB warning/8 kB error); moving declarations into imported Sass partials alone does not reduce emitted CSS. Do not raise budgets merely to silence errors.
+
+Browser geometry, focus and pointer/touch interactions require browser checks; fixture checks do not replace physical iPhone/Safari acceptance. Keep verification reports honest about what ran. Documentation-only changes ordinarily require accuracy and link review, not new automated tests.
