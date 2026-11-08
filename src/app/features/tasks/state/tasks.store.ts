@@ -136,9 +136,10 @@ export class TasksStore {
             // Always tear down prior subscription when user changes/logs out
             this.teardownRealtime();
 
-            // If no user, clear tasks and mark realtime as disconnected
+            // Clear account-owned rows on logout and direct account switches.
+            this.tasks.set([]);
+            // If no user, mark realtime as disconnected
             if (!userId) {
-                this.tasks.set([]);
                 this.realtimeConnected.set(false);
                 return;
             }

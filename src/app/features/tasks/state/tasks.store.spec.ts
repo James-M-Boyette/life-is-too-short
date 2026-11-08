@@ -89,6 +89,22 @@ describe('TasksStore', () => {
         TestBed.tick();
     });
 
+    it('clears the previous account collection before the new account refresh completes', async () => {
+        let resolve!: (value: { data: Task[]; error: null }) => void;
+        const pending = new Promise<{ data: Task[]; error: null }>(done => { resolve = done; });
+        const secondOrder = vi.fn().mockResolvedValue({ data: [createTask()], error: null });
+        select.mockReturnValue({ order: vi.fn().mockReturnValue({ order: secondOrder }) });
+        userId.set('user-1'); TestBed.tick();
+        await Promise.resolve();
+        expect(store.tasks()).toEqual([createTask()]);
+        secondOrder.mockReturnValueOnce(pending);
+        userId.set('user-2'); TestBed.tick();
+        expect(store.tasks()).toEqual([]);
+        const next = createTask({ id: 'new', user_id: 'user-2' });
+        resolve({ data: [next], error: null }); await pending;
+        expect(store.tasks()).toEqual([next]);
+    });
+
     it('atomically saves both content fields optimistically and rolls both back without losing unrelated changes', async () => {
         const original = createTask({ description: 'Original', due_date: '2026-11-06' });
         store.tasks.set([original]);
