@@ -45,6 +45,7 @@ describe('Project page dialogs through the existing shell', () => {
                 provideRouter([
                     { path: 'tasks/project/:projectId', component: TasksPage, data: { view: 'project' } },
                     { path: 'tasks/inbox', component: TasksPage, data: { view: 'inbox' } },
+                    { path: 'tasks/today', component: TasksPage, data: { view: 'today' } },
                 ], withComponentInputBinding()),
                 { provide: BreakpointObserver, useValue: { isMatched: () => false, observe: () => of({ matches: false }) } },
                 { provide: AuthStore, useValue: { userId, user: computed(() => ({ id: userId(), email: 'fixture@example.com' })), isAuthed: signal(true) } },
@@ -81,6 +82,31 @@ describe('Project page dialogs through the existing shell', () => {
         await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/tasks/inbox'));
         await settle();
         expect(document.querySelector('.project-page-more')).toBeNull();
+    });
+
+    it('reconciles successful deletion after same-account navigation without reviving the initiating dialog', async () => {
+        let finish!: () => void;
+        remove.mockImplementationOnce(async (id: string) => {
+            await new Promise<void>(resolve => { finish = resolve; });
+            projects.update(items => items.filter(item => item.id !== id));
+        });
+        const origin = button('More actions for project First');
+        await select('Delete project');
+        button('Delete project').click(); button('Delete project').click();
+        await settle();
+        expect(remove).toHaveBeenCalledExactlyOnceWith('First');
+        expect(refresh).not.toHaveBeenCalled();
+        await TestBed.inject(Router).navigateByUrl('/tasks/today'); await settle();
+        const destination = document.querySelector<HTMLElement>('.tasks-page')!;
+        destination.focus();
+        finish();
+        await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+        await settle();
+        expect(TestBed.inject(Router).url).toBe('/tasks/today');
+        expect(document.querySelector('.p-dialog')).toBeNull();
+        expect(document.activeElement).toBe(destination);
+        expect(origin.isConnected).toBe(false);
+        expect(projects().some(item => item.id === 'First')).toBe(false);
     });
 
     it('rejects stale requests and closes a page-originated editor on route/session changes', async () => {

@@ -401,16 +401,17 @@ export class AppShellComponent {
             return;
         }
 
-        if (owner !== this.auth.userId() || context !== this.pageProjectDialog()) {
-            this.deletingProject.set(false);
-            return;
-        }
-        // Deletion succeeded. Close the dialog.
-        this.projectToDelete.set(null);
         this.deletingProject.set(false);
-        this.restoreProjectActionFocus();
+        if (owner !== this.auth.userId()) return;
 
-        // Reconcile task state with the database.
+        // Dialog cleanup belongs only to the still-current interaction.
+        if (context === this.pageProjectDialog()) {
+            this.projectToDelete.set(null);
+            this.restoreProjectActionFocus();
+        }
+
+        // Successful persistence still needs reconciliation after same-account navigation.
+        // refreshTasks retains its existing session protections for an account change in flight.
         await this.tasksStore.refreshTasks();
         if (owner !== this.auth.userId()) return;
 

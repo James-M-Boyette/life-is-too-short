@@ -17,7 +17,7 @@ In-flight persistence is not cancelled by route changes: a confirmed operation m
 ## Automated verification
 
 - Focused page/header/sidebar/shell/integration run: 90 tests passed; an additional immediate session-change confirmation regression also passed (5 integration tests total).
-- Final full suite: 257 tests passed across 21 files.
+- Final full suite: 258 tests passed across 21 files.
 - pnpm exec ng build --configuration production: passed.
 - git diff --check: passed.
 - Existing stylesheet warnings only: TaskRow 7.62kB and AppSidebar 4.31kB exceed the 4kB warning threshold, below the 8kB error budget. No budget changes or new component warnings.
@@ -41,3 +41,7 @@ Physical iPhone/Safari/VoiceOver and touchscreen acceptance remain device checks
 Reviewed duplicated-dialog avoidance, current project ownership checks, duplicate action suppression, route/session races, focus handoff, long names, CSS budgets and unchanged scheduling/task behavior. No Sections, archiving, duplication, sharing, reordering or other roadmap features were added.
 
 The four project-context documents mark PR #61 sidebar work as merged and project-page actions as implemented on this branch, pending review/merge. No claim is made that this new feature is already on main.
+
+## Pre-merge reconciliation correction
+
+A focused deferred-deletion regression failed before the correction: navigating to Today while deletion was pending invalidated the dialog context and skipped task reconciliation. Successful same-account deletion now always calls the existing refreshTasks API; context identity gates only dialog cleanup/focus. The existing account check before refresh, TasksStore session protection during refresh, and account/current-route checks afterward remain intact. The regression verifies one deletion and one refresh, preserved Today navigation/focus, and no revived dialog. Targeted project integration tests: 6 passed. Full suite: 258 passed. Production build and diff check passed; stylesheet warnings unchanged. No browser rerun was necessary for this asynchronous orchestration-only correction.
