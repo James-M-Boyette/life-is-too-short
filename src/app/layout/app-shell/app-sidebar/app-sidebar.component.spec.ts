@@ -17,7 +17,7 @@ describe('AppSidebarComponent', () => {
     let fixture: ComponentFixture<AppSidebarComponent>;
     const link = (id: string): HTMLAnchorElement | null => fixture.nativeElement.querySelector(`a[href="/tasks/project/${id}"]`);
     const row = (id: string): HTMLElement => link(id)!.closest('[role="treeitem"]')!;
-    const button = (id: string): HTMLButtonElement | null => link(id)!.closest('.project-tree-item')!.querySelector('button');
+    const button = (id: string): HTMLButtonElement | null => link(id)!.closest('.project-tree-item')!.querySelector('.project-toggle');
     const toggle = (id: string) => {
         button(id)!.click();
         fixture.detectChanges();
@@ -34,6 +34,8 @@ describe('AppSidebarComponent', () => {
         fixture.componentRef.setInput('projects', hierarchy());
         await fixture.whenStable();
     });
+
+    afterEach(() => { fixture.destroy(); fixture.nativeElement.remove(); });
 
     it('navigates on a name click without expanding and retains active styling', async () => {
         const navigated = vi.fn();
@@ -86,12 +88,76 @@ describe('AppSidebarComponent', () => {
         expect(link('child')).toBeNull();
     });
 
-    it('removes all row CRUD controls', () => {
-        action('Expand all').click();
-        fixture.detectChanges();
-        expect(fixture.nativeElement.querySelector('.edit-project-btn, .delete-project-btn, .pi-pencil, .pi-trash')).toBeNull();
-        expect(Array.from(fixture.nativeElement.querySelectorAll('.project-tree-item button') as NodeListOf<HTMLButtonElement>)
-            .every(button => /^(Expand|Collapse) /.test(button.getAttribute('aria-label')!))).toBe(true);
+    const more = (id: string): HTMLButtonElement => link(id)!.closest('.project-tree-item')!.querySelector('.project-more')!;
+    const menuAction = (label: string): HTMLElement => Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"] a'))
+        .find(item => item.textContent?.trim() === label)!;
+
+    it('uses one menu and emits Edit/Delete intentions without navigation or expansion', async () => {
+        document.body.appendChild(fixture.nativeElement);
+        const edit = vi.fn(), remove = vi.fn(), navigated = vi.fn();
+        fixture.componentInstance.editProject.subscribe(edit);
+        fixture.componentInstance.deleteProject.subscribe(remove);
+        fixture.componentInstance.navigated.subscribe(navigated);
+        action('Expand all').click(); await fixture.whenStable();
+        expect(fixture.nativeElement.querySelectorAll('p-menu')).toHaveLength(1);
+        more('child').click(); await fixture.whenStable();
+        expect(link('grandchild')).toBeTruthy();
+        expect(menuAction('Edit project')).toBeTruthy();
+        menuAction('Edit project').click(); await fixture.whenStable();
+        expect(edit).toHaveBeenCalledExactlyOnceWith('child');
+        await vi.waitFor(() => expect(more('child').getAttribute('aria-expanded')).toBe('false'));
+        more('parent').click(); await fixture.whenStable();
+        const deletion = menuAction('Delete project');
+        expect(deletion.closest('[role="menuitem"]')?.getAttribute('style')).toContain('--p-menu-item-color: var(--color-status-danger)');
+        deletion.click(); await fixture.whenStable();
+        expect(remove).toHaveBeenCalledExactlyOnceWith('parent');
+        expect(navigated).not.toHaveBeenCalled();
+        expect(TestBed.inject(Router).url).toBe('/');
+    });
+
+    it('switches the shared menu context and activates the selected project through the keyboard', async () => {
+        document.body.appendChild(fixture.nativeElement);
+        const edit = vi.fn();
+        fixture.componentInstance.editProject.subscribe(edit);
+        more('parent').click(); await fixture.whenStable();
+        more('other').click(); await fixture.whenStable();
+        await vi.waitFor(() => expect(more('other').getAttribute('aria-expanded')).toBe('true'));
+        await vi.waitFor(() => expect(document.activeElement?.getAttribute('role')).toBe('menu'));
+        const menu = document.activeElement!;
+        menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', bubbles: true }));
+        menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+        await fixture.whenStable();
+        expect(edit).toHaveBeenCalledExactlyOnceWith('other');
+    });
+
+    it('dismisses with Escape and restores the trigger without bubbling into a surrounding drawer', async () => {
+        document.body.appendChild(fixture.nativeElement);
+        more('parent').click(); await fixture.whenStable();
+        await vi.waitFor(() => expect(document.activeElement?.getAttribute('role')).toBe('menu'));
+        const bubbled = vi.fn();
+        document.addEventListener('keydown', bubbled);
+        document.querySelector('[role="menu"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
+        await fixture.whenStable();
+        await vi.waitFor(() => expect(more('parent').getAttribute('aria-expanded')).toBe('false'));
+        document.removeEventListener('keydown', bubbled);
+        expect(bubbled).not.toHaveBeenCalled();
+        expect(more('parent').getAttribute('aria-expanded')).toBe('false');
+        expect(document.activeElement).toBe(more('parent'));
+    });
+
+    it('fails safely if the selected project disappears, and uses the next project context on reopening', async () => {
+        document.body.appendChild(fixture.nativeElement);
+        const remove = vi.fn();
+        fixture.componentInstance.deleteProject.subscribe(remove);
+        more('parent').click(); await fixture.whenStable();
+        const stale = menuAction('Delete project');
+        fixture.componentRef.setInput('projects', [project('other')]); await fixture.whenStable();
+        stale.click(); await fixture.whenStable();
+        expect(remove).not.toHaveBeenCalled();
+        await vi.waitFor(() => expect(document.querySelector('[role="menu"]')).toBeNull());
+        more('other').click(); await fixture.whenStable();
+        menuAction('Delete project').click(); await fixture.whenStable();
+        expect(remove).toHaveBeenCalledExactlyOnceWith('other');
     });
 
     it('expands only routed ancestors after late data arrival and respects subsequent manual collapse', async () => {

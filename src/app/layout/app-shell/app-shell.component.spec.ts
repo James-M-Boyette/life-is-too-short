@@ -255,25 +255,23 @@ describe('responsive AppShellComponent', () => {
         expect(signOut).toHaveBeenCalledTimes(2);
     });
 
-    it('preserves project creation and retained edit/delete dialog handlers after removing sidebar CRUD controls', async () => {
-        const shell = fixture.componentInstance as unknown as {
-            openEditProjectDialog(id: string): void;
-            openDeleteProjectDialog(id: string): void;
-        };
+    it('routes sidebar menu actions into existing project dialogs and closes the mobile drawer', async () => {
         await open(); button('Create a project').click(); await settle();
         expect(button('Show navigation').getAttribute('aria-expanded')).toBe('false');
         expect(document.querySelector('app-project-editor')).toBeTruthy();
         button('Cancel').click(); await settle();
         expect(document.activeElement).toBe(button('Show navigation'));
         await open();
-        expect(button('Edit Parent')).toBeUndefined();
-        shell.openEditProjectDialog('Parent'); await settle();
+        button('More actions for Parent').click(); await settle();
+        expect(document.querySelector('.p-drawer [role="menu"]')).toBeTruthy();
+        expect(button('Show navigation').getAttribute('aria-expanded')).toBe('true');
+        (Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"] a')).find(item => item.textContent?.trim() === 'Edit project'))!.click(); await settle();
         expect((document.querySelector('app-project-editor input') as HTMLInputElement).value).toBe('Parent');
         expect(button('Show navigation').getAttribute('aria-expanded')).toBe('false');
         button('Cancel').click(); await settle();
         await open();
-        expect(button('Delete Parent')).toBeUndefined();
-        shell.openDeleteProjectDialog('Parent'); await settle();
+        button('More actions for Parent').click(); await settle();
+        (Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"] a')).find(item => item.textContent?.trim() === 'Delete project'))!.click(); await settle();
         expect(document.body.textContent).toContain('Delete project?');
         expect(button('Show navigation').getAttribute('aria-expanded')).toBe('false');
         button('Cancel').click(); await settle();
