@@ -122,6 +122,73 @@ describe('responsive AppShellComponent', () => {
         expect(separator.getAttribute('aria-valuenow')).toBe('270');
     });
 
+    it('collapses without recreating navigation and restores width, tree state and focus', async () => {
+        await resize(false);
+        const sidebar = fixture.debugElement.query(By.directive(AppSidebarComponent)).componentInstance;
+        const account = fixture.debugElement.query(By.directive(AccountControlsComponent)).componentInstance;
+        const separator = fixture.nativeElement.querySelector('[role="separator"]');
+        separator.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); await settle();
+        button('Expand all').click(); await settle();
+        button('Account menu').click(); await settle();
+        button('Collapse navigation').click(); await settle();
+        const aside = fixture.nativeElement.querySelector('#desktop-sidebar-content');
+        expect(aside.hidden).toBe(true);
+        expect(aside.hasAttribute('inert')).toBe(true);
+        expect(separator.hidden).toBe(true);
+        expect(separator.getAttribute('tabindex')).toBe('-1');
+        expect(fixture.nativeElement.querySelector('.account-trigger').getAttribute('aria-expanded')).toBe('false');
+        expect(fixture.nativeElement.querySelectorAll('app-sidebar')).toHaveLength(1);
+        expect(fixture.debugElement.query(By.directive(AppSidebarComponent)).componentInstance).toBe(sidebar);
+        expect(document.activeElement).toBe(button('Expand navigation'));
+        expect(button('Expand navigation').getAttribute('aria-expanded')).toBe('false');
+        button('Expand navigation').click(); await settle();
+        expect(aside.hidden).toBe(false);
+        expect(aside.hasAttribute('inert')).toBe(false);
+        expect(separator.getAttribute('aria-valuenow')).toBe('270');
+        expect(fixture.nativeElement.querySelector('a[href="/tasks/project/Child"]')).toBeTruthy();
+        expect(fixture.debugElement.query(By.directive(AccountControlsComponent)).componentInstance).toBe(account);
+        expect(document.activeElement).toBe(button('Collapse navigation'));
+    });
+
+    it('keeps rail destinations accessible and remains collapsed across ordinary navigation', async () => {
+        await resize(false); button('Collapse navigation').click(); await settle();
+        const rail = fixture.nativeElement.querySelector('nav[aria-label="Quick navigation"]');
+        expect(rail.querySelectorAll('a')).toHaveLength(3);
+        for (const [label, path] of [['Inbox', '/tasks/inbox'], ['Today', '/tasks/today'], ['Upcoming', '/tasks/upcoming']]) {
+            const link = rail.querySelector(`a[aria-label="${label}"]`);
+            expect(link.getAttribute('href')).toBe(path);
+            link.click(); await settle();
+            expect(TestBed.inject(Router).url).toBe(path);
+            expect(link.getAttribute('aria-current')).toBe('page');
+            expect(button('Expand navigation')).toBeTruthy();
+            expect(fixture.nativeElement.querySelector('#desktop-sidebar-content').hidden).toBe(true);
+        }
+    });
+
+    it('preserves the desktop collapsed state while providing the full mobile drawer', async () => {
+        await resize(false); button('Expand all').click(); await settle();
+        const sidebar = fixture.debugElement.query(By.directive(AppSidebarComponent)).componentInstance;
+        button('Collapse navigation').click(); await settle();
+        await resize(true);
+        expect(document.activeElement).toBe(button('Show navigation'));
+        expect(fixture.nativeElement.querySelector('.navigation-rail')).toBeNull();
+        // Returning while the closed drawer toggle has focus must not drop focus to body.
+        await resize(false);
+        expect(document.activeElement).toBe(button('Expand navigation'));
+        await resize(true);
+        await open();
+        expect(document.querySelector('.p-drawer #desktop-sidebar-content')!.hasAttribute('inert')).toBe(false);
+        expect(document.querySelector('.p-drawer a[href="/tasks/project/Child"]')).toBeTruthy();
+        expect(document.querySelector('.p-drawer .account-trigger')).toBeTruthy();
+        await resize(false);
+        expect(document.activeElement).toBe(button('Expand navigation'));
+        expect(fixture.nativeElement.querySelector('#desktop-sidebar-content').hidden).toBe(true);
+        expect(fixture.debugElement.query(By.directive(AppSidebarComponent)).componentInstance).toBe(sidebar);
+        expect(fixture.nativeElement.querySelectorAll('app-sidebar')).toHaveLength(1);
+        button('Expand navigation').click(); await settle();
+        expect(fixture.nativeElement.querySelector('[role="separator"]').getAttribute('aria-valuenow')).toBe('260');
+    });
+
     it('preserves mobile task creation, palette choice and sign out', async () => {
         await TestBed.inject(Router).navigateByUrl('/tasks/today'); await settle();
         button('Add task').click(); await settle();

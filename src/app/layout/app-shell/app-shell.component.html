@@ -4,10 +4,28 @@
         <app-top-bar [navigationOpen]="navigationOpen()" (showNavigation)="openNavigation()" (createTask)="openTaskDialog()" />
     }
 
-    <div class="app-body" [style.grid-template-columns]="mobile() ? 'minmax(0, 1fr)' : sidebarWidth() + 'px 6px minmax(0, 1fr)'">
+    <div class="app-body" [style.grid-template-columns]="shellColumns()">
         <!-- App Sidebar -->
-        <div class="desktop-navigation" [hidden]="mobile()"><aside #sidebarContent class="app-sidebar">
-            <app-account-controls [user]="auth.user()" [available]="!mobile() || navigationOpen()" [mobile]="mobile()"
+        <div class="desktop-navigation" [hidden]="mobile()">
+            @if (!mobile() && desktopCollapsed()) {
+                <nav class="navigation-rail" aria-label="Quick navigation">
+                    <button type="button" class="navigation-control expand-navigation" aria-label="Expand navigation"
+                        aria-expanded="false" aria-controls="desktop-sidebar-content" pTooltip="Expand navigation" tooltipPosition="right"
+                        (click)="setDesktopCollapsed(false)"><i class="pi pi-angle-double-right" aria-hidden="true"></i></button>
+                    @for (destination of railDestinations; track destination.route) {
+                        <a class="navigation-control" [routerLink]="destination.route" routerLinkActive="active" ariaCurrentWhenActive="page"
+                            [attr.aria-label]="destination.label" [pTooltip]="destination.label" tooltipPosition="right">
+                            <i [class]="destination.icon" aria-hidden="true"></i>
+                        </a>
+                    }
+                </nav>
+            } @else if (!mobile()) {
+                <button type="button" class="navigation-control collapse-navigation" aria-label="Collapse navigation"
+                    aria-expanded="true" aria-controls="desktop-sidebar-content" pTooltip="Collapse navigation" tooltipPosition="right"
+                    (click)="setDesktopCollapsed(true)"><i class="pi pi-angle-double-left" aria-hidden="true"></i></button>
+            }
+            <aside #sidebarContent id="desktop-sidebar-content" class="app-sidebar" [hidden]="desktopHidden()" [attr.inert]="desktopHidden() ? '' : null">
+            <app-account-controls [user]="auth.user()" [available]="mobile() ? navigationOpen() : !desktopCollapsed()" [mobile]="mobile()"
                 [pending]="signingOut()" [error]="signOutError()" (signOut)="signOut()" />
             <app-sidebar
                 [projects]="projectsStore.projectTree()"
@@ -22,11 +40,11 @@
 
         <!-- Vertical Border Handle (for re-sizing) -->
         <div
-            class="sidebar-resize-handle" [hidden]="mobile()"
+            class="sidebar-resize-handle" [hidden]="mobile() || desktopCollapsed()"
             role="separator"
             aria-label="Resize sidebar"
             aria-orientation="vertical"
-            tabindex="0"
+            [attr.tabindex]="mobile() || desktopCollapsed() ? -1 : 0"
             [attr.aria-valuemin]="minSidebarWidth"
             [attr.aria-valuemax]="maxSidebarWidth"
             [attr.aria-valuenow]="sidebarWidth()"

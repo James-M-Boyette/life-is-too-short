@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, isDevMode } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 
@@ -10,6 +10,8 @@ import { ButtonModule } from 'primeng/button';
     styleUrls: ['./tasks-header.component.scss'],
 })
 export class TasksHeaderComponent {
+    // Temporary presentation policy only; this does not grant any privileged capabilities.
+    protected readonly showRealtimeDiagnostic = isDevMode();
     @Input() title = 'Tasks';
     @Input() realtimeOn = false;
     @Input() errorText: string | null = null;
