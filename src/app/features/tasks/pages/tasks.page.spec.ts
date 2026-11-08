@@ -1,11 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ProjectDialogService } from '@/features/projects/services/project-dialog.service';
 import { TaskCreateDialogService } from '@/features/tasks/services/task-create-dialog.service';
 import { TasksPage } from './tasks.page';
 import { signal } from '@angular/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { BehaviorSubject } from 'rxjs';
 import { MOBILE_LAYOUT_QUERY } from '@/shared/utils/mobile-layout';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { vi } from 'vitest';
 import { TasksStore } from '@/features/tasks/state/tasks.store';
@@ -72,7 +73,7 @@ describe('TasksPage', () => {
         await TestBed.configureTestingModule({
             imports: [TasksPage],
             providers: [
-                TaskCreateDialogService,
+                TaskCreateDialogService, ProjectDialogService,
                 { provide: BreakpointObserver, useValue: {
                     isMatched: () => viewport.value.matches,
                     observe: (query: string) => { expect(query).toBe(MOBILE_LAYOUT_QUERY); return viewport.asObservable(); },
@@ -92,6 +93,81 @@ describe('TasksPage', () => {
         component = fixture.componentInstance;
         fixture.componentRef.setInput('view', 'today');
         await fixture.whenStable();
+    });
+
+    function showProject(id = 'project-1') {
+        projects.set([{ id, name: 'A project: "with punctuation"', user_id: 'user-1' } as Project]);
+        fixture.componentRef.setInput('projectId', id);
+        fixture.componentRef.setInput('view', 'project');
+        fixture.detectChanges();
+    }
+    const projectAction = (name: string) => Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"] a'))
+        .find(item => item.textContent?.trim() === name)!;
+
+    it('projects actions into the reusable heading only for an existing owned project', () => {
+        showProject();
+        expect(fixture.nativeElement.querySelector('app-tasks-header .project-page-more')).toBeTruthy();
+        for (const view of ['all', 'inbox', 'today', 'upcoming']) {
+            fixture.componentRef.setInput('view', view); fixture.detectChanges();
+            expect(fixture.nativeElement.querySelector('.project-page-more')).toBeNull();
+        }
+        fixture.componentRef.setInput('view', 'project');
+        fixture.componentRef.setInput('projectId', 'missing'); fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.project-page-more')).toBeNull();
+        showProject(); userId.set('other'); fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.project-page-more')).toBeNull();
+    });
+
+    it.each(['Edit project', 'Delete project'])('requests %s once with current identity/context and preserves route', async label => {
+        document.body.appendChild(fixture.nativeElement);
+        showProject();
+        const intentions = vi.fn();
+        const subscription = TestBed.inject(ProjectDialogService).requests.subscribe(intentions);
+        const trigger = fixture.nativeElement.querySelector('.project-page-more');
+        trigger.click(); await fixture.whenStable();
+        const action = projectAction(label);
+        action.click(); action.click(); await fixture.whenStable();
+        expect(intentions).toHaveBeenCalledExactlyOnceWith({ action: label === 'Edit project' ? 'edit' : 'delete', projectId: 'project-1', userId: 'user-1', sourceUrl: '/', trigger });
+        expect(TestBed.inject(Router).url).toBe('/');
+        subscription.unsubscribe();
+    });
+
+    it('dismisses with keyboard Escape, restores focus and creates no dialog request', async () => {
+        document.body.appendChild(fixture.nativeElement); showProject();
+        const intentions = vi.fn();
+        const subscription = TestBed.inject(ProjectDialogService).requests.subscribe(intentions);
+        const trigger = fixture.nativeElement.querySelector('.project-page-more') as HTMLButtonElement;
+        trigger.click(); await fixture.whenStable();
+        await vi.waitFor(() => expect(document.activeElement?.getAttribute('role')).toBe('menu'));
+        document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
+        await vi.waitFor(() => expect(trigger.getAttribute('aria-expanded')).toBe('false'));
+        expect(document.activeElement).toBe(trigger);
+        expect(intentions).not.toHaveBeenCalled(); subscription.unsubscribe();
+    });
+
+    it('dismisses the popup on an outside click without requesting a dialog', async () => {
+        document.body.appendChild(fixture.nativeElement); showProject();
+        const intentions = vi.fn();
+        const subscription = TestBed.inject(ProjectDialogService).requests.subscribe(intentions);
+        const trigger = fixture.nativeElement.querySelector('.project-page-more');
+        trigger.click(); await fixture.whenStable();
+        await vi.waitFor(() => expect(document.activeElement?.getAttribute('role')).toBe('menu'));
+        document.body.click();
+        await vi.waitFor(() => expect(trigger.getAttribute('aria-expanded')).toBe('false'));
+        expect(intentions).not.toHaveBeenCalled(); subscription.unsubscribe();
+    });
+
+    it.each(['project', 'session', 'route'])('rejects a stale menu after %s changes', async change => {
+        document.body.appendChild(fixture.nativeElement); showProject();
+        const intentions = vi.fn();
+        const subscription = TestBed.inject(ProjectDialogService).requests.subscribe(intentions);
+        fixture.nativeElement.querySelector('.project-page-more').click(); await fixture.whenStable();
+        const oldAction = projectAction('Delete project');
+        if (change === 'project') { projects.set([]); fixture.detectChanges(); }
+        if (change === 'session') { userId.set('other'); fixture.detectChanges(); }
+        if (change === 'route') await TestBed.inject(Router).navigateByUrl('/');
+        oldAction.click(); await fixture.whenStable();
+        expect(intentions).not.toHaveBeenCalled(); subscription.unsubscribe();
     });
 
     it.each(['today', 'upcoming', 'inbox', 'project'] as const)(

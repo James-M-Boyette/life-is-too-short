@@ -5,6 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { ReplaySubject } from 'rxjs';
 import { vi } from 'vitest';
+import { ProjectDialogService } from '@/features/projects/services/project-dialog.service';
 import { AppShellComponent } from './app-shell.component';
 import { AppSidebarComponent } from './app-sidebar/app-sidebar.component';
 import { AuthStore } from '@/shared/supabase/auth.store';
@@ -49,7 +50,7 @@ describe('responsive AppShellComponent', () => {
             providers: [
                 provideRouter([{ path: '**', component: TestPage }]),
                 { provide: BreakpointObserver, useValue: { isMatched: () => true, observe: () => viewport.asObservable() } },
-                { provide: AuthStore, useValue: { isAuthed: signal(true), user: signal({ email: 'test@example.com' }), signOut } },
+                { provide: AuthStore, useValue: { isAuthed: signal(true), user: signal({ id: 'test', email: 'test@example.com' }), userId: signal<string | null>('test'), signOut } },
                 { provide: ProjectsStore, useValue: { projectTree: tree, projects: signal([project('Parent').project]), getProject: () => project('Parent').project } },
                 { provide: TasksStore, useValue: { tasks: signal([]) } },
             ],
