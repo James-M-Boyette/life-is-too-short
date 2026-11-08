@@ -2,6 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TaskCreateDialogService } from '@/features/tasks/services/task-create-dialog.service';
 import { TasksPage } from './tasks.page';
 import { signal } from '@angular/core';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { BehaviorSubject } from 'rxjs';
+import { MOBILE_LAYOUT_QUERY } from '@/shared/utils/mobile-layout';
 import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { vi } from 'vitest';
@@ -29,6 +32,7 @@ const task = (id: string, plannedDate: string | null, overrides: Partial<Task> =
 describe('TasksPage', () => {
     let component: TasksPage;
     let fixture: ComponentFixture<TasksPage>;
+    const viewport = new BehaviorSubject({ matches: false, breakpoints: {} });
     const tasks = signal<Task[]>([]);
     const projects = signal<Project[]>([]);
     const updatePlannedDate = vi.fn();
@@ -39,6 +43,7 @@ describe('TasksPage', () => {
     const userId = signal<string | null>('user-1');
 
     beforeEach(async () => {
+        viewport.next({ matches: false, breakpoints: {} });
         projects.set([]);
         mutating.set(false);
         userId.set('user-1');
@@ -68,6 +73,10 @@ describe('TasksPage', () => {
             imports: [TasksPage],
             providers: [
                 TaskCreateDialogService,
+                { provide: BreakpointObserver, useValue: {
+                    isMatched: () => viewport.value.matches,
+                    observe: (query: string) => { expect(query).toBe(MOBILE_LAYOUT_QUERY); return viewport.asObservable(); },
+                } },
                 provideRouter([]),
                 { provide: AuthStore, useValue: { userId } },
                 { provide: ProjectsStore, useValue: { projects, projectTree: signal([]) } },
@@ -83,6 +92,50 @@ describe('TasksPage', () => {
         component = fixture.componentInstance;
         fixture.componentRef.setInput('view', 'today');
         await fixture.whenStable();
+    });
+
+    it.each(['today', 'upcoming', 'inbox', 'project'] as const)(
+        'disables row and list dragging on mobile and restores desktop capabilities in %s', async view => {
+            tasks.set([task('one', '2026-11-05', { project_id: view === 'project' ? 'p1' : null })]);
+            fixture.componentRef.setInput('view', view);
+            fixture.componentRef.setInput('projectId', 'p1');
+            component['setTodayLayout']('planning');
+            await fixture.whenStable();
+            const drags = () => fixture.debugElement.queryAll(By.directive(CdkDrag)).map(el => el.injector.get(CdkDrag));
+            const lists = () => fixture.debugElement.queryAll(By.directive(CdkDropList)).map(el => el.injector.get(CdkDropList));
+            const desktopRows = drags().map(drag => drag.disabled);
+            const desktopLists = lists().map(list => list.disabled);
+            expect(desktopRows).toContain(false);
+            expect(desktopLists).toContain(false);
+            const original = tasks();
+            viewport.next({ matches: true, breakpoints: {} });
+            await fixture.whenStable();
+            expect(drags().every(drag => drag.disabled)).toBe(true);
+            expect(lists().every(list => list.disabled && list.sortingDisabled)).toBe(true);
+            expect(fixture.nativeElement.querySelector('.task-drag-handle')).toBeNull();
+            expect(fixture.nativeElement.textContent).not.toContain('Drop to clear the planned date');
+            viewport.next({ matches: false, breakpoints: {} });
+            await fixture.whenStable();
+            expect(drags().map(drag => drag.disabled)).toEqual(desktopRows);
+            expect(lists().map(list => list.disabled)).toEqual(desktopLists);
+            expect(fixture.nativeElement.querySelector('.task-drag-handle')).not.toBeNull();
+            expect(tasks()).toBe(original);
+            expect(updateTaskPosition).not.toHaveBeenCalled();
+            expect(updatePlannedDate).not.toHaveBeenCalled();
+        },
+    );
+
+    it('ignores late scheduling and reorder intentions after switching to mobile', async () => {
+        const original = tasks();
+        viewport.next({ matches: true, breakpoints: {} });
+        await fixture.whenStable();
+        const list = todayList().componentInstance as TaskListComponent;
+        list.taskDropped.emit({ task: original[0], plannedDate: '2026-11-05' });
+        list.taskReordered.emit({ task: original[0], previousIndex: 0, currentIndex: 1, tasks: original, field: 'planned_position' });
+        await fixture.whenStable();
+        expect(updateTaskPosition).not.toHaveBeenCalled();
+        expect(updatePlannedDate).not.toHaveBeenCalled();
+        expect(tasks()).toBe(original);
     });
 
     it('shows project names verbatim and retains the missing/loading fallback', () => {

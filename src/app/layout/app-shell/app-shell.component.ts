@@ -1,3 +1,4 @@
+import { MOBILE_LAYOUT_QUERY } from '@/shared/utils/mobile-layout';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CdkPortalOutlet, DomPortal } from '@angular/cdk/portal';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -58,7 +59,7 @@ export class AppShellComponent {
     private readonly accountMenu = viewChild(AccountControlsComponent);
     private readonly navigationDrawer = viewChild<Drawer>('navigationDrawer');
     protected readonly sidebarPortal = signal<DomPortal | null>(null);
-    protected readonly mobile = signal(this.breakpoints.isMatched('(width < 768px)'));
+    protected readonly mobile = signal(this.breakpoints.isMatched(MOBILE_LAYOUT_QUERY));
     protected readonly navigationOpen = signal(false);
     protected readonly desktopCollapsed = signal(false);
     protected readonly desktopHidden = computed(() => !this.mobile() && this.desktopCollapsed());
@@ -229,7 +230,7 @@ export class AppShellComponent {
 
     constructor() {
         afterNextRender(() => this.sidebarPortal.set(new DomPortal(this.sidebarElement())));
-        this.breakpoints.observe('(width < 768px)').pipe(takeUntilDestroyed()).subscribe(result => {
+        this.breakpoints.observe(MOBILE_LAYOUT_QUERY).pipe(takeUntilDestroyed()).subscribe(result => {
             const changed = this.mobile() !== result.matches;
             const drawerWasOpen = this.navigationOpen();
             const focused = this.element.nativeElement.ownerDocument.activeElement;

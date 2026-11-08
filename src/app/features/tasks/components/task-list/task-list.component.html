@@ -7,7 +7,7 @@
     [cdkDropListData]="displayTasks()"
     [cdkDropListConnectedTo]="connectedDropLists()"
     [cdkDropListDisabled]="!draggable()"
-    [cdkDropListSortingDisabled]="!sortable()"
+    [cdkDropListSortingDisabled]="!draggable() || !sortable()"
     [cdkDropListEnterPredicate]="canEnter"
     [cdkDropListSortPredicate]="canSort"
     (cdkDropListDropped)="onDrop($event)"

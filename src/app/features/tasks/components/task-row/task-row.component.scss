@@ -135,3 +135,9 @@ button:disabled { cursor: not-allowed; }
 li.row.cdk-drag-preview { box-sizing: border-box; list-style: none; rotate: 1.5deg; cursor: grabbing; box-shadow: 0 12px 28px color-mix(in srgb, var(--color-text-primary) 22%, transparent); }
 li.row.cdk-drag-placeholder { opacity: 1; background: var(--color-surface-selected); border-color: var(--color-border-strong); border-style: dashed; box-shadow: none; pointer-events: none; }
 li.row.cdk-drag-placeholder > .task-card-content { visibility: hidden; }
+
+// Mobile is a viewport policy, independent of compact cards in narrow desktop columns.
+@media (width < 768px) {
+    li.row, li.row.is-draggable, li.row.is-draggable:active { margin-left: 0; cursor: auto; }
+    .task-drag-handle { display: none; }
+}
