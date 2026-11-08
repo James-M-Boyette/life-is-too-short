@@ -67,12 +67,6 @@
                         ariaCurrentWhenActive="page">
                         <span>{{ node.label }}</span>
                     </a>
-                    <button type="button" class="project-more" aria-haspopup="menu" aria-controls="sidebar-project-actions"
-                        [attr.aria-label]="'More actions for ' + node.label" [pTooltip]="'More actions for ' + node.label"
-                        [attr.aria-expanded]="menuOpen() && selectedProjectId() === node.key"
-                        (keydown)="onProjectControlKeydown($event)" (click)="openProjectMenu($event, node.key)">
-                        <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
-                    </button>
                     @if (node.children?.length) {
                         <button type="button" class="project-toggle"
                             [attr.aria-label]="(node.expanded ? 'Collapse ' : 'Expand ') + node.label"
@@ -82,6 +76,12 @@
                             <i [class]="node.expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" aria-hidden="true"></i>
                         </button>
                     }
+                    <button type="button" class="project-more" aria-haspopup="menu" aria-controls="sidebar-project-actions"
+                        [attr.aria-label]="'More actions for ' + node.label" [pTooltip]="'More actions for ' + node.label"
+                        [attr.aria-expanded]="menuOpen() && selectedProjectId() === node.key"
+                        (keydown)="onProjectControlKeydown($event)" (click)="openProjectMenu($event, node.key)">
+                        <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
+                    </button>
                 </div>
             </ng-template>
         </p-tree>

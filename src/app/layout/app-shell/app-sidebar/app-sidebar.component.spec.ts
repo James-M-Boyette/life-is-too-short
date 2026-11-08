@@ -37,6 +37,16 @@ describe('AppSidebarComponent', () => {
 
     afterEach(() => { fixture.destroy(); fixture.nativeElement.remove(); });
 
+    it('orders the name, optional chevron and More actions consistently for pointer and keyboard users', () => {
+        const controls = (id: string) => Array.from(link(id)!.closest('.project-tree-item')!.children)
+            .map(control => control.tagName === 'A' ? 'name' : control.className);
+        expect(controls('parent')).toEqual(['name', 'project-toggle', 'project-more']);
+        toggle('parent');
+        expect(controls('child')).toEqual(['name', 'project-toggle', 'project-more']);
+        expect(controls('leaf')).toEqual(['name', 'project-more']);
+        expect(link('parent')!.closest('.project-tree-item')!.querySelector('[tabindex]')).toBeNull();
+    });
+
     it('navigates on a name click without expanding and retains active styling', async () => {
         const navigated = vi.fn();
         fixture.componentInstance.navigated.subscribe(navigated);

@@ -3,9 +3,9 @@
     "version": "0.0.0",
     "scripts": {
         "ng": "ng",
-        "dockerStart": "pnpm exec docker desktop start",
+        "dockerStart": "docker desktop start",
         "supabaseStart": "pnpm exec supabase start",
-        "localStart": "pnpm run dockerStart && pnpm run supabaseStart",
+        "localStart": "dockerStart && supabaseStart",
         "supabaseStop": "pnpm exec supabase stop",
         "git:sync-branches": "node scripts/sync-branches.mjs",
         "start": "ng serve --port 4300 --host 127.0.0.1",

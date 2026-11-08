@@ -10,8 +10,8 @@ The popup appends to body on desktop and to the existing Drawer root on mobile, 
 
 ## Automated verification
 
-- Targeted sidebar/shell tests: 23 passed.
-- Full suite: 243 tests passed across 20 files.
+- Targeted sidebar/shell tests: 24 passed.
+- Full suite: 244 tests passed across 20 files.
 - Production build: passed.
 - git diff --check: passed.
 - Stylesheet warnings remain below the 8kB error budget: AppSidebar 4.31kB; TaskRow 7.62kB. No budget changes.
@@ -37,3 +37,7 @@ Physical touchscreen/screen-reader combinations and mobile Safari remain device 
 ## Self-review
 
 Reviewed stale selected IDs, popup switching/animation races, focus handoff into modals, Escape bubbling into the drawer, stable action-slot layout, and overlay-scoped destructive styling. No new data operations, security boundaries, services, stores, or duplicate project trees were introduced. The existing arbitrary-depth hierarchy/expansion implementation was retained.
+
+## Pre-merge correction
+
+Project controls now follow DOM/Tab order: name, optional expansion chevron, More actions. Leaf rows contain no chevron placeholder. Existing flex sizing and action visibility rules are unchanged. Added one focused order regression covering parent, nested parent, and leaf rows. Restored only dockerStart and localStart to origin/main values; package.json now has no diff against main. Re-ran targeted/full tests, production build, and diff check successfully. Browser acceptance above predates this template-only reorder; no new browser session was required for the unchanged interaction handlers/styles.
