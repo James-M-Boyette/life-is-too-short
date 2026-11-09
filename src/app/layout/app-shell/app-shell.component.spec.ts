@@ -51,7 +51,7 @@ describe('responsive AppShellComponent', () => {
                 provideRouter([{ path: '**', component: TestPage }]),
                 { provide: BreakpointObserver, useValue: { isMatched: () => true, observe: () => viewport.asObservable() } },
                 { provide: AuthStore, useValue: { isAuthed: signal(true), user: signal({ id: 'test', email: 'test@example.com' }), userId: signal<string | null>('test'), signOut } },
-                { provide: ProjectsStore, useValue: { projectTree: tree, projects: signal([project('Parent').project]), getProject: () => project('Parent').project } },
+                { provide: ProjectsStore, useValue: { loadError: signal(null), projectTree: tree, projects: signal([project('Parent').project]), getProject: () => project('Parent').project } },
                 { provide: TasksStore, useValue: { tasks: signal([]) } },
             ],
         }).compileComponents();

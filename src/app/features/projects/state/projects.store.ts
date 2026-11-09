@@ -25,6 +25,8 @@ export class ProjectsStore {
         // A hierarchical representation of the Projects, built from the flat list of Projects.
         buildProjectTree(this.projects()),
     );
+    // Loading recovery is distinct from CRUD errors already shown in dialogs.
+    readonly loadError = signal<string | null>(null);
     readonly loading = signal(false); // Are we fetching them?
     readonly error = signal<string | null>(null); // Did fetching them fail?
 
@@ -49,6 +51,7 @@ export class ProjectsStore {
             this.generation++;
             this.projects.set([]);
             this.error.set(null);
+            this.loadError.set(null);
             this.loading.set(false);
         }
         return { userId, generation: this.generation };
@@ -93,9 +96,13 @@ export class ProjectsStore {
                 .from('projects').select('*').order('name', { ascending: true });
             if (error) throw error;
             if (this.isCurrent(session) && id === this.latestRefresh) {
+                this.loadError.set(null);
                 this.projects.set((data ?? []) as Project[]);
             }
         } catch (error: unknown) {
+            if (this.isCurrent(session) && id === this.latestRefresh) {
+                this.loadError.set(error instanceof Error ? error.message : 'Failed to load projects');
+            }
             this.recordError(session, id, error);
             throw error;
         } finally {

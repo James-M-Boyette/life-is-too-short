@@ -27,6 +27,12 @@
             <aside #sidebarContent id="desktop-sidebar-content" class="app-sidebar" [hidden]="desktopHidden()" [attr.inert]="desktopHidden() ? '' : null">
             <app-account-controls [user]="auth.user()" [available]="mobile() ? navigationOpen() : !desktopCollapsed()" [mobile]="mobile()"
                 [pending]="signingOut()" [error]="signOutError()" (signOut)="signOut()" />
+            @if (projectsStore.loadError()) {
+                <div class="project-load-error" role="alert">
+                    <p>Could not load projects. Check your connection and try again.</p>
+                    <p-button label="Retry loading projects" [text]="true" [loading]="projectsStore.loading()" [disabled]="projectsStore.loading()" (onClick)="retryProjects()" />
+                </div>
+            }
             <app-sidebar
                 [projects]="projectsStore.projectTree()"
                 [expandProjectRequest]="expandProjectRequest()"

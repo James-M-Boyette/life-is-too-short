@@ -173,6 +173,15 @@ export class AppShellComponent {
     protected readonly projectsStore = inject(ProjectsStore);
     protected readonly tasksStore = inject(TasksStore);
 
+    protected async retryProjects(): Promise<void> {
+        if (!this.auth.userId() || this.projectsStore.loading()) return;
+        try {
+            await this.projectsStore.refresh();
+        } catch {
+            // ProjectsStore owns session-safe loading feedback.
+        }
+    }
+
     private readonly taskCreateDialog = inject(TaskCreateDialogService);
     protected readonly taskDialogVisible = computed(() => this.taskCreateDialog.context() !== null);
     protected readonly taskCreateContext = this.taskCreateDialog.context;

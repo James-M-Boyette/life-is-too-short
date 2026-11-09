@@ -40,10 +40,17 @@ describe('TasksPage', () => {
     const updateDueDate = vi.fn();
     const updateTaskPosition = vi.fn();
     const updateContent = vi.fn();
+    const toggleDone = vi.fn(); const updateProject = vi.fn(); const remove = vi.fn();
+    const refreshTasks = vi.fn();
+    const loading = signal(false);
+    const storeError = signal<string | null>(null);
     const mutating = signal(false);
     const userId = signal<string | null>('user-1');
 
     beforeEach(async () => {
+        storeError.set(null); loading.set(false);
+        refreshTasks.mockReset().mockImplementation(async () => { storeError.set(null); });
+        for (const operation of [toggleDone, updateProject, remove]) operation.mockReset().mockResolvedValue(undefined);
         viewport.next({ matches: false, breakpoints: {} });
         projects.set([]);
         mutating.set(false);
@@ -83,7 +90,7 @@ describe('TasksPage', () => {
                 { provide: ProjectsStore, useValue: { projects, projectTree: signal([]) } },
                 { provide: CalendarClockService, useValue: { today: signal('2026-11-05') } },
                 { provide: TasksStore, useValue: {
-                    tasks, updatePlannedDate, updateDueDate, updateTaskPosition, updateContent, mutating, error: signal(null), loading: signal(false),
+                    tasks, updatePlannedDate, updateDueDate, updateTaskPosition, updateContent, toggleDone, updateProject, remove, refreshTasks, mutating, error: storeError, loading,
                     realtimeConnected: signal(false),
                 } },
             ],
@@ -872,4 +879,114 @@ describe('TasksPage', () => {
         await saving;
         expect(component['bulkScheduleBusy']()).toBe(false);
     });
+    for (const action of ['completion', 'assignment', 'deletion'] as const) {
+        it(`handles rejected ${action} from the UI while keeping the store failure visible`, async () => {
+            let fail!: (error: Error) => void;
+            const request = new Promise<void>((_resolve, reject) => { fail = reject; });
+            const operation = { completion: toggleDone, assignment: updateProject, deletion: remove }[action];
+            operation.mockImplementationOnce(async () => {
+                try { await request; } catch (error) { storeError.set((error as Error).message); throw error; }
+            });
+            const list = todayList().componentInstance as TaskListComponent;
+            const current = tasks().find(item => item.id === 'today')!;
+            if (action === 'completion') list.toggleDone.emit(current);
+            else if (action === 'assignment') list.projectChange.emit({ task: current, projectId: 'project-1' });
+            else {
+                const confirmations = fixture.debugElement.injector.get(ConfirmationService);
+                const confirm = vi.spyOn(confirmations, 'confirm');
+                list.remove.emit(current.id); confirm.mock.calls[0][0].accept!();
+            }
+            fail(new Error('Network unavailable')); await fixture.whenStable(); fixture.detectChanges();
+            expect(operation).toHaveBeenCalledTimes(1);
+            expect(fixture.nativeElement.querySelector('app-tasks-header')?.textContent).toContain('Network unavailable');
+        });
+    }
+
+    it('shows actionable feedback for an ordering calculation failure before persistence', async () => {
+        const current = task('today', '2026-11-05');
+        const neighbor = task('neighbor', '2026-11-05', { planned_position: null });
+        tasks.set([current, neighbor]); fixture.detectChanges();
+        (todayList().componentInstance as TaskListComponent).taskReordered.emit({
+            task: current, previousIndex: 0, currentIndex: 1, tasks: [current, neighbor], field: 'planned_position',
+        });
+        await fixture.whenStable(); fixture.detectChanges();
+        expect(updateTaskPosition).not.toHaveBeenCalled();
+        expect(fixture.nativeElement.querySelector('app-tasks-header')?.textContent).toMatch(/Could not reorder.*try again/i);
+    });
+
+    for (const action of ['completion', 'assignment', 'deletion'] as const) {
+        it(`permits a successful ${action} retry after failure without a duplicate error message`, async () => {
+            const operation = { completion: toggleDone, assignment: updateProject, deletion: remove }[action];
+            operation.mockRejectedValueOnce(new Error('Supabase denied'));
+            const list = todayList().componentInstance as TaskListComponent;
+            const current = tasks().find(item => item.id === 'today')!;
+            const invoke = () => {
+                if (action === 'completion') list.toggleDone.emit(current);
+                else if (action === 'assignment') list.projectChange.emit({ task: current, projectId: null });
+                else {
+                    const confirm = vi.spyOn(fixture.debugElement.injector.get(ConfirmationService), 'confirm');
+                    list.remove.emit(current.id); confirm.mock.calls.at(-1)![0].accept!();
+                }
+            };
+            invoke(); await fixture.whenStable(); fixture.detectChanges();
+            expect(fixture.nativeElement.querySelectorAll('app-tasks-header [role="alert"]')).toHaveLength(1);
+            expect(fixture.nativeElement.querySelector('app-tasks-header')?.textContent).toMatch(/Could not .*try again/i);
+            invoke(); await fixture.whenStable(); fixture.detectChanges();
+            expect(operation).toHaveBeenCalledTimes(2);
+            expect(fixture.nativeElement.querySelector('app-tasks-header [role="alert"]')).toBeNull();
+        });
+    }
+
+    for (const change of ['account', 'navigation'] as const) {
+        it(`ignores late completion feedback after ${change}`, async () => {
+            let fail!: (error: Error) => void;
+            const request = new Promise<void>((_resolve, reject) => { fail = reject; });
+            toggleDone.mockReturnValueOnce(request);
+            (todayList().componentInstance as TaskListComponent).toggleDone.emit(tasks().find(item => item.id === 'today')!);
+            if (change === 'account') { userId.set('other'); fixture.detectChanges(); }
+            else await TestBed.inject(Router).navigateByUrl('/');
+            fail(new Error('Obsolete failure')); await fixture.whenStable(); fixture.detectChanges();
+            expect(fixture.nativeElement.querySelector('app-tasks-header [role="alert"]')).toBeNull();
+        });
+    }
+
+    it('rejects an obsolete delete confirmation after an account switch', async () => {
+        const confirm = vi.spyOn(fixture.debugElement.injector.get(ConfirmationService), 'confirm');
+        (todayList().componentInstance as TaskListComponent).remove.emit('today');
+        const accept = confirm.mock.calls[0][0].accept!;
+        userId.set('other'); accept(); await fixture.whenStable();
+        expect(remove).not.toHaveBeenCalled();
+    });
+
+    it('recovers ordering feedback by refreshing task data without automatically replaying the reorder', async () => {
+        const current = task('today', '2026-11-05'); const neighbor = task('neighbor', '2026-11-05', { planned_position: null });
+        tasks.set([current, neighbor]); fixture.detectChanges();
+        (todayList().componentInstance as TaskListComponent).taskReordered.emit({ task: current, previousIndex: 0, currentIndex: 1, tasks: [current, neighbor], field: 'planned_position' });
+        await fixture.whenStable(); fixture.detectChanges();
+        let finish!: () => void;
+        refreshTasks.mockImplementationOnce(async () => { loading.set(true); await new Promise<void>(resolve => { finish = resolve; }); loading.set(false); });
+        const retry = fixture.nativeElement.querySelector('p-button[label="Refresh task list"] button') as HTMLButtonElement;
+        expect(retry).toBeTruthy(); retry.click(); retry.click(); fixture.detectChanges();
+        expect(refreshTasks).toHaveBeenCalledTimes(1);
+        finish(); await fixture.whenStable(); fixture.detectChanges();
+        expect(updateTaskPosition).not.toHaveBeenCalled();
+        expect(fixture.nativeElement.querySelector('app-tasks-header [role="alert"]')).toBeNull();
+    });
+
+    it('catches a failed task refresh and keeps a retry action available', async () => {
+        storeError.set('Initial load failed'); fixture.detectChanges();
+        refreshTasks.mockImplementationOnce(async () => { storeError.set(null); throw new Error('Offline'); });
+        fixture.nativeElement.querySelector('p-button[label="Refresh task list"] button').click();
+        await fixture.whenStable(); fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('app-tasks-header')?.textContent).toMatch(/Could not refresh tasks.*try again/i);
+        expect(fixture.nativeElement.querySelector('p-button[label="Refresh task list"]')).toBeTruthy();
+    });
+
+    it('shows rejected drop feedback even when validation failed before the store recorded an error', async () => {
+        updatePlannedDate.mockRejectedValueOnce(new Error('Invalid insertion boundary'));
+        (todayList().componentInstance as TaskListComponent).taskDropped.emit({ task: tasks().find(item => item.id === 'old')!, plannedDate: '2026-11-05' });
+        await fixture.whenStable(); fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('app-tasks-header')?.textContent).toMatch(/Could not reschedule.*try again/i);
+    });
+
 });
