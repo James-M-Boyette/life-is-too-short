@@ -62,7 +62,7 @@ describe('Shell dialog account ownership', () => {
             provideRouter([{ path: '**', component: SessionPage }]),
             { provide: BreakpointObserver, useValue: { isMatched: () => true, observe: () => of({ matches: true }) } },
             { provide: AuthStore, useValue: { userId, isAuthed: computed(() => userId() !== null), user: computed(() => userId() ? { id: userId(), email: userId() + '@example.test' } : null) } },
-            { provide: ProjectsStore, useValue: { projects, projectTree: computed(() => buildProjectTree(projects())), getProject: (id: string) => projects().find(item => item.id === id), createProject, updateProject, deleteProject } },
+            { provide: ProjectsStore, useValue: { projects, loadError: signal(null), projectTree: computed(() => buildProjectTree(projects())), getProject: (id: string) => projects().find(item => item.id === id), createProject, updateProject, deleteProject } },
             { provide: TasksStore, useValue: { tasks: signal([]), addTask, refreshTasks } },
         ] }).compileComponents();
         fixture = TestBed.createComponent(AppShellComponent); document.body.appendChild(fixture.nativeElement);

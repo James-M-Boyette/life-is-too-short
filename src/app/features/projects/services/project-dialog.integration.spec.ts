@@ -50,7 +50,7 @@ describe('Project page dialogs through the existing shell', () => {
                 ], withComponentInputBinding()),
                 { provide: BreakpointObserver, useValue: { isMatched: () => false, observe: () => of({ matches: false }) } },
                 { provide: AuthStore, useValue: { userId, user: computed(() => ({ id: userId(), email: 'fixture@example.com' })), isAuthed: signal(true) } },
-                { provide: ProjectsStore, useValue: { projects, projectTree: computed(() => buildProjectTree(projects())), getProject: (id: string) => projects().find(item => item.id === id), deleteProject: remove } },
+                { provide: ProjectsStore, useValue: { projects, loadError: signal(null), projectTree: computed(() => buildProjectTree(projects())), getProject: (id: string) => projects().find(item => item.id === id), deleteProject: remove } },
                 { provide: TasksStore, useValue: { tasks: signal([]), loading: signal(false), mutating: signal(false), error: taskError, realtimeConnected: signal(false), refreshTasks: refresh } },
                 { provide: CalendarClockService, useValue: { today: signal('2026-11-08') } },
             ],

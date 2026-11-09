@@ -77,11 +77,11 @@ describe('ProjectsStore account isolation', () => {
     it('handles automatic refresh rejection and ignores old-account failures', async () => {
         const a = query(); userId.set('A'); TestBed.tick();
         a.reject(new Error('current failure')); await a.promise.catch(() => undefined); TestBed.tick();
-        expect(store.error()).toBe('current failure');
+        expect(store.error()).toBe('current failure'); expect(store.loadError()).toBe('current failure');
         const old = query(); const pending = store.refresh().catch(() => undefined);
         const b = query(); userId.set('B'); TestBed.tick();
         old.reject(new Error('obsolete')); await pending;
-        expect(store.error()).toBeNull(); expect(store.loading()).toBe(true);
+        expect(store.error()).toBeNull(); expect(store.loadError()).toBeNull(); expect(store.loading()).toBe(true);
         await finish(b, [project('b', 'B')]);
     });
 
@@ -91,7 +91,7 @@ describe('ProjectsStore account isolation', () => {
         first.reject(new Error('older')); await first.promise.catch(() => undefined);
         expect(store.loading()).toBe(true); expect(store.error()).toBeNull();
         second.reject(new Error('newer')); await pending;
-        expect(store.loading()).toBe(false); expect(store.error()).toBe('newer');
+        expect(store.loading()).toBe(false); expect(store.error()).toBe('newer'); expect(store.loadError()).toBe('newer');
         const third = query(); const thirdPending = store.refresh();
         const fourth = query(); const fourthPending = store.refresh();
         await finish(fourth, [project('newest')]); await fourthPending;

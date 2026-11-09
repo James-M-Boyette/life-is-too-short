@@ -4,7 +4,7 @@
     <app-tasks-header
         [title]="pageHeader()"
         [realtimeOn]="tasksStore.realtimeConnected()"
-        [errorText]="tasksStore.error()"
+        [errorText]="error() ?? tasksStore.error()"
         [disabled]="tasksStore.mutating()"
         (signOut)="signOut()"
     >
@@ -15,6 +15,10 @@
                 (click)="toggleProjectMenu($event)"><i pButtonIcon class="pi pi-ellipsis-h" aria-hidden="true"></i></button>
         }
     </app-tasks-header>
+    @if (error() || tasksStore.error()) {
+        <p-button label="Refresh task list" [text]="true" [disabled]="tasksStore.loading() || tasksStore.mutating()"
+            (onClick)="refreshTaskList()" />
+    }
     <p-menu #projectPageMenu id="project-page-actions" [model]="projectMenuItems" [popup]="true"
         appendTo="body" ariaLabel="Project actions" (onHide)="projectMenuHidden()" />
 
@@ -139,9 +143,9 @@
                     [destinationDate]="calendarClock.today()"
                     (taskDropped)="onTaskDropped($event)"
                     emptyMessage="Nothing for today."
-                    (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
+                    (projectChange)="changeTaskProject($event)"
                     (scheduleRequested)="openSchedule($event)"
-                    (toggleDone)="tasksStore.toggleDone($event)"
+                    (toggleDone)="toggleTask($event)"
                     (remove)="confirmDeleteTask($event)"
                     (contentSaved)="
                         saveContent($event)
@@ -206,9 +210,9 @@
                         [sortable]="true"
                         (taskReordered)="onTaskReordered($event)"
                         emptyMessage="No unscheduled tasks."
-                        (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
+                        (projectChange)="changeTaskProject($event)"
                         (scheduleRequested)="openSchedule($event)"
-                        (toggleDone)="tasksStore.toggleDone($event)"
+                        (toggleDone)="toggleTask($event)"
                         (remove)="confirmDeleteTask($event)"
                         (contentSaved)="
                             saveContent($event)
@@ -244,9 +248,9 @@
                         [acceptsDrops]="false"
                         (taskDropped)="onTaskDropped($event)"
                         emptyMessage="Nothing overdue."
-                        (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
+                        (projectChange)="changeTaskProject($event)"
                         (scheduleRequested)="openSchedule($event)"
-                        (toggleDone)="tasksStore.toggleDone($event)"
+                        (toggleDone)="toggleTask($event)"
                         (remove)="confirmDeleteTask($event)"
                         (contentSaved)="
                             saveContent($event)
@@ -301,9 +305,9 @@
                         [destinationDate]="day.date"
                         (taskDropped)="onTaskDropped($event)"
                         emptyMessage="No tasks scheduled."
-                        (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
+                        (projectChange)="changeTaskProject($event)"
                         (scheduleRequested)="openSchedule($event)"
-                        (toggleDone)="tasksStore.toggleDone($event)"
+                        (toggleDone)="toggleTask($event)"
                         (remove)="confirmDeleteTask($event)"
                         (contentSaved)="
                             saveContent($event)
@@ -349,9 +353,9 @@
                     [dropListId]="view() === 'inbox' ? 'tasks-inbox' : 'tasks-project'"
                     (taskReordered)="onTaskReordered($event)"
                     emptyMessage="No open tasks."
-                    (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
+                    (projectChange)="changeTaskProject($event)"
                     (scheduleRequested)="openSchedule($event)"
-                    (toggleDone)="tasksStore.toggleDone($event)"
+                    (toggleDone)="toggleTask($event)"
                     (remove)="confirmDeleteTask($event)"
                     (contentSaved)="
                         saveContent($event)
@@ -387,9 +391,9 @@
                     [contentFeedback]="contentFeedback()"
                     [disabled]="tasksStore.mutating()"
                     emptyMessage="No completed tasks."
-                    (projectChange)="tasksStore.updateProject($event.task, $event.projectId)"
+                    (projectChange)="changeTaskProject($event)"
                     (scheduleRequested)="openSchedule($event)"
-                    (toggleDone)="tasksStore.toggleDone($event)"
+                    (toggleDone)="toggleTask($event)"
                     (remove)="confirmDeleteTask($event)"
                     (contentSaved)="
                         saveContent($event)

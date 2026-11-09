@@ -84,3 +84,8 @@
 .collapse-navigation { position: absolute; inset-inline-end: var(--space-3); top: var(--space-3); z-index: 1; }
 // Reserve a fixed target beside the account trigger without affecting the relocated mobile aside.
 .desktop-navigation > .app-sidebar > app-account-controls { padding-inline-end: calc(var(--space-3) + 2.75rem); }
+
+.project-load-error {
+    padding: var(--space-3);
+    color: var(--color-status-danger);
+}
