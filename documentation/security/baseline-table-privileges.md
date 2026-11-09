@@ -17,3 +17,7 @@ The hierarchy migration does not change these existing privileges, deletion sema
 Independently inspect effective deployed grants, role membership and function exposure with read-only authorization first. Inventory required table privileges, then propose a focused least-privilege migration removing unnecessary TRUNCATE/TRIGGER/REFERENCES and broad defaults where appropriate. Test permitted CRUD/RPC paths and prohibited whole-table operations in an isolated Supabase environment before requesting deployment approval. Do not infer safety from frontend controls or RLS alone.
 
 No permission rewrite or hosted verification was performed in this PR. Treat the checked-in baseline exposure as a material finding requiring independent security review, while keeping its remediation separately scoped.
+
+## Follow-up proposal
+
+The subsequent [least-privilege proposal and isolated verification](database-least-privilege-proposal.md) inventories required access and supplies a candidate additive migration. It is a review proposal, not evidence of hosted remediation. PR #70's hierarchy migration and the privilege correction have not been deployed to hosted Supabase.
