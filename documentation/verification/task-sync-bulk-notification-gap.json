@@ -1,0 +1,54 @@
+{
+  "meters": [
+    {
+      "requests": 34,
+      "bytes": 4673460,
+      "active": 0,
+      "offline": false,
+      "hints": 5000
+    },
+    {
+      "requests": 18,
+      "bytes": 2336732,
+      "active": 0,
+      "offline": false,
+      "hints": 5000
+    }
+  ],
+  "stores": [
+    {
+      "error": null,
+      "connected": true,
+      "lastRead": 1794250600696,
+      "lastHint": 1794250600404,
+      "content": [
+        {
+          "id": "33a6c14e-be0d-4239-b83c-ea768e2f5277",
+          "user_id": "cdc599d9-492a-4b03-9002-4b034c408bbf",
+          "title": "Cross-device create",
+          "is_done": false,
+          "created_at": "2026-11-09T18:56:40.727693+00:00",
+          "description": "**source**",
+          "due_at": null,
+          "updated_at": "2026-11-09T18:56:40.727693+00:00",
+          "status": "todo",
+          "project_id": null,
+          "planned_date": null,
+          "due_date": null,
+          "project_position": 1000,
+          "planned_position": 0
+        }
+      ]
+    },
+    {
+      "error": null,
+      "connected": true,
+      "lastRead": 1794250600701,
+      "lastHint": 1794250600406,
+      "content": []
+    }
+  ],
+  "persisted": "[{\"id\":\"33a6c14e-be0d-4239-b83c-ea768e2f5277\",\"user_id\":\"cdc599d9-492a-4b03-9002-4b034c408bbf\",\"title\":\"Cross-device create\",\"is_done\":false,\"created_at\":\"2026-11-09T18:56:40.727693+00:00\",\"description\":\"**source**\",\"due_at\":null,\"updated_at\":\"2026-11-09T18:56:40.727693+00:00\",\"status\":\"todo\",\"project_id\":null,\"planned_date\":null,\"due_date\":null,\"project_position\":1000,\"planned_position\":0}]",
+  "messages": "5001",
+  "observation": "After the 5000-row connected burst, next committed mutation/message was not observed by either joined A client within 45 seconds. Cause not established; not evidence of unauthorized access."
+}
