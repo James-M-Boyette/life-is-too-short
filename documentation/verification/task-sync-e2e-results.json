@@ -1,0 +1,66 @@
+{
+  "checks": [
+    {
+      "mode": "broadcast",
+      "result": "passed"
+    }
+  ],
+  "environment": {
+    "project": "lits-integration-ed49b9c8",
+    "work": "tmp\\supabase-services-c2288a48-d220-42f8-8752-c05de249b459",
+    "cli": "2.120.0"
+  },
+  "evidence": {
+    "checks": [
+      "Independent A1/A2/B stores joined; adversarial B private-A join explicitly denied",
+      "Cross-device stable-ID INSERT/content/completion/planned/due/project/delete_project/DELETE convergence",
+      "Injected HTTP outage/online recovery and real unexpected websocket close/SDK rejoin/catch-up/subsequent delivery",
+      "100/1000/5000 task snapshots measured; both devices converge after each workload",
+      "Real denied-send mutation persisted without a message; both devices recovered on actual safety ticks",
+      "B store received no A task content or private hints; adversarial raw observer received no DELETE IDs/events"
+    ],
+    "measurements": [
+      {
+        "bulkRows": 25,
+        "elapsedMs": 263,
+        "a1Requests": 2,
+        "a2Requests": 2
+      },
+      {
+        "duplicateHints": 100,
+        "a1Requests": 2,
+        "a2Requests": 2
+      },
+      {
+        "tasks": 100,
+        "requests": 2,
+        "bytes": 38015,
+        "elapsedMs": 7
+      },
+      {
+        "tasks": 1000,
+        "requests": 3,
+        "bytes": 381814,
+        "elapsedMs": 20
+      },
+      {
+        "tasks": 5000,
+        "requests": 11,
+        "bytes": 1916998,
+        "elapsedMs": 153
+      },
+      {
+        "safetyRecoveryMs": 106894,
+        "intervalMs": 120000,
+        "a1Requests": 11,
+        "a2Requests": 11
+      }
+    ],
+    "retainedJwt": "Server proof separately verifies JWT validity until expiry; store logout prevents obsolete application updates."
+  },
+  "result": "passed",
+  "serviceObservations": {
+    "messageRateLimitErrors": 1,
+    "observedLogWindowLines": 300
+  }
+}
