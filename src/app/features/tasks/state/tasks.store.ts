@@ -3,6 +3,8 @@ import type { TaskContent } from '../models/task-content.model';
     [] Split repository/data-access concerns from application state
 */
 import { Injectable, effect, inject, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { TASK_SYNC_CONFIG } from './task-sync.config';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 // import { supabase } from '@/shared/supabase/supabase.client';
 import { SUPABASE_CLIENT } from '@/shared/supabase/supabase.client';
@@ -49,6 +51,13 @@ export class TasksStore {
     readonly error = signal<string | null>(null); // Did fetching or mutating fail?
 
     readonly realtimeConnected = signal(false);
+    readonly syncError = signal<string | null>(null);
+    readonly lastSyncedAt = signal<number | null>(null);
+    readonly lastInvalidationAt = signal<number | null>(null);
+    private readonly syncConfig = inject(TASK_SYNC_CONFIG);
+    private readonly document = inject(DOCUMENT);
+    private wakeSync: (() => void) | null = null;
+    private syncConnectionFailed = false;
 
     private channel: RealtimeChannel | null = null;
 
@@ -122,6 +131,7 @@ export class TasksStore {
 
             if (isCurrentSession()) {
                 this.mutating.set(this.taskMutationQueues.size > 0);
+                this.wakeSync?.();
             }
         }
     }
@@ -144,6 +154,11 @@ export class TasksStore {
             this.creating.set(false);
             this.loading.set(false);
             this.error.set(null);
+            this.syncError.set(null);
+            this.syncConnectionFailed = false;
+            this.lastSyncedAt.set(null);
+            this.lastInvalidationAt.set(null);
+            this.realtimeConnected.set(false);
 
             // Always tear down prior subscription when user changes/logs out
             this.teardownRealtime();
@@ -153,6 +168,14 @@ export class TasksStore {
             // If no user, mark realtime as disconnected
             if (!userId) {
                 this.realtimeConnected.set(false);
+                return;
+            }
+
+            if (this.syncConfig.mode !== 'postgres-changes') {
+                const cleanup = this.startInvalidationSync(userId);
+                onCleanup(cleanup);
+                // Prompt initial UI load; the joined channel still requires catch-up.
+                void this.refreshTasks().catch(() => undefined);
                 return;
             }
 
@@ -201,9 +224,104 @@ export class TasksStore {
 
     private teardownRealtime() {
         if (this.channel) {
-            void this.supabase.removeChannel(this.channel);
+            void this.supabase.removeChannel(this.channel).catch(() => undefined);
             this.channel = null;
         }
+    }
+
+    private startInvalidationSync(userId: string): () => void {
+        const generation = this.sessionGeneration;
+        let disposed = false;
+        const current = () => !disposed && generation === this.sessionGeneration && this.auth.userId() === userId;
+        const view = this.document.defaultView;
+        const available = () => view?.navigator.onLine !== false && this.document.visibilityState !== 'hidden';
+        let dirty = 0, completed = 0, running = false, protectedGeneration = 0;
+        let firstDirtyAt: number | null = null;
+        let attempts = 0, retryAt = 0;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const clearTimer = () => { clearTimeout(timer); timer = undefined; };
+        const schedule = (immediate = false) => {
+            if (!current() || running || !available() || this.loading() || dirty === completed || attempts > 3) return;
+            if (dirty <= protectedGeneration && this.pendingTaskIds.size > 0) return;
+            clearTimer();
+            const now = Date.now();
+            firstDirtyAt ??= now;
+            const delay = immediate ? 0 : Math.max(0, Math.min(150, firstDirtyAt + 1000 - now));
+            timer = setTimeout(() => { timer = undefined; void run(); }, Math.max(delay, retryAt - now));
+        };
+        const invalidate = (immediate = false, resetRetries = false) => {
+            if (!current()) return;
+            dirty++;
+            if (resetRetries) { attempts = 0; retryAt = 0; }
+            schedule(immediate);
+        };
+        const run = async () => {
+            if (!current() || running || !available() || this.loading()) return;
+            if (dirty <= protectedGeneration && this.pendingTaskIds.size > 0) return;
+            running = true;
+            const target = dirty;
+            firstDirtyAt = null;
+            try {
+                const result = await this.refreshSnapshot(true);
+                if (!current()) return;
+                if (result.applied) {
+                    attempts = 0; retryAt = 0;
+                    protectedGeneration = result.protected ? target : 0;
+                    if (!result.protected) completed = target;
+                }
+            } catch {
+                if (!current()) return;
+                attempts++;
+                retryAt = Date.now() + ([1000, 5000, 15000][attempts - 1] ?? 15000);
+            } finally {
+                running = false;
+                if (current()) schedule();
+            }
+        };
+        const wake = () => schedule();
+        this.wakeSync = wake;
+        const resume = () => { if (available()) invalidate(true, true); else clearTimer(); };
+        view?.addEventListener('online', resume);
+        view?.addEventListener('offline', resume);
+        view?.addEventListener('pageshow', resume);
+        this.document.addEventListener('visibilitychange', resume);
+        // The SDK alone owns channel reconnect/rejoin. Every successful join
+        // triggers a read, including joins following a missed-event window.
+        if (this.syncConfig.mode === 'broadcast') {
+            this.channel = this.supabase.channel(`task-invalidation:${userId}`, { config: { private: true } })
+            .on('broadcast', { event: 'tasks_changed_v1' }, message => {
+                if (!current() || message?.['payload']?.v !== 1) return;
+                this.lastInvalidationAt.set(Date.now());
+                invalidate();
+            }).subscribe(status => {
+                if (!current()) return;
+                this.realtimeConnected.set(status === 'SUBSCRIBED');
+                if (status === 'SUBSCRIBED') {
+                    this.syncConnectionFailed = false;
+                    invalidate(true, true);
+                }
+                else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                    this.syncConnectionFailed = true;
+                    this.syncError.set('Live task connection unavailable. Refresh the task list to catch up.');
+                }
+            });
+        }
+        // Best-effort notifications can be lost even while the socket is joined.
+        // This modest safety read is paused when hidden/offline; it is not a
+        // second websocket reconnect loop or a claim of durable replay.
+        const safety = this.syncConfig.safetyRefreshMs > 0
+            ? setInterval(() => { if (available()) invalidate(false, true); }, this.syncConfig.safetyRefreshMs)
+            : undefined;
+        return () => {
+            disposed = true;
+            clearTimer(); clearInterval(safety);
+            view?.removeEventListener('online', resume);
+            view?.removeEventListener('offline', resume);
+            view?.removeEventListener('pageshow', resume);
+            this.document.removeEventListener('visibilitychange', resume);
+            if (this.wakeSync === wake) this.wakeSync = null;
+            this.teardownRealtime();
+        };
     }
 
     // Payload typing is annoyingly loose in supabase-js; we’re keeping it safe for now ...
@@ -260,6 +378,10 @@ export class TasksStore {
     }
 
     async refreshTasks(): Promise<void> {
+        await this.refreshSnapshot(false);
+    }
+
+    private async refreshSnapshot(background: boolean): Promise<{ applied: boolean; protected: boolean }> {
         const generationAtStart = this.sessionGeneration;
         const userIdAtStart = this.auth.userId();
         const requestId = ++this.latestRefreshRequest;
@@ -273,8 +395,10 @@ export class TasksStore {
         // Snapshot the revisions when this particular query starts.
         const revisionsAtStart = new Map(this.taskRevisions);
 
-        this.loading.set(true);
-        this.error.set(null);
+        if (!background) {
+            this.loading.set(true);
+            this.error.set(null);
+        }
 
         try {
             const fetchedTasks: Task[] = [];
@@ -288,7 +412,7 @@ export class TasksStore {
                 if (cursor !== undefined) query = query.gt('id', cursor);
                 const { data, error } = await query.limit(500);
                 if (error) throw error;
-                if (!ownsRefresh()) return;
+                if (!ownsRefresh()) return { applied: false, protected: false };
                 if (!Array.isArray(data)) throw new Error('Incomplete task snapshot: invalid page');
                 // Do not infer completion from a short page: an API cap may be
                 // lower than our requested limit. Only an empty page ends fetch.
@@ -303,8 +427,9 @@ export class TasksStore {
                     fetchedTasks.push(task);
                 }
             }
-            if (!ownsRefresh()) return;
+            if (!ownsRefresh()) return { applied: false, protected: false };
 
+            let protectedTasks = this.pendingTaskIds.size > 0;
             this.tasks.update((currentTasks) => {
                 const currentById = new Map(currentTasks.map((task) => [task.id, task]));
 
@@ -320,6 +445,7 @@ export class TasksStore {
                     const isPending = this.pendingTaskIds.has(fetched.id);
 
                     if (changedDuringRefresh || isPending) {
+                        protectedTasks = true;
                         // A newer change occurred. Keep its current state,
                         // or leave it deleted if no current row exists.
                         const current = currentById.get(fetched.id);
@@ -344,20 +470,28 @@ export class TasksStore {
                         (revisionsAtStart.get(current.id) ?? 0);
 
                     if (changedDuringRefresh || this.pendingTaskIds.has(current.id)) {
+                        protectedTasks = true;
                         merged.set(current.id, current);
                     }
                 }
 
                 return this.sortDesc([...merged.values()]);
             });
+            this.syncError.set(this.syncConnectionFailed
+                ? 'Live task connection unavailable. Refresh the task list to catch up.' : null);
+            if (!protectedTasks) this.lastSyncedAt.set(Date.now());
+            return { applied: true, protected: protectedTasks };
         } catch (error: unknown) {
             if (ownsRefresh()) {
-                this.error.set(error instanceof Error ? error.message : 'Failed to load tasks');
+                const message = error instanceof Error ? error.message : 'Failed to load tasks';
+                if (background) this.syncError.set(`Task synchronization failed: ${message}. Refresh the task list to retry.`);
+                else this.error.set(message);
             }
             // Supersession suppresses store writes, not rejection to the caller.
             throw error;
         } finally {
-            if (ownsRefresh()) this.loading.set(false);
+            if (!background && ownsRefresh()) this.loading.set(false);
+            if (!background && generationAtStart === this.sessionGeneration && userIdAtStart === this.auth.userId()) this.wakeSync?.();
         }
     }
 
@@ -492,6 +626,7 @@ export class TasksStore {
                 }
             }
             finishCreation();
+            if (isCurrentSession()) this.wakeSync?.();
         }
     }
 

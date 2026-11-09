@@ -1,0 +1,22 @@
+{
+  "checks": [
+    {
+      "mode": "postgres-changes",
+      "result": "passed"
+    },
+    {
+      "mode": "broadcast",
+      "result": "passed"
+    },
+    {
+      "mode": "api-only",
+      "result": "passed"
+    }
+  ],
+  "environment": {
+    "project": "lits-integration-d47689d7",
+    "work": "tmp\\supabase-services-12f0eb1c-fe11-43cc-9c74-a202026aecc6",
+    "cli": "2.120.0"
+  },
+  "result": "passed"
+}

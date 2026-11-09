@@ -6,6 +6,7 @@ import { TasksStore } from './tasks.store';
 import { AuthStore } from '@/shared/supabase/auth.store';
 import type { Task } from '@/features/tasks/models/tasks.model';
 import { SUPABASE_CLIENT } from '@/shared/supabase/supabase.client';
+import { TASK_SYNC_CONFIG } from './task-sync.config';
 
 function deferred<T>() {
     let resolve!: (value: T) => void;
@@ -116,6 +117,15 @@ describe('TasksStore', () => {
         userId.set(id); TestBed.tick();
         loaded.resolve({ data: [], error: null }); await loaded.promise; await vi.waitFor(() => expect(store.loading()).toBe(false));
     }
+
+    it('defaults to the deployed PostgreSQL Changes contract until Broadcast rollout is explicitly configured', async () => {
+        expect(TestBed.inject(TASK_SYNC_CONFIG).mode).toBe('postgres-changes');
+        await authenticateForCreation();
+        const client = TestBed.inject(SUPABASE_CLIENT);
+        expect(client.channel).toHaveBeenCalledExactlyOnceWith('tasks:user-1');
+        realtimeEvent({ eventType: 'INSERT', new: createTask() });
+        expect(store.tasks()).toEqual([createTask()]);
+    });
 
     it('keeps one task identity when Realtime INSERT arrives before the HTTP creation response', async () => {
         await authenticateForCreation();

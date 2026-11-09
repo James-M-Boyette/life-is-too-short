@@ -44,11 +44,12 @@ describe('TasksPage', () => {
     const refreshTasks = vi.fn();
     const loading = signal(false);
     const storeError = signal<string | null>(null);
+    const syncError = signal<string | null>(null);
     const mutating = signal(false);
     const userId = signal<string | null>('user-1');
 
     beforeEach(async () => {
-        storeError.set(null); loading.set(false);
+        storeError.set(null); syncError.set(null); loading.set(false);
         refreshTasks.mockReset().mockImplementation(async () => { storeError.set(null); });
         for (const operation of [toggleDone, updateProject, remove]) operation.mockReset().mockResolvedValue(undefined);
         viewport.next({ matches: false, breakpoints: {} });
@@ -91,7 +92,7 @@ describe('TasksPage', () => {
                 { provide: CalendarClockService, useValue: { today: signal('2026-11-05') } },
                 { provide: TasksStore, useValue: {
                     tasks, updatePlannedDate, updateDueDate, updateTaskPosition, updateContent, toggleDone, updateProject, remove, refreshTasks, mutating, error: storeError, loading,
-                    realtimeConnected: signal(false),
+                    syncError, realtimeConnected: signal(false),
                 } },
             ],
         }).compileComponents();
@@ -108,6 +109,17 @@ describe('TasksPage', () => {
         fixture.componentRef.setInput('view', 'project');
         fixture.detectChanges();
     }
+
+    it('shows synchronization recovery in the existing alert without duplicating or hiding a task-action error', () => {
+        syncError.set('Synchronization unavailable'); fixture.detectChanges();
+        const header = () => fixture.nativeElement.querySelector('app-tasks-header').textContent;
+        expect(header()).toContain('Synchronization unavailable');
+        expect(fixture.nativeElement.textContent).toContain('Refresh task list');
+        storeError.set('Task save failed'); fixture.detectChanges();
+        expect(header()).toContain('Task save failed');
+        expect(header()).not.toContain('Synchronization unavailable');
+        expect(fixture.nativeElement.querySelectorAll('app-tasks-header [role="alert"]')).toHaveLength(1);
+    });
     const projectAction = (name: string) => Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"] a'))
         .find(item => item.textContent?.trim() === name)!;
 
