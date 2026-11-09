@@ -1,0 +1,310 @@
+{
+  "ownershipExperiment": true,
+  "checks": [
+    {
+      "name": "GoTrue signup password login and session refresh before migration"
+    },
+    {
+      "name": "CLI migration 20261109020000_enforce_project_hierarchy_integrity.sql"
+    },
+    {
+      "name": "CLI migration 20261109040000_restrict_application_privileges.sql"
+    },
+    {
+      "name": "Project create rename reparent root and cycle rejection over Data API"
+    },
+    {
+      "name": "Angular SDK contracts: task create read atomic content completion scheduling order assignment"
+    },
+    {
+      "name": "Two real Auth accounts and anon: RLS ownership and direct project DELETE denial"
+    },
+    {
+      "name": "delete_project real RPC preserves direct tasks children and grandchildren"
+    },
+    {
+      "name": "Explicit future function grant and schema-cache reload work",
+      "closedPrivilege": "f"
+    },
+    {
+      "name": "Publication plus Realtime restart experiment: authorized INSERT UPDATE; foreign INSERT content not delivered",
+      "filteredDelete": false
+    },
+    {
+      "name": "Publication plus Realtime restart experiment: Realtime resubscription receives current account events"
+    },
+    {
+      "name": "Replica identity FULL experiment: authorized INSERT UPDATE; foreign INSERT content not delivered",
+      "filteredDelete": true
+    },
+    {
+      "name": "Replica identity FULL experiment: Realtime resubscription receives current account events"
+    },
+    {
+      "name": "Post-migration session refresh logout anonymous fallback and login"
+    }
+  ],
+  "defects": [
+    {
+      "name": "Checked-in migrations: task INSERT events missing",
+      "detail": "Subscriptions joined, but own-account INSERT did not arrive within 12 seconds"
+    },
+    {
+      "name": "Publication experiment: task INSERT events missing",
+      "detail": "Subscriptions joined, but own-account INSERT did not arrive within 12 seconds"
+    },
+    {
+      "name": "Publication plus Realtime restart experiment: app-filtered DELETE missing",
+      "detail": "user_id filter with current replica identity did not deliver own DELETE"
+    }
+  ],
+  "experiments": [
+    {
+      "name": "Temporary helper-role membership around ownership assignment",
+      "sourceUnchanged": true
+    },
+    {
+      "name": "Realtime system status",
+      "message": {
+        "message": "Unable to subscribe to changes with given parameters. Please check Realtime is enabled for the given connect parameters: [event: *, schema: public, table: tasks, filters: [{\"user_id\", \"eq\", \"d8f59383-c83e-40d1-b75b-d1ae9ef75857\", false}], select: nil]",
+        "status": "error",
+        "extension": "postgres_changes",
+        "channel": "integration-43276124-a2e7-4448-b293-13a4ef6a4109"
+      }
+    },
+    {
+      "name": "Realtime system status",
+      "message": {
+        "message": "Unable to subscribe to changes with given parameters. Please check Realtime is enabled for the given connect parameters: [event: *, schema: public, table: tasks, filters: [{\"user_id\", \"eq\", \"69c27a7e-55fa-46cc-9cf1-c173703dbc3a\", false}], select: nil]",
+        "status": "error",
+        "extension": "postgres_changes",
+        "channel": "integration-0d654e24-f28a-4a92-afa7-aa0c42fad0c9"
+      }
+    },
+    {
+      "name": "Realtime system status",
+      "message": {
+        "message": "Unable to subscribe to changes with given parameters. Please check Realtime is enabled for the given connect parameters: [event: *, schema: public, table: tasks, filters: [], select: nil]",
+        "status": "error",
+        "extension": "postgres_changes",
+        "channel": "integration-96e27a50-102d-4a1a-bf15-7f43ee193faa"
+      }
+    },
+    {
+      "label": "Checked-in migrations",
+      "insertObservation": {
+        "ownerA": [],
+        "ownerB": [],
+        "unfiltered": []
+      }
+    },
+    {
+      "name": "Disposable-only publication diagnostic",
+      "sql": "ALTER PUBLICATION supabase_realtime ADD TABLE public.tasks"
+    },
+    {
+      "name": "Realtime system status",
+      "message": {
+        "message": "Subscribed to PostgreSQL",
+        "status": "ok",
+        "extension": "postgres_changes",
+        "channel": "integration-e7803968-2268-4237-9b7e-622a0fb993d7"
+      }
+    },
+    {
+      "name": "Realtime system status",
+      "message": {
+        "message": "Subscribed to PostgreSQL",
+        "status": "ok",
+        "extension": "postgres_changes",
+        "channel": "integration-ca8ca940-9549-43a8-bcc1-bd80634e4c58"
+      }
+    },
+    {
+      "name": "Realtime system status",
+      "message": {
+        "message": "Subscribed to PostgreSQL",
+        "status": "ok",
+        "extension": "postgres_changes",
+        "channel": "integration-64c4b862-b9c0-4f8c-ab1e-f4e1dd04d44c"
+      }
+    },
+    {
+      "label": "Publication experiment",
+      "insertObservation": {
+        "ownerA": [],
+        "ownerB": [],
+        "unfiltered": []
+      }
+    },
+    {
+      "name": "Disposable-only Realtime restart and fresh authenticated clients after publication change"
+    },
+    {
+      "name": "Realtime system status",
+      "message": {
+        "message": "Subscribed to PostgreSQL",
+        "status": "ok",
+        "extension": "postgres_changes",
+        "channel": "integration-24c906c3-ccc3-450c-b49c-5a696a665667"
+      }
+    },
+    {
+      "name": "Realtime system status",
+      "message": {
+        "message": "Subscribed to PostgreSQL",
+        "status": "ok",
+        "extension": "postgres_changes",
+        "channel": "integration-fd8da64c-9c64-41eb-80e7-0f81deab8bf7"
+      }
+    },
+    {
+      "name": "Realtime system status",
+      "message": {
+        "message": "Subscribed to PostgreSQL",
+        "status": "ok",
+        "extension": "postgres_changes",
+        "channel": "integration-05f974f7-f9e4-43c1-b23c-e172adea8650"
+      }
+    },
+    {
+      "label": "Publication plus Realtime restart experiment",
+      "insertObservation": {
+        "ownerA": [
+          {
+            "event": "INSERT",
+            "id": "f4ac91d7-948d-4d96-904f-2b7a984d7e94"
+          }
+        ],
+        "ownerB": [
+          {
+            "event": "INSERT",
+            "id": "8babfe07-91b2-490e-8eda-fcc6172d69b5"
+          }
+        ],
+        "unfiltered": [
+          {
+            "event": "INSERT",
+            "id": "f4ac91d7-948d-4d96-904f-2b7a984d7e94"
+          }
+        ]
+      }
+    },
+    {
+      "label": "Publication plus Realtime restart experiment",
+      "inserted": true,
+      "filteredDelete": false,
+      "unfilteredDelete": true,
+      "deleteFields": [
+        "id"
+      ],
+      "foreignDeleteDelivered": true,
+      "foreignDeleteFields": [
+        "id"
+      ],
+      "foreignDeleteOnAppFilter": false
+    },
+    {
+      "name": "Realtime system status",
+      "message": {
+        "message": "Subscribed to PostgreSQL",
+        "status": "ok",
+        "extension": "postgres_changes",
+        "channel": "integration-5ce803c4-04ab-4e0a-9796-48aa0f5ebbe3"
+      }
+    },
+    {
+      "name": "Disposable-only replica identity diagnostic",
+      "sql": "ALTER TABLE public.tasks REPLICA IDENTITY FULL"
+    },
+    {
+      "name": "Realtime system status",
+      "message": {
+        "message": "Subscribed to PostgreSQL",
+        "status": "ok",
+        "extension": "postgres_changes",
+        "channel": "integration-42fe230a-64f5-4628-bca8-13a62fe3e004"
+      }
+    },
+    {
+      "name": "Realtime system status",
+      "message": {
+        "message": "Subscribed to PostgreSQL",
+        "status": "ok",
+        "extension": "postgres_changes",
+        "channel": "integration-2de26e87-d3f9-4425-b9dd-776bb53d138c"
+      }
+    },
+    {
+      "name": "Realtime system status",
+      "message": {
+        "message": "Subscribed to PostgreSQL",
+        "status": "ok",
+        "extension": "postgres_changes",
+        "channel": "integration-ef6ac341-89fe-47a2-b27d-56c74204bb6b"
+      }
+    },
+    {
+      "label": "Replica identity FULL experiment",
+      "insertObservation": {
+        "ownerA": [
+          {
+            "event": "INSERT",
+            "id": "af3b1d17-a0a5-45b0-998a-b4ddd37468f4"
+          }
+        ],
+        "ownerB": [
+          {
+            "event": "INSERT",
+            "id": "e246381e-3cc9-4dca-8d3c-935ce08a41b8"
+          }
+        ],
+        "unfiltered": [
+          {
+            "event": "INSERT",
+            "id": "af3b1d17-a0a5-45b0-998a-b4ddd37468f4"
+          }
+        ]
+      }
+    },
+    {
+      "label": "Replica identity FULL experiment",
+      "inserted": true,
+      "filteredDelete": true,
+      "unfilteredDelete": true,
+      "deleteFields": [
+        "id"
+      ],
+      "foreignDeleteDelivered": true,
+      "foreignDeleteFields": [
+        "id"
+      ],
+      "foreignDeleteOnAppFilter": false
+    },
+    {
+      "name": "Realtime system status",
+      "message": {
+        "message": "Subscribed to PostgreSQL",
+        "status": "ok",
+        "extension": "postgres_changes",
+        "channel": "integration-35f7716a-8467-4fd0-b30d-326f17d237f2"
+      }
+    }
+  ],
+  "environment": {
+    "project": "lits-integration-f7f063b6",
+    "images": [
+      "supabase_rest_lits-integration-f7f063b6 public.ecr.aws/supabase/postgrest:v16.4",
+      "supabase_realtime_lits-integration-f7f063b6 public.ecr.aws/supabase/realtime:v2.140.10",
+      "supabase_inbucket_lits-integration-f7f063b6 public.ecr.aws/supabase/mailpit:v1.31.3",
+      "supabase_auth_lits-integration-f7f063b6 public.ecr.aws/supabase/gotrue:v2.197.0",
+      "supabase_kong_lits-integration-f7f063b6 public.ecr.aws/supabase/kong:2.8.1",
+      "supabase_db_lits-integration-f7f063b6 public.ecr.aws/supabase/postgres:17.11.0.004"
+    ],
+    "database": "17.11",
+    "publicationBefore": "",
+    "role": "postgres|f|t",
+    "helperMembership": "supabase_admin|t|f|f"
+  },
+  "result": "blocked-with-conditional-results"
+}

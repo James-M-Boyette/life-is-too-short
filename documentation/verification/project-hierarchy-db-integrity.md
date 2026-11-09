@@ -1,5 +1,7 @@
 # F5: Project hierarchy database integrity — verification report
 
+> Subsequent [full local Supabase verification](local-supabase-services.md) found that the normal non-superuser migration role cannot assign the helper-function owner as written. The superuser-fixture guarantees below do not establish installability through the actual Supabase CLI. PR #70 remains undeployed; see the follow-up report for the blocked gate and disposable-only correction experiment.
+
 ## Scope and deployment status
 
 Implemented on `codex/project-hierarchy-db-integrity`, based on main after PR #69. This is an additive migration and isolated validation only. No hosted Supabase connection, deployment, remote db push, configuration change, or production-data operation was performed. Angular production code and existing CRUD APIs are unchanged.
