@@ -1,8 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { computed, signal } from '@angular/core';
-import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
+import { NavigationEnd, Router, provideRouter, withComponentInputBinding } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { of } from 'rxjs';
+import { filter, firstValueFrom, of } from 'rxjs';
 import { vi } from 'vitest';
 import { AppShellComponent } from '@/layout/app-shell/app-shell.component';
 import { TasksPage } from '@/features/tasks/pages/tasks.page';
@@ -22,6 +22,7 @@ describe('Project page dialogs through the existing shell', () => {
     const userId = signal<string | null>('owner');
     const remove = vi.fn();
     const refresh = vi.fn();
+    const taskError = signal<string | null>(null);
     const button = (name: string) => Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
         .find(item => item.getAttribute('aria-label') === name || item.textContent?.trim() === name)!;
     const menuItem = (label: string) => Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"] a'))
@@ -36,7 +37,7 @@ describe('Project page dialogs through the existing shell', () => {
         menuItem(label).click(); await settle();
     }
     beforeEach(async () => {
-        projects.set([project('First'), project('Second')]); userId.set('owner');
+        projects.set([project('First'), project('Second')]); userId.set('owner'); taskError.set(null);
         refresh.mockReset().mockResolvedValue(undefined);
         remove.mockReset().mockImplementation(async (id: string) => projects.update(items => items.filter(item => item.id !== id)));
         await TestBed.configureTestingModule({
@@ -50,7 +51,7 @@ describe('Project page dialogs through the existing shell', () => {
                 { provide: BreakpointObserver, useValue: { isMatched: () => false, observe: () => of({ matches: false }) } },
                 { provide: AuthStore, useValue: { userId, user: computed(() => ({ id: userId(), email: 'fixture@example.com' })), isAuthed: signal(true) } },
                 { provide: ProjectsStore, useValue: { projects, projectTree: computed(() => buildProjectTree(projects())), getProject: (id: string) => projects().find(item => item.id === id), deleteProject: remove } },
-                { provide: TasksStore, useValue: { tasks: signal([]), loading: signal(false), mutating: signal(false), error: signal(null), realtimeConnected: signal(false), refreshTasks: refresh } },
+                { provide: TasksStore, useValue: { tasks: signal([]), loading: signal(false), mutating: signal(false), error: taskError, realtimeConnected: signal(false), refreshTasks: refresh } },
                 { provide: CalendarClockService, useValue: { today: signal('2026-11-08') } },
             ],
         }).compileComponents();
@@ -145,4 +146,25 @@ describe('Project page dialogs through the existing shell', () => {
         expect(TestBed.inject(Router).url).toBe('/tasks/project/First');
         expect(refresh).not.toHaveBeenCalled();
     });
+    it('keeps a current-account task refresh error visible after successful deletion without reopening the dialog', async () => {
+        let fail!: (error: Error) => void;
+        refresh.mockImplementationOnce(async () => {
+            try {
+                await new Promise<void>((_resolve, reject) => { fail = reject; });
+            } catch (error) {
+                // Model TasksStore retaining its current-session refresh error.
+                taskError.set((error as Error).message);
+                throw error;
+            }
+        });
+        await select('Delete project'); button('Delete project').click(); await settle();
+        expect(refresh).toHaveBeenCalledTimes(1);
+        const navigation = firstValueFrom(TestBed.inject(Router).events.pipe(filter(event => event instanceof NavigationEnd)));
+        fail(new Error('Task refresh unavailable')); await navigation; await settle();
+        expect(TestBed.inject(Router).url).toBe('/tasks/inbox');
+        expect(document.querySelector('app-tasks-header .error')?.textContent).toContain('Task refresh unavailable');
+        expect(document.querySelector('.p-dialog')).toBeNull();
+        expect(remove).toHaveBeenCalledExactlyOnceWith('First');
+    });
+
 });
