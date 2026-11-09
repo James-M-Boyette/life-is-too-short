@@ -30,8 +30,14 @@
             formControlName="parentProject"
             placeholder="None (top-level project)"
             [showClear]="true"
+            [pt]="{ hiddenInput: { 'aria-describedby': form.controls.parentProject.invalid ? 'parent-project-error' : undefined, 'aria-invalid': form.controls.parentProject.invalid } }"
             appendTo="body"
         />
+        @if (form.controls.parentProject.hasError('unavailableParent')) {
+            <small id="parent-project-error" class="field-error" role="alert">
+                The selected parent is no longer available. Choose another parent or clear the selection.
+            </small>
+        }
     </div>
 
     <footer class="form-actions">

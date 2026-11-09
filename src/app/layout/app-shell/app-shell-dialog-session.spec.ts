@@ -230,4 +230,16 @@ describe('Shell dialog account ownership', () => {
         expect(TestBed.inject(Router).url).toBe('/tasks/today'); expect(document.activeElement).toBe(destination);
     });
 
+    it('starts fresh project drafts when edit or create dialogs are cancelled and reopened', async () => {
+        openers.edit(); await settle(); setDraft('Unsaved edit');
+        button('Cancel').click(); await settle();
+        expect(document.querySelector('app-project-editor')).toBeNull();
+        openers.edit(); await settle(); expect(input().value).toBe('A project');
+        button('Cancel').click(); await settle();
+        openers.create(); await settle(); expect(input().value).toBe(''); setDraft('Unsaved create');
+        button('Cancel').click(); await settle();
+        openers.create(); await settle(); expect(input().value).toBe('');
+        expect(createProject).not.toHaveBeenCalled(); expect(updateProject).not.toHaveBeenCalled();
+    });
+
 });
