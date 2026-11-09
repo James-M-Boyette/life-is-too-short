@@ -116,7 +116,7 @@ class Lab:
         # Minimal local auth contract. This is not the hosted Auth service/JWT verifier.
         self.raw(database, "CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY); CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$; GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;")
         for migration in sorted((ROOT / 'supabase/migrations').glob('*.sql')):
-            if migration != MIGRATION:
+            if migration < MIGRATION:
                 self.raw(database, migration.read_text(encoding='utf-8'))
 
     def connect(self, **kwargs):
@@ -184,23 +184,25 @@ def move(number, parent):
     return f"UPDATE public.projects SET parent_project_id={value} WHERE id='{ident(number)}'"
 
 
-def run(lab):
-    # Existing rootless cycle must abort BEFORE creating any new objects or role.
-    bad = lab.connect(database='invalid_hierarchy')
-    bad.execute(f"INSERT INTO auth.users VALUES ('{OWNER}')")
-    bad.execute(f"INSERT INTO public.projects(id,user_id,name) VALUES ('{ident(1)}','{OWNER}','A'),('{ident(2)}','{OWNER}','B')")
-    bad.execute(move(1, 2)); bad.execute(move(2, 1))
-    audit = lab.raw('invalid_hierarchy', (ROOT / 'supabase/tests/project-hierarchy/preflight.sql').read_text(encoding='utf-8'))
-    assert ident(1) in audit.stdout and ident(2) in audit.stdout
-    failed = lab.raw('invalid_hierarchy', MIGRATION.read_text(encoding='utf-8'), check=False)
-    assert failed.returncode != 0 and 'Existing project hierarchy contains a cycle' in failed.stdout
-    assert bad.scalar("SELECT to_regnamespace('project_hierarchy_private') IS NULL") == 't'
-    assert bad.scalar('SELECT count(*) FROM public.projects') == '2'
-    assert bad.scalar("SELECT count(*) FROM pg_roles WHERE rolname='project_hierarchy_checker'") == '0'
-    bad.close()
-    lab.raw('hierarchy', MIGRATION.read_text(encoding='utf-8'))
+def run(lab, least_privilege=False):
+    if not least_privilege:
+        # Existing rootless cycle must abort BEFORE creating any new objects or role.
+        bad = lab.connect(database='invalid_hierarchy')
+        bad.execute(f"INSERT INTO auth.users VALUES ('{OWNER}')")
+        bad.execute(f"INSERT INTO public.projects(id,user_id,name) VALUES ('{ident(1)}','{OWNER}','A'),('{ident(2)}','{OWNER}','B')")
+        bad.execute(move(1, 2)); bad.execute(move(2, 1))
+        audit = lab.raw('invalid_hierarchy', (ROOT / 'supabase/tests/project-hierarchy/preflight.sql').read_text(encoding='utf-8'))
+        assert ident(1) in audit.stdout and ident(2) in audit.stdout
+        failed = lab.raw('invalid_hierarchy', MIGRATION.read_text(encoding='utf-8'), check=False)
+        assert failed.returncode != 0 and 'Existing project hierarchy contains a cycle' in failed.stdout
+        assert bad.scalar("SELECT to_regnamespace('project_hierarchy_private') IS NULL") == 't'
+        assert bad.scalar('SELECT count(*) FROM public.projects') == '2'
+        assert bad.scalar("SELECT count(*) FROM pg_roles WHERE rolname='project_hierarchy_checker'") == '0'
+        bad.close()
+        lab.raw('hierarchy', MIGRATION.read_text(encoding='utf-8'))
     lab.reset()
-    lab.record('preflight rejects existing rootless cycles without repairs', migration_aborted=True)
+    if not least_privilege:
+        lab.record('preflight rejects existing rootless cycles without repairs', migration_aborted=True)
 
     user = lab.connect(role='authenticated')
     user.execute(move(2, 1)); user.execute(move(3, 2))
@@ -399,13 +401,16 @@ def run(lab):
     privilege_finding = []
     for role in ['authenticated', 'anon']:
         connection = lab.connect(role=role)
-        connection.execute('BEGIN')
-        connection.execute('TRUNCATE public.tasks, public.projects')
-        assert connection.scalar('SELECT count(*) FROM public.projects') == '0'
-        connection.execute('ROLLBACK')
-        assert lab.admin.scalar('SELECT count(*) FROM public.projects') == before
-        privilege_finding.append(role)
-    lab.record('separate baseline TRUNCATE finding (rolled back)', allowed_roles=privilege_finding)
+        if least_privilege:
+            expect_error(connection, 'TRUNCATE public.tasks, public.projects', '42501')
+        else:
+            connection.execute('BEGIN')
+            connection.execute('TRUNCATE public.tasks, public.projects')
+            assert connection.scalar('SELECT count(*) FROM public.projects') == '0'
+            connection.execute('ROLLBACK')
+            assert lab.admin.scalar('SELECT count(*) FROM public.projects') == before
+            privilege_finding.append(role)
+    lab.record('TRUNCATE denied' if least_privilege else 'separate baseline TRUNCATE finding (rolled back)', allowed_roles=privilege_finding)
 
     # New helper has only graph SELECT columns and guard INSERT/UPDATE rights.
     checker = lab.connect(role='project_hierarchy_checker')

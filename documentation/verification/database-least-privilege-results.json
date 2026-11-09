@@ -1,0 +1,608 @@
+{
+  "server": "17.6",
+  "network": "none",
+  "before": {
+    "anon": {
+      "tables": {
+        "public.tasks": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE",
+          "TRUNCATE",
+          "REFERENCES",
+          "TRIGGER",
+          "MAINTAIN"
+        ],
+        "public.projects": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE",
+          "TRUNCATE",
+          "REFERENCES",
+          "TRIGGER",
+          "MAINTAIN"
+        ],
+        "project_hierarchy_private.account_guards": []
+      },
+      "public_create": false,
+      "private_usage": false,
+      "functions": {
+        "public.set_updated_at()": true,
+        "public.delete_project(uuid)": false,
+        "project_hierarchy_private.enforce_acyclic_projects()": false
+      }
+    },
+    "authenticated": {
+      "tables": {
+        "public.tasks": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE",
+          "TRUNCATE",
+          "REFERENCES",
+          "TRIGGER",
+          "MAINTAIN"
+        ],
+        "public.projects": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE",
+          "TRUNCATE",
+          "REFERENCES",
+          "TRIGGER",
+          "MAINTAIN"
+        ],
+        "project_hierarchy_private.account_guards": []
+      },
+      "public_create": false,
+      "private_usage": false,
+      "functions": {
+        "public.set_updated_at()": true,
+        "public.delete_project(uuid)": true,
+        "project_hierarchy_private.enforce_acyclic_projects()": false
+      }
+    },
+    "service_role": {
+      "tables": {
+        "public.tasks": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE",
+          "TRUNCATE",
+          "REFERENCES",
+          "TRIGGER",
+          "MAINTAIN"
+        ],
+        "public.projects": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE",
+          "TRUNCATE",
+          "REFERENCES",
+          "TRIGGER",
+          "MAINTAIN"
+        ],
+        "project_hierarchy_private.account_guards": []
+      },
+      "public_create": false,
+      "private_usage": false,
+      "functions": {
+        "public.set_updated_at()": true,
+        "public.delete_project(uuid)": true,
+        "project_hierarchy_private.enforce_acyclic_projects()": false
+      }
+    },
+    "project_hierarchy_checker": {
+      "tables": {
+        "public.tasks": [],
+        "public.projects": [],
+        "project_hierarchy_private.account_guards": [
+          "SELECT",
+          "INSERT"
+        ]
+      },
+      "public_create": false,
+      "private_usage": true,
+      "functions": {
+        "public.set_updated_at()": true,
+        "public.delete_project(uuid)": false,
+        "project_hierarchy_private.enforce_acyclic_projects()": true
+      }
+    },
+    "default_acls": [
+      "postgres|public|S|{postgres=rwU/postgres,anon=rwU/postgres,authenticated=rwU/postgres,service_role=rwU/postgres}",
+      "postgres|public|f|{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "postgres|public|r|{postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}"
+    ],
+    "public_sequences": "0"
+  },
+  "after": {
+    "anon": {
+      "tables": {
+        "public.tasks": [],
+        "public.projects": [],
+        "project_hierarchy_private.account_guards": []
+      },
+      "public_create": false,
+      "private_usage": false,
+      "functions": {
+        "public.set_updated_at()": false,
+        "public.delete_project(uuid)": false,
+        "project_hierarchy_private.enforce_acyclic_projects()": false
+      }
+    },
+    "authenticated": {
+      "tables": {
+        "public.tasks": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "public.projects": [
+          "SELECT",
+          "INSERT",
+          "UPDATE"
+        ],
+        "project_hierarchy_private.account_guards": []
+      },
+      "public_create": false,
+      "private_usage": false,
+      "functions": {
+        "public.set_updated_at()": false,
+        "public.delete_project(uuid)": true,
+        "project_hierarchy_private.enforce_acyclic_projects()": false
+      }
+    },
+    "service_role": {
+      "tables": {
+        "public.tasks": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "public.projects": [
+          "SELECT",
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "project_hierarchy_private.account_guards": []
+      },
+      "public_create": false,
+      "private_usage": false,
+      "functions": {
+        "public.set_updated_at()": false,
+        "public.delete_project(uuid)": true,
+        "project_hierarchy_private.enforce_acyclic_projects()": false
+      }
+    },
+    "project_hierarchy_checker": {
+      "tables": {
+        "public.tasks": [],
+        "public.projects": [],
+        "project_hierarchy_private.account_guards": [
+          "SELECT",
+          "INSERT"
+        ]
+      },
+      "public_create": false,
+      "private_usage": true,
+      "functions": {
+        "public.set_updated_at()": false,
+        "public.delete_project(uuid)": false,
+        "project_hierarchy_private.enforce_acyclic_projects()": true
+      }
+    },
+    "default_acls": [
+      "postgres|*|f|{postgres=X/postgres}",
+      "postgres|public|S|{postgres=rwU/postgres}",
+      "postgres|public|f|{postgres=X/postgres}",
+      "postgres|public|r|{postgres=arwdDxtm/postgres}"
+    ],
+    "public_sequences": "0"
+  },
+  "baseline_checks": [
+    {
+      "test": "preflight rejects existing rootless cycles without repairs",
+      "migration_aborted": true,
+      "acyclic_rows": 8
+    },
+    {
+      "test": "sequential creation rename reparent root and cycle checks",
+      "acyclic_rows": 9
+    },
+    {
+      "test": "multi-row updates and inserts rollback invalid graphs",
+      "acyclic_rows": 10
+    },
+    {
+      "test": "upsert cannot bypass integrity trigger",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "repeated ancestor check terminates and rejects corrupt ancestry",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "READ COMMITTED",
+      "existing_guard": true,
+      "winner": "first",
+      "loser_sqlstate": "23514",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "READ COMMITTED",
+      "existing_guard": false,
+      "winner": "first",
+      "loser_sqlstate": "23514",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "REPEATABLE READ",
+      "existing_guard": true,
+      "winner": "first",
+      "loser_sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "REPEATABLE READ",
+      "existing_guard": false,
+      "winner": "first",
+      "loser_sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "SERIALIZABLE",
+      "existing_guard": true,
+      "winner": "first",
+      "loser_sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "SERIALIZABLE",
+      "existing_guard": false,
+      "winner": "first",
+      "loser_sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "READ COMMITTED",
+      "existing_guard": true,
+      "outcomes": {
+        "A_to_B": "00000",
+        "B_to_C": "00000",
+        "C_to_A": "23514"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "READ COMMITTED",
+      "existing_guard": false,
+      "outcomes": {
+        "A_to_B": "00000",
+        "C_to_A": "00000",
+        "B_to_C": "23514"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "REPEATABLE READ",
+      "existing_guard": true,
+      "outcomes": {
+        "A_to_B": "00000",
+        "B_to_C": "40001",
+        "C_to_A": "40001"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "REPEATABLE READ",
+      "existing_guard": false,
+      "outcomes": {
+        "A_to_B": "00000",
+        "B_to_C": "40001",
+        "C_to_A": "40001"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "SERIALIZABLE",
+      "existing_guard": true,
+      "outcomes": {
+        "A_to_B": "00000",
+        "C_to_A": "40001",
+        "B_to_C": "40001"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "SERIALIZABLE",
+      "existing_guard": false,
+      "outcomes": {
+        "A_to_B": "00000",
+        "C_to_A": "40001",
+        "B_to_C": "40001"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "serialization failure rolls back prior writes",
+      "sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "installation lock timeout aborts transaction",
+      "sqlstate": "55P03",
+      "configured_timeout": "5s",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "different accounts do not share the guard",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "deadlock rolls back prior writes",
+      "sqlstate": "40P01",
+      "victim_project": 1,
+      "acyclic_rows": 8
+    },
+    {
+      "test": "delete_project preserves promotion and task semantics",
+      "acyclic_rows": 7
+    },
+    {
+      "test": "delete wins reparent race",
+      "loser_sqlstate": "23503",
+      "acyclic_rows": 7
+    },
+    {
+      "test": "reparent wins deletion race and child is promoted",
+      "acyclic_rows": 7
+    },
+    {
+      "test": "RLS and new guard permission boundaries",
+      "role_checks": [
+        "authenticated",
+        "anon",
+        "service_role"
+      ],
+      "acyclic_rows": 8
+    },
+    {
+      "test": "separate baseline TRUNCATE finding (rolled back)",
+      "allowed_roles": [
+        "authenticated",
+        "anon"
+      ],
+      "acyclic_rows": 8
+    },
+    {
+      "test": "function owner least privilege",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "account deletion cascades guard cleanup",
+      "acyclic_rows": 4
+    }
+  ],
+  "candidate_checks": [
+    {
+      "test": "authenticated task CRUD all mutation fields, RLS and generated project IDs",
+      "acyclic_rows": 9
+    },
+    {
+      "test": "ordinary roles denied whole-table, DDL, trigger, reference and private operations",
+      "acyclic_rows": 9
+    },
+    {
+      "test": "future postgres tables sequences and functions default closed",
+      "acyclic_rows": 9
+    },
+    {
+      "test": "sequential creation rename reparent root and cycle checks",
+      "acyclic_rows": 9
+    },
+    {
+      "test": "multi-row updates and inserts rollback invalid graphs",
+      "acyclic_rows": 10
+    },
+    {
+      "test": "upsert cannot bypass integrity trigger",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "repeated ancestor check terminates and rejects corrupt ancestry",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "READ COMMITTED",
+      "existing_guard": true,
+      "winner": "first",
+      "loser_sqlstate": "23514",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "READ COMMITTED",
+      "existing_guard": false,
+      "winner": "first",
+      "loser_sqlstate": "23514",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "REPEATABLE READ",
+      "existing_guard": true,
+      "winner": "first",
+      "loser_sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "REPEATABLE READ",
+      "existing_guard": false,
+      "winner": "first",
+      "loser_sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "SERIALIZABLE",
+      "existing_guard": true,
+      "winner": "first",
+      "loser_sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "SERIALIZABLE",
+      "existing_guard": false,
+      "winner": "first",
+      "loser_sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "READ COMMITTED",
+      "existing_guard": true,
+      "outcomes": {
+        "A_to_B": "00000",
+        "B_to_C": "00000",
+        "C_to_A": "23514"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "READ COMMITTED",
+      "existing_guard": false,
+      "outcomes": {
+        "A_to_B": "00000",
+        "B_to_C": "00000",
+        "C_to_A": "23514"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "REPEATABLE READ",
+      "existing_guard": true,
+      "outcomes": {
+        "A_to_B": "00000",
+        "B_to_C": "40001",
+        "C_to_A": "40001"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "REPEATABLE READ",
+      "existing_guard": false,
+      "outcomes": {
+        "A_to_B": "00000",
+        "B_to_C": "40001",
+        "C_to_A": "40001"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "SERIALIZABLE",
+      "existing_guard": true,
+      "outcomes": {
+        "A_to_B": "00000",
+        "C_to_A": "40001",
+        "B_to_C": "40001"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "SERIALIZABLE",
+      "existing_guard": false,
+      "outcomes": {
+        "A_to_B": "00000",
+        "C_to_A": "40001",
+        "B_to_C": "40001"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "serialization failure rolls back prior writes",
+      "sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "installation lock timeout aborts transaction",
+      "sqlstate": "55P03",
+      "configured_timeout": "5s",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "different accounts do not share the guard",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "deadlock rolls back prior writes",
+      "sqlstate": "40P01",
+      "victim_project": 1,
+      "acyclic_rows": 8
+    },
+    {
+      "test": "delete_project preserves promotion and task semantics",
+      "acyclic_rows": 7
+    },
+    {
+      "test": "delete wins reparent race",
+      "loser_sqlstate": "23503",
+      "acyclic_rows": 7
+    },
+    {
+      "test": "reparent wins deletion race and child is promoted",
+      "acyclic_rows": 7
+    },
+    {
+      "test": "RLS and new guard permission boundaries",
+      "role_checks": [
+        "authenticated",
+        "anon",
+        "service_role"
+      ],
+      "acyclic_rows": 8
+    },
+    {
+      "test": "TRUNCATE denied",
+      "allowed_roles": [],
+      "acyclic_rows": 8
+    },
+    {
+      "test": "function owner least privilege",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "account deletion cascades guard cleanup",
+      "acyclic_rows": 4
+    }
+  ]
+}
