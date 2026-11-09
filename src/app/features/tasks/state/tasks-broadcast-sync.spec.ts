@@ -29,6 +29,7 @@ describe('TasksStore private Broadcast synchronization', () => {
     let removeChannel: ReturnType<typeof vi.fn>;
     let update: ReturnType<typeof vi.fn>;
     let single: ReturnType<typeof vi.fn>;
+    let signals: AbortSignal[];
     let online: ReturnType<typeof vi.spyOn>;
     let visible: ReturnType<typeof vi.spyOn>;
     const flush = () => vi.advanceTimersByTimeAsync(0);
@@ -44,10 +45,11 @@ describe('TasksStore private Broadcast synchronization', () => {
         vi.useFakeTimers(); vi.setSystemTime(10000);
         online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
         visible = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
-        user = signal<string | null>('A'); pages = []; channels = [];
+        user = signal<string | null>('A'); pages = []; channels = []; signals = [];
         removeChannel = vi.fn().mockResolvedValue('ok'); single = vi.fn(); update = vi.fn();
         const query = {
             select: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), gt: vi.fn().mockReturnThis(),
+            abortSignal: vi.fn(signal => { signals.push(signal); return query; }),
             limit: vi.fn(() => { const page = deferred<Page>(); pages.push(page); return page.promise; }),
             update, eq: vi.fn().mockReturnThis(), single,
         };
@@ -107,6 +109,43 @@ describe('TasksStore private Broadcast synchronization', () => {
         await advance(149); expect(pages).toHaveLength(1);
         await advance(1); expect(pages).toHaveLength(2); expect(update).not.toHaveBeenCalled();
         await empty(1); await advance(1000); expect(pages).toHaveLength(2);
+    });
+
+    it('releases a permanently stalled background snapshot and rejects its late partial results', async () => {
+        store.tasks.set([row('1', 'Keep visible')]);
+        notify(); await advance();
+        await advance(30_000);
+        expect(store.syncError()).toContain('timed out');
+        await advance(1000); expect(pages).toHaveLength(3);
+        await snapshot(2, [row('1', 'Recovered')]);
+        pages[1].resolve({ data: [row('1', 'Obsolete timeout response')], error: null }); await flush();
+        expect(store.tasks()[0].title).toBe('Recovered'); expect(store.loading()).toBe(false);
+    });
+
+    it('times out a later page atomically and passes one cancellation signal through all pages', async () => {
+        store.tasks.set([row('1', 'Original')]); notify(); await advance();
+        pages[1].resolve({ data: [row('1', 'Partial')], error: null }); await flush();
+        expect(signals[0]).toBe(signals[1]);
+        await advance(30_000); expect(signals[0].aborted).toBe(true);
+        expect(store.tasks()[0].title).toBe('Original');
+        await advance(1000); await snapshot(3, [row('1', 'Full retry')]);
+        pages[2].resolve({ data: [], error: null }); await flush();
+        expect(store.tasks()[0].title).toBe('Full retry');
+    });
+
+    it('bounds repeated never-settling requests without a safety tick resetting the retry budget', async () => {
+        TestBed.inject(TASK_SYNC_CONFIG).safetyRefreshMs = 0;
+        user.set('B'); TestBed.tick(); await empty(1);
+        notify(); await advance();
+        for (let attempt = 0; attempt < 4; attempt++) {
+            await advance(30_000);
+            expect(signals.at(-1)!.aborted).toBe(true);
+            if (attempt < 3) await advance([1000, 5000, 15000][attempt]);
+        }
+        const count = pages.length;
+        notify(); await advance(300_000); expect(pages).toHaveLength(count);
+        window.dispatchEvent(new Event('online')); await flush(); await empty(count);
+        expect(store.syncError()).toBeNull();
     });
 
     it('bounds continuous debounce and preserves dirty work during a paginated refresh', async () => {
@@ -196,6 +235,7 @@ describe('TasksStore private Broadcast synchronization', () => {
         const closing = deferred<string>(); removeChannel.mockReturnValueOnce(closing.promise);
         notify(); await advance(); const old = channels[0];
         user.set('B'); TestBed.tick(); expect(store.tasks()).toEqual([]);
+        expect(signals[0].aborted).toBe(true);
         const bPage = pages.length - 1; await snapshot(bPage, [row('1', 'B only', 'B')]);
         old.notify({ payload: { v: 1 } }); old.status('SUBSCRIBED'); old.status('CHANNEL_ERROR');
         pages[1].resolve({ data: [row('1', 'A late')], error: null }); await flush();
@@ -210,7 +250,7 @@ describe('TasksStore private Broadcast synchronization', () => {
     it('lets a foreground refresh supersede a background snapshot without leaving a spinner or losing dirty work', async () => {
         notify(); await advance(); const foreground = store.refreshTasks();
         await snapshot(2, [row('1', 'Manual refresh')]); await foreground;
-        pages[1].resolve({ data: [row('1', 'Obsolete background')], error: null }); await flush();
+        expect(signals[0].aborted).toBe(true); // The obsolete HTTP promise need never settle.
         expect(store.tasks()[0].title).toBe('Manual refresh'); expect(store.loading()).toBe(false);
         await advance(); await snapshot(4, [row('1', 'Caught up')]);
         expect(store.tasks()[0].title).toBe('Caught up');

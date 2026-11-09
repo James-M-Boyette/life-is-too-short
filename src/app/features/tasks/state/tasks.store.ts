@@ -58,6 +58,7 @@ export class TasksStore {
     private readonly document = inject(DOCUMENT);
     private wakeSync: (() => void) | null = null;
     private syncConnectionFailed = false;
+    private backgroundAbort: AbortController | null = null;
 
     private channel: RealtimeChannel | null = null;
 
@@ -261,19 +262,38 @@ export class TasksStore {
             running = true;
             const target = dirty;
             firstDirtyAt = null;
+            const controller = new AbortController();
+            this.backgroundAbort = controller;
+            // Bound the whole snapshot, not just each page. The race releases
+            // coordination even if a transport ignores AbortSignal entirely.
+            const deadline = setTimeout(() => controller.abort(new Error('Task synchronization timed out')), 30_000);
+            let rejectAbort!: () => void;
+            const aborted = new Promise<never>((_, reject) => {
+                rejectAbort = () => reject(controller.signal.reason);
+                controller.signal.addEventListener('abort', rejectAbort, { once: true });
+            });
+            const snapshot = this.refreshSnapshot(true, controller.signal);
+            const request = this.latestRefreshRequest;
             try {
-                const result = await this.refreshSnapshot(true);
+                const result = await Promise.race([snapshot, aborted]);
                 if (!current()) return;
                 if (result.applied) {
                     attempts = 0; retryAt = 0;
                     protectedGeneration = result.protected ? target : 0;
                     if (!result.protected) completed = target;
                 }
-            } catch {
+            } catch (error) {
                 if (!current()) return;
+                if (request !== this.latestRefreshRequest) return;
+                if (controller.signal.aborted && request === this.latestRefreshRequest) {
+                    this.syncError.set(`${error instanceof Error ? error.message : 'Task synchronization cancelled'}. Refresh the task list to retry.`);
+                }
                 attempts++;
                 retryAt = Date.now() + ([1000, 5000, 15000][attempts - 1] ?? 15000);
             } finally {
+                clearTimeout(deadline);
+                controller.signal.removeEventListener('abort', rejectAbort);
+                if (this.backgroundAbort === controller) this.backgroundAbort = null;
                 running = false;
                 if (current()) schedule();
             }
@@ -314,6 +334,7 @@ export class TasksStore {
             : undefined;
         return () => {
             disposed = true;
+            this.backgroundAbort?.abort(new Error('Task synchronization session ended'));
             clearTimer(); clearInterval(safety);
             view?.removeEventListener('online', resume);
             view?.removeEventListener('offline', resume);
@@ -378,10 +399,11 @@ export class TasksStore {
     }
 
     async refreshTasks(): Promise<void> {
+        this.backgroundAbort?.abort(new Error('Task synchronization superseded by manual refresh'));
         await this.refreshSnapshot(false);
     }
 
-    private async refreshSnapshot(background: boolean): Promise<{ applied: boolean; protected: boolean }> {
+    private async refreshSnapshot(background: boolean, signal?: AbortSignal): Promise<{ applied: boolean; protected: boolean }> {
         const generationAtStart = this.sessionGeneration;
         const userIdAtStart = this.auth.userId();
         const requestId = ++this.latestRefreshRequest;
@@ -390,7 +412,7 @@ export class TasksStore {
         const ownsRefresh = () =>
             generationAtStart === this.sessionGeneration &&
             userIdAtStart === this.auth.userId() &&
-            requestId === this.latestRefreshRequest;
+            requestId === this.latestRefreshRequest && !signal?.aborted;
 
         // Snapshot the revisions when this particular query starts.
         const revisionsAtStart = new Map(this.taskRevisions);
@@ -410,6 +432,7 @@ export class TasksStore {
                 let query = this.supabase.from('tasks').select('*')
                     .order('id', { ascending: true });
                 if (cursor !== undefined) query = query.gt('id', cursor);
+                if (signal) query = query.abortSignal(signal);
                 const { data, error } = await query.limit(500);
                 if (error) throw error;
                 if (!ownsRefresh()) return { applied: false, protected: false };
