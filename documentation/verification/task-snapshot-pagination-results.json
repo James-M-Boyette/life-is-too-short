@@ -1,0 +1,30 @@
+{
+  "checks": [
+    {
+      "name": "Real API caps a single SELECT at 1000 despite a request for 2000"
+    },
+    {
+      "name": "Keyset pages retrieve all 1205 unique owner rows with an empty terminal page",
+      "pages": 4,
+      "rows": 1205
+    },
+    {
+      "name": "RLS limits each authenticated account snapshot to its own rows"
+    },
+    {
+      "name": "Concurrent earlier-row deletion causes no keyset skip; next refresh removes the already-read row"
+    },
+    {
+      "name": "Tasks publication and replica identity remain unchanged"
+    }
+  ],
+  "environment": {
+    "project": "lits-integration-370550df",
+    "work": "tmp\\supabase-services-75bd8460-f5af-47f1-ae48-03d551b13631",
+    "database": "17.11",
+    "cli": "2.120.0",
+    "apiMaxRows": 1000
+  },
+  "scope": "Real SDK/Data API pagination contract, not an instantiated Angular TasksStore",
+  "result": "passed"
+}
