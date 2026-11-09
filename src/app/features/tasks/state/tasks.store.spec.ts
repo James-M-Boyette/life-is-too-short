@@ -42,6 +42,7 @@ describe('TasksStore', () => {
     let update: ReturnType<typeof vi.fn>;
     let eq: ReturnType<typeof vi.fn>;
     let select: ReturnType<typeof vi.fn>;
+    let realtimeEvent: (payload: { eventType: string; new?: Task; old?: Task }) => void;
 
     beforeEach(() => {
         from = vi.fn();
@@ -56,7 +57,10 @@ describe('TasksStore', () => {
             subscribe: vi.fn(),
         };
 
-        channel.on.mockReturnValue(channel);
+        channel.on.mockImplementation((_event, _filter, callback) => {
+            realtimeEvent = callback;
+            return channel;
+        });
         channel.subscribe.mockReturnValue(channel);
 
         const query = {
@@ -94,6 +98,197 @@ describe('TasksStore', () => {
 
         // Run the constructor effect before individual tests populate the task signal. Our mocked user is unauthenticated, so the effect will clear the initially empty task list ...
         TestBed.tick();
+    });
+
+    async function authenticateForCreation(id = 'user-1') {
+        const loaded = deferred<{ data: Task[]; error: null }>();
+        from.mockReturnValueOnce({ select: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({ order: vi.fn().mockReturnValue(loaded.promise) }),
+        }) });
+        userId.set(id); TestBed.tick();
+        loaded.resolve({ data: [], error: null }); await loaded.promise;
+    }
+
+    it('keeps one task identity when Realtime INSERT arrives before the HTTP creation response', async () => {
+        await authenticateForCreation();
+        const response = deferred<{ data: Task; error: null }>();
+        let persisted!: Task;
+        const insert = vi.fn().mockImplementation(payload => {
+            // Model the database UUID default when the client omits an id.
+            persisted = createTask({ ...payload, id: payload.id ?? 'server-generated-id', created_at: '2026-11-08T12:00:00Z' });
+            return { select: vi.fn().mockReturnValue({ single: vi.fn().mockReturnValue(response.promise) }) };
+        });
+        from.mockReturnValueOnce({ insert });
+        const creation = store.addTask({ title: 'Created', description: '**Markdown**', projectId: null });
+        const optimistic = store.tasks()[0];
+        realtimeEvent({ eventType: 'INSERT', new: persisted });
+        const duringCreation = store.tasks();
+        response.resolve({ data: persisted, error: null }); await creation;
+        expect(new Set(store.tasks().map(task => task.id)).size).toBe(store.tasks().length);
+        expect(duringCreation).toEqual([optimistic]);
+        expect(store.tasks()).toEqual([persisted]);
+        expect(single).not.toHaveBeenCalled();
+    });
+
+    function startCreation() {
+        const response = deferred<{ data: Task | null; error: Error | null }>();
+        let saved!: Task;
+        const insert = vi.fn().mockImplementation(payload => {
+            saved = createTask({ ...payload, created_at: '2026-11-08T14:00:00Z', updated_at: '2026-11-08T14:00:00Z' });
+            return { select: vi.fn().mockReturnValue({ single: vi.fn().mockReturnValue(response.promise) }) };
+        });
+        from.mockReturnValueOnce({ insert });
+        const creation = store.addTask({ title: 'Created', description: '**Markdown**', projectId: null });
+        return { response, saved, insert, creation, optimistic: store.tasks()[0] };
+    }
+
+    it('keeps one identity with HTTP-first and repeated Realtime events, accepting server defaults and later updates', async () => {
+        await authenticateForCreation();
+        const { response, saved, creation, optimistic, insert } = startCreation();
+        expect(insert).toHaveBeenCalledWith(expect.objectContaining({ id: optimistic.id }));
+        expect(saved.id).toBe(optimistic.id);
+        response.resolve({ data: saved, error: null }); await creation;
+        expect(store.tasks()).toEqual([saved]);
+        realtimeEvent({ eventType: 'INSERT', new: saved });
+        realtimeEvent({ eventType: 'INSERT', new: saved });
+        const updated = { ...saved, title: 'Remote update' };
+        realtimeEvent({ eventType: 'UPDATE', new: updated });
+        expect(store.tasks()).toEqual([updated]);
+        expect(store.creating()).toBe(false); expect(single).not.toHaveBeenCalled();
+    });
+
+    it('reconciles deferred Realtime changes after creation without leaving pending or reconciliation state', async () => {
+        await authenticateForCreation();
+        const { response, saved, creation, optimistic } = startCreation();
+        const latest = { ...saved, title: 'Changed remotely after INSERT' };
+        realtimeEvent({ eventType: 'INSERT', new: saved });
+        realtimeEvent({ eventType: 'UPDATE', new: latest });
+        expect(store.tasks()).toEqual([optimistic]);
+        single.mockResolvedValueOnce({ data: latest, error: null });
+        response.resolve({ data: saved, error: null }); await creation;
+        expect(store.tasks()).toEqual([latest]);
+        expect(single).toHaveBeenCalledTimes(1);
+        single.mockResolvedValueOnce({ data: { title: 'Edited', description: null }, error: null });
+        await store.updateContent(latest, { title: 'Edited', description: null });
+        // One reconciliation plus one UPDATE; no obsolete reconciliation after editing.
+        expect(single).toHaveBeenCalledTimes(2);
+        const event = { ...store.tasks()[0], description: 'Later event' };
+        realtimeEvent({ eventType: 'UPDATE', new: event });
+        expect(store.tasks()).toEqual([event]);
+    });
+
+    it('rolls back only failed creation and clears deferred Realtime bookkeeping', async () => {
+        await authenticateForCreation();
+        const unrelated = createTask({ id: 'unrelated' }); store.tasks.set([unrelated]);
+        const { response, saved, creation } = startCreation();
+        const rejected = expect(creation).rejects.toThrow('Insert denied');
+        realtimeEvent({ eventType: 'INSERT', new: saved });
+        realtimeEvent({ eventType: 'UPDATE', new: saved });
+        response.resolve({ data: null, error: new Error('Insert denied') }); await rejected;
+        expect(store.tasks()).toEqual([unrelated]); expect(store.error()).toBe('Insert denied');
+        expect(store.creating()).toBe(false); expect(single).not.toHaveBeenCalled();
+        const retry = startCreation();
+        retry.response.resolve({ data: retry.saved, error: null }); await retry.creation;
+        expect(store.tasks().map(task => task.id)).toEqual([retry.saved.id, unrelated.id]);
+        expect(store.error()).toBeNull();
+    });
+
+    for (const fails of [false, true]) {
+        it(`ignores old-account creation ${fails ? 'failure' : 'success'} and Realtime while a new account creates a task`, async () => {
+            await authenticateForCreation('A');
+            const oldEvent = realtimeEvent;
+            const old = startCreation();
+            const settled = fails ? expect(old.creation).rejects.toThrow('Old insert failure') : old.creation;
+            await authenticateForCreation('B');
+            const current = startCreation();
+            oldEvent({ eventType: 'INSERT', new: old.saved });
+            if (fails) old.response.reject(new Error('Old insert failure'));
+            else old.response.resolve({ data: old.saved, error: null });
+            await settled;
+            expect(store.tasks()).toEqual([current.optimistic]);
+            expect(store.creating()).toBe(true); expect(store.error()).toBeNull();
+            current.response.resolve({ data: current.saved, error: null }); await current.creation;
+            expect(store.tasks()).toEqual([current.saved]); expect(store.creating()).toBe(false);
+        });
+    }
+
+    it('discards creation reconciliation completing after an account switch', async () => {
+        await authenticateForCreation('A');
+        const old = startCreation();
+        realtimeEvent({ eventType: 'INSERT', new: old.saved });
+        realtimeEvent({ eventType: 'UPDATE', new: old.saved });
+        const reconciled = deferred<{ data: Task; error: null }>(); const started = deferred<void>();
+        single.mockImplementationOnce(() => { started.resolve(); return reconciled.promise; });
+        old.response.resolve({ data: old.saved, error: null }); await started.promise;
+        await authenticateForCreation('B');
+        const current = createTask({ id: old.saved.id, user_id: 'B', title: 'B task' });
+        store.tasks.set([current]);
+        reconciled.resolve({ data: old.saved, error: null }); await old.creation;
+        expect(store.tasks()).toEqual([current]); expect(store.error()).toBeNull();
+    });
+
+    for (const fails of [false, true]) {
+        it(`preserves creation ${fails ? 'rollback' : 'confirmation'} against a refresh started during INSERT`, async () => {
+            await authenticateForCreation();
+            const created = startCreation();
+            const settled = fails ? expect(created.creation).rejects.toThrow('Insert failed') : created.creation;
+            const snapshot = pendingRefresh(); const refreshing = store.refreshTasks();
+            if (fails) created.response.resolve({ data: null, error: new Error('Insert failed') });
+            else created.response.resolve({ data: created.saved, error: null });
+            await settled;
+            snapshot.resolve({ data: fails ? [created.optimistic] : [], error: null }); await refreshing;
+            expect(store.tasks()).toEqual(fails ? [] : [created.saved]);
+        });
+    }
+
+    it('queues edits behind creation and uses the stable identity for subsequent updates and deletion', async () => {
+        await authenticateForCreation();
+        const created = startCreation();
+        realtimeEvent({ eventType: 'INSERT', new: created.saved });
+        const response = deferred<{ data: { title: string; description: null }; error: null }>();
+        const started = deferred<void>();
+        single.mockImplementationOnce(() => { started.resolve(); return response.promise; });
+        const editing = store.updateContent(created.optimistic, { title: 'Edited', description: null });
+        const snapshot = pendingRefresh(); const refreshing = store.refreshTasks();
+        snapshot.resolve({ data: [], error: null }); await refreshing;
+        expect(update).not.toHaveBeenCalled();
+        created.response.resolve({ data: created.saved, error: null }); await started.promise;
+        expect(eq).toHaveBeenCalledWith('id', created.saved.id);
+        // INSERT and a stale refresh arriving during the queued edit must stay protected.
+        realtimeEvent({ eventType: 'INSERT', new: created.saved });
+        const finalTask = { ...created.saved, title: 'Edited', description: null };
+        single.mockResolvedValueOnce({ data: finalTask, error: null });
+        response.resolve({ data: { title: 'Edited', description: null }, error: null });
+        await editing; await created.creation;
+        expect(store.tasks()).toEqual([finalTask]);
+        expect(single).toHaveBeenCalledTimes(2);
+        const deleted = deferred<{ error: null }>();
+        const query = { eq: vi.fn(), then: deleted.promise.then.bind(deleted.promise) };
+        query.eq.mockReturnValue(query);
+        from.mockReturnValueOnce({ delete: vi.fn().mockReturnValue(query) });
+        const deleting = store.remove(finalTask.id);
+        deleted.resolve({ error: null }); await deleting;
+        expect(query.eq).toHaveBeenCalledWith('id', created.saved.id);
+        expect(store.tasks()).toEqual([]); expect(store.mutating()).toBe(false);
+    });
+
+    it('keeps creation loading true until all concurrent inserts settle and preserves the successful task', async () => {
+        await authenticateForCreation();
+        const first = startCreation(); const second = startCreation();
+        const rejected = expect(first.creation).rejects.toThrow('First failed');
+        first.response.reject(new Error('First failed')); await rejected;
+        expect(store.creating()).toBe(true); expect(store.tasks()).toEqual([second.optimistic]);
+        second.response.resolve({ data: second.saved, error: null }); await second.creation;
+        expect(store.creating()).toBe(false); expect(store.tasks()).toEqual([second.saved]);
+    });
+
+    it('rejects an unexpected server identity without retaining or replacing unrelated tasks', async () => {
+        await authenticateForCreation();
+        const unrelated = createTask({ id: 'unrelated' }); store.tasks.set([unrelated]);
+        const created = startCreation();
+        const rejected = expect(created.creation).rejects.toThrow('identity does not match');
+        created.response.resolve({ data: { ...created.saved, id: unrelated.id }, error: null }); await rejected;
+        expect(store.tasks()).toEqual([unrelated]); expect(store.creating()).toBe(false);
     });
 
     function pendingRefresh() {
@@ -1539,17 +1734,16 @@ describe('TasksStore', () => {
         resolveInsert({
             data: {
                 ...optimisticTask!,
-                id: 'saved-task',
+                id: optimisticTask!.id,
             },
             error: null,
         });
 
         await creation;
 
-        // Temporary ID should be replaced by the persisted ID.
-        expect(store.tasks().some((task) => task.id === 'saved-task')).toBe(true);
-
-        expect(store.tasks().some((task) => task.id === optimisticTask?.id)).toBe(false);
+        // Optimistic and persisted task keep the same identity.
+        expect(store.tasks().filter(task => task.id === optimisticTask?.id)).toHaveLength(1);
+        expect(insert).toHaveBeenCalledWith(expect.objectContaining({ id: optimisticTask!.id }));
     });
 
     it('does not restore tasks when an old refresh finishes after logout', async () => {

@@ -40,6 +40,7 @@ export class TasksStore {
     readonly creating = signal(false); // Are we in the process of creating a new task (showing the form)?
     readonly mutating = signal(false); // Are we performing a mutation (add, update, delete) on the server?
     private readonly pendingTaskIds = new Set<string>();
+    private readonly pendingCreations = new Map<string, Promise<void>>();
     private readonly taskMutationQueues = new Map<string, Promise<void>>();
     private readonly tasksNeedingReconciliation = new Set<string>();
     private readonly taskRevisions = new Map<string, number>();
@@ -60,7 +61,9 @@ export class TasksStore {
 
         const isCurrentSession = () => generationAtStart === this.sessionGeneration;
 
-        const previous = this.taskMutationQueues.get(taskId) ?? Promise.resolve();
+        const previous = this.taskMutationQueues.get(taskId)
+            ?? this.pendingCreations.get(taskId)
+            ?? Promise.resolve();
 
         const operation = previous
             .catch(() => undefined)
@@ -133,6 +136,7 @@ export class TasksStore {
 
             this.taskMutationQueues.clear();
             this.pendingTaskIds.clear();
+            this.pendingCreations.clear();
             this.tasksNeedingReconciliation.clear();
             this.taskRevisions.clear();
 
@@ -208,6 +212,9 @@ export class TasksStore {
 
         if (eventType === 'INSERT' || eventType === 'UPDATE') {
             const row = payload.new as Task;
+            // The HTTP response confirms this creation echo, including defaults.
+            // UPDATE events still use deferred reconciliation for newer server edits.
+            if (eventType === 'INSERT' && this.pendingCreations.has(row.id)) return;
             this.upsertFromRealtime(row);
             return;
         }
@@ -233,18 +240,10 @@ export class TasksStore {
             return;
         }
 
-        this.tasks.update((tasks) => {
-            const index = tasks.findIndex((current) => current.id === row.id);
-
-            if (index >= 0) {
-                const next = [...tasks];
-                next[index] = row;
-
-                return this.sortDesc(next);
-            }
-
-            return this.sortDesc([...tasks, row]);
-        });
+        this.tasks.update(tasks => this.sortDesc([
+            row,
+            ...tasks.filter(task => task.id !== row.id),
+        ]));
     }
 
     private removeFromRealtime(id: string): void {
@@ -254,10 +253,8 @@ export class TasksStore {
     }
 
     private sortDesc(list: Task[]) {
-        // return [...list].sort(
-        // (a, b) =>
-        //  b.created_at.localeCompare(a.created_at));
-        return [...list].sort(
+        // Defensive normalization for refresh, creation, and Realtime entry points.
+        return [...new Map(list.map(task => [task.id, task])).values()].sort(
             (a, b) => b.created_at.localeCompare(a.created_at) || a.id.localeCompare(b.id),
         );
     }
@@ -387,10 +384,13 @@ export class TasksStore {
         this.error.set(null);
         this.creating.set(true);
 
-        const tempId = crypto.randomUUID();
+        const taskId = crypto.randomUUID();
+        let finishCreation!: () => void;
+        const creationSettled = new Promise<void>(resolve => { finishCreation = resolve; });
+        this.pendingCreations.set(taskId, creationSettled);
 
         const optimistic: Task = {
-            id: tempId,
+            id: taskId,
             user_id: userId,
             project_id: input.projectId,
 
@@ -412,17 +412,18 @@ export class TasksStore {
             updated_at: new Date().toISOString(),
         };
 
-        // Protect this temporary task from refresh results
-        // until the insert has completed.
-        this.pendingTaskIds.add(tempId);
-        this.markTaskChanged(tempId);
+        // Use the same identity for optimistic state, INSERT, and Realtime.
+        // Mutations targeting this row wait for creation through the existing queue.
+        this.pendingTaskIds.add(taskId);
+        this.markTaskChanged(taskId);
 
-        this.tasks.update((prev) => [optimistic, ...prev]);
+        this.tasks.update((prev) => [optimistic, ...prev.filter(task => task.id !== taskId)]);
 
         try {
             const { data, error } = await this.supabase
                 .from('tasks')
                 .insert({
+                    id: taskId,
                     user_id: userId,
                     title: input.title,
                     description: input.description,
@@ -442,13 +443,18 @@ export class TasksStore {
                 return;
             }
 
-            this.tasks.update((prev) =>
-                prev.map((task) => (task.id === tempId ? (data as Task) : task)),
-            );
+            const saved = data as Task;
+            if (saved.id !== taskId || saved.user_id !== userId) {
+                throw new Error('Created task identity does not match the request');
+            }
+            this.tasks.update(prev => this.sortDesc([
+                saved,
+                ...prev.filter(task => task.id !== taskId),
+            ]));
         } catch (e: unknown) {
             if (isCurrentSession()) {
                 // Remove the failed optimistic task.
-                this.tasks.update((prev) => prev.filter((task) => task.id !== tempId));
+                this.tasks.update((prev) => prev.filter((task) => task.id !== taskId));
 
                 this.error.set(e instanceof Error ? e.message : 'Failed to create task');
             }
@@ -456,9 +462,23 @@ export class TasksStore {
             throw e;
         } finally {
             if (isCurrentSession()) {
-                this.pendingTaskIds.delete(tempId);
-                this.creating.set(false);
+                // Preserve a confirmed insert or rollback against overlapping refreshes.
+                this.markTaskChanged(taskId);
+                this.pendingCreations.delete(taskId);
+                this.creating.set(this.pendingCreations.size > 0);
+                // A queued mutation owns pending/reconciliation state until it settles.
+                if (!this.taskMutationQueues.has(taskId)) {
+                    this.pendingTaskIds.delete(taskId);
+                    if (this.tasksNeedingReconciliation.delete(taskId)) {
+                        try {
+                            await this.reconcileTask(taskId);
+                        } catch (error) {
+                            console.error('Failed to reconcile task after creation:', error);
+                        }
+                    }
+                }
             }
+            finishCreation();
         }
     }
 
@@ -1028,6 +1048,8 @@ export class TasksStore {
     }
 
     private async reconcileTask(taskId: string): Promise<void> {
+        const generationAtStart = this.sessionGeneration;
+        const userIdAtStart = this.auth.userId();
         const task = this.tasks().find((current) => current.id === taskId);
 
         if (!task) return;
@@ -1044,6 +1066,8 @@ export class TasksStore {
 
         if (error) throw error;
 
+        if (generationAtStart !== this.sessionGeneration || userIdAtStart !== this.auth.userId()) return;
+
         // If another local mutation started, don't overwrite it.
         if (this.pendingTaskIds.has(taskId)) {
             this.tasksNeedingReconciliation.add(taskId);
@@ -1058,6 +1082,7 @@ export class TasksStore {
             return;
         }
 
+        this.markTaskChanged(taskId);
         this.tasks.update((tasks) =>
             tasks.map((current) => (current.id === taskId ? (data as Task) : current)),
         );
