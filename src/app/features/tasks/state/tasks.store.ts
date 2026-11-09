@@ -44,6 +44,7 @@ export class TasksStore {
     private readonly tasksNeedingReconciliation = new Set<string>();
     private readonly taskRevisions = new Map<string, number>();
     private sessionGeneration = 0;
+    private latestRefreshRequest = 0;
     readonly error = signal<string | null>(null); // Did fetching or mutating fail?
 
     readonly realtimeConnected = signal(false);
@@ -73,7 +74,14 @@ export class TasksStore {
                 this.error.set(null);
                 this.markTaskChanged(taskId);
 
-                return fn(isCurrentSession);
+                try {
+                    return await fn(isCurrentSession);
+                } finally {
+                    // A refresh started during this mutation must also see its
+                    // settlement (confirmed save or rollback) as a newer revision.
+                    // Retain revisions for deleted rows as refresh tombstones.
+                    if (isCurrentSession()) this.markTaskChanged(taskId);
+                }
             });
 
         const settled = operation.then(
@@ -256,6 +264,14 @@ export class TasksStore {
 
     async refreshTasks(): Promise<void> {
         const generationAtStart = this.sessionGeneration;
+        const userIdAtStart = this.auth.userId();
+        const requestId = ++this.latestRefreshRequest;
+        // Latest-started refresh owns all refresh state. Check auth directly
+        // as well, covering a switch before the constructor effect runs.
+        const ownsRefresh = () =>
+            generationAtStart === this.sessionGeneration &&
+            userIdAtStart === this.auth.userId() &&
+            requestId === this.latestRefreshRequest;
 
         // Snapshot the revisions when this particular query starts.
         const revisionsAtStart = new Map(this.taskRevisions);
@@ -272,9 +288,8 @@ export class TasksStore {
 
             if (error) throw error;
 
-            // The user signed out or switched accounts while this
-            // request was pending. Discard the response.
-            if (generationAtStart !== this.sessionGeneration) {
+            // A newer refresh or another account owns the visible state.
+            if (!ownsRefresh()) {
                 return;
             }
 
@@ -326,11 +341,13 @@ export class TasksStore {
                 return this.sortDesc([...merged.values()]);
             });
         } catch (error: unknown) {
-            this.error.set(error instanceof Error ? error.message : 'Failed to load tasks');
-
+            if (ownsRefresh()) {
+                this.error.set(error instanceof Error ? error.message : 'Failed to load tasks');
+            }
+            // Supersession suppresses store writes, not rejection to the caller.
             throw error;
         } finally {
-            this.loading.set(false);
+            if (ownsRefresh()) this.loading.set(false);
         }
     }
 
