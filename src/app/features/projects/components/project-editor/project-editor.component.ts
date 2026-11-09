@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output } from '@angular/core';
+import { Component, computed, effect, inject, input, output, untracked } from '@angular/core';
 import {
     NonNullableFormBuilder,
     ReactiveFormsModule,
@@ -57,31 +57,64 @@ export class ProjectEditorComponent {
         return toProjectTreeNodes(excludeBranch(this.projects()));
     });
 
+    // A new component instance is a fresh dialog session; identity changes can
+    // also initialize a reused editor. Same-project snapshots never reset drafts.
+    private editingId: string | null | undefined;
+
     constructor() {
+        const parentControl = this.form.controls.parentProject;
+        parentControl.addValidators(control => {
+            const selected = control.value as TreeNode | null;
+            return selected && (!selected.key || !findTreeNodeByKey(this.projectOptions(), selected.key))
+                ? { unavailableParent: true }
+                : null;
+        });
+
         effect(() => {
             const project = this.project();
-            const options = this.projectOptions();
-
-            const selectedParent = project?.parent_project_id
-                ? findTreeNodeByKey(options, project.parent_project_id)
-                : null;
-
-            this.form.reset({
-                name: project?.name ?? '',
-                parentProject: selectedParent,
+            const id = project?.id ?? null;
+            if (id === this.editingId) return;
+            this.editingId = id;
+            // Initial values are a session snapshot, not an options dependency.
+            untracked(() => {
+                const parentId = project?.parent_project_id;
+                this.form.reset({
+                    name: project?.name ?? '',
+                    parentProject: parentId
+                        ? findTreeNodeByKey(this.projectOptions(), parentId)
+                            ?? { key: parentId, label: 'Unavailable project' }
+                        : null,
+                });
             });
         });
 
         effect(() => {
-            if (this.disabled()) {
-                this.form.disable({ emitEvent: false });
-            } else {
-                this.form.enable({ emitEvent: false });
+            const options = this.projectOptions();
+            const selected = parentControl.value;
+            const refreshed = selected?.key ? findTreeNodeByKey(options, selected.key) : null;
+            if (refreshed && refreshed !== selected) {
+                // Rebind TreeSelect's node object by identity without resetting
+                // the name, parent intent, or dirty/touched state.
+                parentControl.setValue(refreshed, { emitEvent: false });
             }
+            // Retain unavailable choices visibly, but block submission until the
+            // user clears/replaces them or they become available again.
+            parentControl.updateValueAndValidity({ emitEvent: false });
+        });
+
+        effect(() => {
+            const disabled = this.disabled();
+            // Validators read options; that must not make enable/disable track them.
+            untracked(() => {
+                if (disabled) this.form.disable({ emitEvent: false });
+                else this.form.enable({ emitEvent: false });
+            });
         });
     }
 
     protected onSubmit(): void {
+        // Validate current options even when submission precedes the sync effect.
+        this.form.controls.parentProject.updateValueAndValidity({ emitEvent: false });
         if (this.disabled() || this.form.invalid) {
             this.form.markAllAsTouched();
             return;
