@@ -4,6 +4,8 @@ Prepared November 9, 2026 against source main `1e3d34d`. This is a planning appe
 
 Run one numbered block at a time, promptly closing a bounded read-only transaction:
 
+**Submit the complete wrapper and its approved SELECT block together in the same database session/submission.** BEGIN, SET LOCAL, the queries and ROLLBACK must share that session for the read-only transaction and local timeouts to apply. Do not assume a SQL dashboard preserves a transaction across separately executed requests; if session continuity is not established, do not split the wrapper across submissions.
+
 ```sql
 BEGIN READ ONLY;
 SET LOCAL lock_timeout = '1s';
@@ -102,7 +104,7 @@ SELECT 'tasks', count(*) FROM public.tasks t
 LEFT JOIN auth.users u ON u.id=t.user_id WHERE u.id IS NULL;
 ```
 
-All-row traversal below includes rootless cycles and paths entering cycles. It has no artificial depth cutoff that could hide long cycles; large/deep graphs may hit the statement budget. If that occurs, stop and review an isolated-copy strategy rather than reporting zero cycles or raising production timeouts casually.
+All-row traversal below includes rootless cycles and paths entering cycles. **Read-only does not mean load-free:** recursive inspection can consume substantial CPU, memory and I/O, especially for large/deep graphs. Schedule it within an approved low-load window after reviewing sizing; keep the wrapper's bounded timeout. It has no artificial depth cutoff that could hide long cycles. A timeout or otherwise incomplete inspection is inconclusive: stop and review an isolated-copy strategy rather than reporting zero cycles or raising production timeouts casually.
 
 ```sql
 WITH RECURSIVE ancestry AS (
