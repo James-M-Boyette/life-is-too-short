@@ -4,7 +4,7 @@
     <app-tasks-header
         [title]="pageHeader()"
         [realtimeOn]="tasksStore.realtimeConnected()"
-        [errorText]="error() ?? tasksStore.error()"
+        [errorText]="error() ?? tasksStore.error() ?? tasksStore.syncError()"
         [disabled]="tasksStore.mutating()"
         (signOut)="signOut()"
     >
@@ -15,7 +15,7 @@
                 (click)="toggleProjectMenu($event)"><i pButtonIcon class="pi pi-ellipsis-h" aria-hidden="true"></i></button>
         }
     </app-tasks-header>
-    @if (error() || tasksStore.error()) {
+    @if (error() || tasksStore.error() || tasksStore.syncError()) {
         <p-button label="Refresh task list" [text]="true" [disabled]="tasksStore.loading() || tasksStore.mutating()"
             (onClick)="refreshTaskList()" />
     }
