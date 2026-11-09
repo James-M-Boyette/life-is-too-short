@@ -277,20 +277,33 @@ export class TasksStore {
         this.error.set(null);
 
         try {
-            const { data, error } = await this.supabase
-                .from('tasks')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .order('id', { ascending: true });
-
-            if (error) throw error;
-
-            // A newer refresh or another account owns the visible state.
-            if (!ownsRefresh()) {
-                return;
+            const fetchedTasks: Task[] = [];
+            let cursor: string | undefined;
+            // ID is unique and is not changed by normal task mutations. Offset
+            // pagination can skip rows when an earlier row is deleted mid-fetch.
+            // Keep presentation ordering in sortDesc(), separate from retrieval.
+            while (ownsRefresh()) {
+                let query = this.supabase.from('tasks').select('*')
+                    .order('id', { ascending: true });
+                if (cursor !== undefined) query = query.gt('id', cursor);
+                const { data, error } = await query.limit(500);
+                if (error) throw error;
+                if (!ownsRefresh()) return;
+                if (!Array.isArray(data)) throw new Error('Incomplete task snapshot: invalid page');
+                // Do not infer completion from a short page: an API cap may be
+                // lower than our requested limit. Only an empty page ends fetch.
+                if (data.length === 0) break;
+                for (const task of data as Task[]) {
+                    if (typeof task?.id !== 'string' || !task.id ||
+                        (cursor !== undefined && task.id <= cursor) ||
+                        (userIdAtStart !== null && task.user_id !== userIdAtStart)) {
+                        throw new Error('Incomplete task snapshot: invalid ownership or ID order');
+                    }
+                    cursor = task.id;
+                    fetchedTasks.push(task);
+                }
             }
-
-            const fetchedTasks = (data ?? []) as Task[];
+            if (!ownsRefresh()) return;
 
             this.tasks.update((currentTasks) => {
                 const currentById = new Map(currentTasks.map((task) => [task.id, task]));

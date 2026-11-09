@@ -34,6 +34,15 @@ function createTask(overrides: Partial<Task> = {}): Task {
     };
 }
 
+function snapshotQuery(response: unknown, continuation = false) {
+    const query = {
+        order: vi.fn().mockReturnThis(),
+        gt: vi.fn().mockImplementation(() => continuation ? query : { limit: vi.fn().mockResolvedValue({ data: [], error: null }) }),
+        limit: vi.fn().mockReturnValue(response),
+    };
+    return query;
+}
+
 describe('TasksStore', () => {
     let store: TasksStore;
     let userId: ReturnType<typeof signal<string | null>>;
@@ -68,6 +77,7 @@ describe('TasksStore', () => {
             eq,
             select,
             single,
+            order: vi.fn().mockReturnValue(snapshotQuery({ data: [], error: null })),
         };
 
         update.mockReturnValue(query);
@@ -102,11 +112,9 @@ describe('TasksStore', () => {
 
     async function authenticateForCreation(id = 'user-1') {
         const loaded = deferred<{ data: Task[]; error: null }>();
-        from.mockReturnValueOnce({ select: vi.fn().mockReturnValue({
-            order: vi.fn().mockReturnValue({ order: vi.fn().mockReturnValue(loaded.promise) }),
-        }) });
+        from.mockReturnValueOnce({ select: vi.fn().mockReturnValue(snapshotQuery(loaded.promise)) });
         userId.set(id); TestBed.tick();
-        loaded.resolve({ data: [], error: null }); await loaded.promise;
+        loaded.resolve({ data: [], error: null }); await loaded.promise; await vi.waitFor(() => expect(store.loading()).toBe(false));
     }
 
     it('keeps one task identity when Realtime INSERT arrives before the HTTP creation response', async () => {
@@ -293,11 +301,202 @@ describe('TasksStore', () => {
 
     function pendingRefresh() {
         const response = deferred<{ data: Task[] | null; error: Error | null }>();
-        from.mockReturnValueOnce({ select: vi.fn().mockReturnValue({
-            order: vi.fn().mockReturnValue({ order: vi.fn().mockReturnValue(response.promise) }),
-        }) });
-        return response;
+        const started = deferred<void>();
+        from.mockImplementationOnce(() => {
+            started.resolve();
+            return { select: vi.fn().mockReturnValue(snapshotQuery(response.promise, true)) };
+        });
+        return { ...response, started: started.promise };
     }
+
+    it('retrieves a complete account snapshot beyond the API cap without dropping legitimate local tasks', async () => {
+        const rows = Array.from({ length: 1005 }, (_, index) => createTask({
+            id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+        }));
+        store.tasks.set(rows);
+        // Model actual PostgREST behavior: the server caps every response, even
+        // when the client does not ask for a range. Each query sees the full DB.
+        const requested: string[][] = [];
+        from.mockImplementation(() => {
+            let cursor = ''; let limit = 1000;
+            const query = {
+                select: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
+                gt: vi.fn((_field, value) => { cursor = value; return query; }),
+                limit: vi.fn(value => { limit = value; return query; }),
+                then: (resolve: (result: { data: Task[]; error: null }) => unknown) => {
+                    const data = rows.filter(row => row.id > cursor).slice(0, Math.min(limit, 1000));
+                    requested.push(data.map(row => row.id));
+                    return Promise.resolve({ data, error: null }).then(resolve);
+                },
+            };
+            return query;
+        });
+        await store.refreshTasks();
+        expect(store.tasks()).toEqual(rows);
+        expect(requested.flat()).toEqual(rows.map(row => row.id));
+        expect(requested.length).toBeGreaterThan(1);
+    });
+
+    function snapshotRows(count: number) {
+        return Array.from({ length: count }, (_, index) => createTask({
+            id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+        }));
+    }
+
+    function serveSnapshot(read: () => Task[], cap = 1000, afterPage?: (page: number) => void) {
+        const requests: { cursor: string; limit: number }[] = [];
+        from.mockImplementation(() => {
+            let cursor = ''; let limit = 1000;
+            const query = {
+                select: vi.fn().mockReturnThis(),
+                order: vi.fn((field, options) => {
+                    expect(field).toBe('id'); expect(options).toEqual({ ascending: true }); return query;
+                }),
+                gt: vi.fn((field, value) => { expect(field).toBe('id'); cursor = value; return query; }),
+                limit: vi.fn(value => { limit = value; return query; }),
+                then: (resolve: (result: { data: Task[]; error: null }) => unknown) => {
+                    requests.push({ cursor, limit });
+                    const data = read().filter(row => row.id > cursor).slice(0, Math.min(cap, limit));
+                    afterPage?.(requests.length);
+                    return Promise.resolve({ data, error: null }).then(resolve);
+                },
+            };
+            return query;
+        });
+        return requests;
+    }
+
+    it.each([0, 1, 500, 501, 1000])('collects %i tasks, including exact pages, before replacing visible state', async count => {
+        const rows = snapshotRows(count);
+        const calls = serveSnapshot(() => rows);
+        store.tasks.set([createTask({ id: 'old' })]);
+        await store.refreshTasks();
+        expect(store.tasks()).toEqual(rows);
+        expect(calls).toHaveLength(Math.ceil(count / 500) + 1);
+        expect(calls.every(call => call.limit === 500)).toBe(true);
+        expect(store.loading()).toBe(false);
+    });
+
+    it('continues after server-capped short pages and retains presentation ordering independently of the cursor', async () => {
+        const rows = snapshotRows(1201).map((row, index) => ({
+            ...row, created_at: index % 2 ? '2026-11-01T00:00:00Z' : row.created_at,
+            planned_position: 1201 - index,
+        }));
+        const calls = serveSnapshot(() => rows, 125);
+        await store.refreshTasks();
+        expect(store.tasks()).toEqual([...rows].sort((a, b) => b.created_at.localeCompare(a.created_at) || a.id.localeCompare(b.id)));
+        expect(calls).toHaveLength(11);
+    });
+
+    it.each(['duplicate', 'changed duplicate', 'out of order', 'missing page'])('rejects %s page data without applying a partial snapshot', async kind => {
+        const original = createTask(); store.tasks.set([original]);
+        const rows = snapshotRows(3);
+        const first = pendingRefresh(); const refresh = store.refreshTasks();
+        const second = pendingRefresh();
+        first.resolve({ data: [rows[1]], error: null }); await second.started;
+        expect(store.tasks()).toEqual([original]);
+        const rejected = expect(refresh).rejects.toThrow('Incomplete task snapshot');
+        second.resolve({ data: kind === 'missing page' ? null : [kind === 'out of order' ? rows[0] : {
+            ...rows[1], title: kind === 'changed duplicate' ? 'Changed across boundary' : rows[1].title,
+        }], error: null });
+        await rejected;
+        expect(store.tasks()).toEqual([original]); expect(store.loading()).toBe(false);
+        expect(store.error()).toContain('Incomplete task snapshot');
+    });
+
+    it('keeps the visible collection on a later-page network failure and permits a complete retry', async () => {
+        const original = createTask(); store.tasks.set([original]);
+        const first = pendingRefresh(); const refresh = store.refreshTasks();
+        const second = pendingRefresh();
+        first.resolve({ data: snapshotRows(500), error: null }); await second.started;
+        expect(store.tasks()).toEqual([original]);
+        const rejected = expect(refresh).rejects.toThrow('Page two unavailable');
+        second.reject(new Error('Page two unavailable')); await rejected;
+        expect(store.tasks()).toEqual([original]); expect(store.error()).toBe('Page two unavailable');
+        const rows = snapshotRows(1001); serveSnapshot(() => rows);
+        await store.refreshTasks();
+        expect(store.tasks()).toEqual(rows); expect(store.error()).toBeNull();
+    });
+
+    it('does not reconcile either earlier page when page three returns an API error', async () => {
+        const original = createTask(); store.tasks.set([original]);
+        const rows = snapshotRows(1000);
+        const first = pendingRefresh(); const refresh = store.refreshTasks();
+        const second = pendingRefresh();
+        first.resolve({ data: rows.slice(0, 500), error: null }); await second.started;
+        const third = pendingRefresh();
+        second.resolve({ data: rows.slice(500), error: null }); await third.started;
+        expect(store.tasks()).toEqual([original]);
+        const rejected = expect(refresh).rejects.toThrow('Page three rejected');
+        third.resolve({ data: null, error: new Error('Page three rejected') }); await rejected;
+        expect(store.tasks()).toEqual([original]); expect(store.error()).toBe('Page three rejected');
+        expect(store.loading()).toBe(false);
+    });
+
+    it('rejects a foreign-owner page without displaying it or losing the current account collection', async () => {
+        await authenticateForCreation('user-1');
+        const original = createTask(); store.tasks.set([original]);
+        const page = pendingRefresh(); const refresh = store.refreshTasks();
+        const rejected = expect(refresh).rejects.toThrow('invalid ownership');
+        page.resolve({ data: [createTask({ user_id: 'foreign' })], error: null }); await rejected;
+        expect(store.tasks()).toEqual([original]); expect(store.loading()).toBe(false);
+    });
+
+    it.each([false, true])('abandons later-page work after an account switch (failure: %s) without changing current feedback', async fails => {
+        await authenticateForCreation('user-1');
+        const first = pendingRefresh(); const refresh = store.refreshTasks();
+        const second = pendingRefresh();
+        first.resolve({ data: snapshotRows(1), error: null }); await second.started;
+        const b = pendingRefresh(); userId.set('B'); TestBed.tick();
+        const obsolete = fails ? expect(refresh).rejects.toThrow('Old page failed') : refresh;
+        if (fails) second.reject(new Error('Old page failed'));
+        else second.resolve({ data: snapshotRows(2).slice(1), error: null });
+        await obsolete;
+        expect(store.tasks()).toEqual([]); expect(store.loading()).toBe(true); expect(store.error()).toBeNull();
+        b.resolve({ data: [], error: null }); await b.promise;
+        expect(store.loading()).toBe(false);
+    });
+
+    it('discards a superseded partial snapshot and stops requesting its remaining pages', async () => {
+        const first = pendingRefresh(); const refresh = store.refreshTasks();
+        const second = pendingRefresh();
+        first.resolve({ data: snapshotRows(1), error: null }); await second.started;
+        const newest = pendingRefresh(); const latest = store.refreshTasks();
+        newest.resolve({ data: [], error: null }); await latest;
+        const calls = from.mock.calls.length;
+        second.resolve({ data: snapshotRows(2), error: null }); await refresh;
+        expect(from.mock.calls).toHaveLength(calls);
+        expect(store.tasks()).toEqual([]); expect(store.error()).toBeNull(); expect(store.loading()).toBe(false);
+    });
+
+    it('retains content saves and deletion tombstones made after an earlier page was collected', async () => {
+        const rows = snapshotRows(2); store.tasks.set(rows);
+        const first = pendingRefresh(); const refresh = store.refreshTasks();
+        const second = pendingRefresh();
+        first.resolve({ data: rows, error: null }); await second.started;
+        single.mockResolvedValueOnce({ data: { title: 'Saved locally', description: '**Markdown**' }, error: null });
+        await store.updateContent(rows[0], { title: 'Saved locally', description: '**Markdown**' });
+        const deleted = deferred<{ error: null }>();
+        const query = { eq: vi.fn(), then: deleted.promise.then.bind(deleted.promise) };
+        query.eq.mockReturnValue(query); from.mockReturnValueOnce({ delete: vi.fn().mockReturnValue(query) });
+        const deleting = store.remove(rows[1].id); deleted.resolve({ error: null }); await deleting;
+        second.resolve({ data: [], error: null }); await refresh;
+        expect(store.tasks()).toEqual([{ ...rows[0], title: 'Saved locally', description: '**Markdown**' }]);
+    });
+
+    it('avoids offset skips under remote deletion while documenting behind-cursor inserts and already-read deletions', async () => {
+        const all = snapshotRows(10);
+        let database = [all[0], all[2], all[4], all[6], all[8]];
+        serveSnapshot(() => database, 2, page => {
+            if (page === 1) database = [all[1], all[2], all[3], all[4], all[6], all[8]];
+        });
+        await store.refreshTasks();
+        // Deleting row 0 does not shift offset and skip row 4. Insertion 3 is
+        // ahead of cursor and included; insertion 1 and deletion 0 need catch-up.
+        expect(store.tasks()).toEqual([all[0], all[2], all[3], all[4], all[6], all[8]]);
+        serveSnapshot(() => database, 2); await store.refreshTasks();
+        expect(store.tasks()).toEqual(database);
+    });
 
     it('preserves a confirmed content save when a refresh started during the mutation returns stale data', async () => {
         const original = createTask({ description: 'Old description' });
@@ -420,6 +619,7 @@ describe('TasksStore', () => {
         expect(store.error()).toBeNull(); expect(store.loading()).toBe(true);
         const taskB = createTask({ user_id: 'B' });
         b.resolve({ data: [taskB], error: null }); await b.promise;
+        await vi.waitFor(() => expect(store.loading()).toBe(false));
         expect(store.tasks()).toEqual([taskB]); expect(store.loading()).toBe(false);
     });
 
@@ -439,15 +639,16 @@ describe('TasksStore', () => {
         let resolve!: (value: { data: Task[]; error: null }) => void;
         const pending = new Promise<{ data: Task[]; error: null }>(done => { resolve = done; });
         const secondOrder = vi.fn().mockResolvedValue({ data: [createTask()], error: null });
-        select.mockReturnValue({ order: vi.fn().mockReturnValue({ order: secondOrder }) });
+        select.mockReturnValue({ order: vi.fn().mockImplementation(() => snapshotQuery(secondOrder())) });
         userId.set('user-1'); TestBed.tick();
-        await Promise.resolve();
+        await vi.waitFor(() => expect(store.loading()).toBe(false));
         expect(store.tasks()).toEqual([createTask()]);
         secondOrder.mockReturnValueOnce(pending);
         userId.set('user-2'); TestBed.tick();
         expect(store.tasks()).toEqual([]);
         const next = createTask({ id: 'new', user_id: 'user-2' });
         resolve({ data: [next], error: null }); await pending;
+        await vi.waitFor(() => expect(store.loading()).toBe(false));
         expect(store.tasks()).toEqual([next]);
     });
 
@@ -527,7 +728,7 @@ describe('TasksStore', () => {
 
     it.each([false, true])('ignores old content responses after logout (failure: %s)', async failure => {
         const task = createTask();
-        const order = vi.fn().mockReturnValue({ order: vi.fn().mockResolvedValue({ data: [task], error: null }) });
+        const order = vi.fn().mockReturnValue(snapshotQuery({ data: [task], error: null }));
         select.mockReturnValueOnce({ order });
         userId.set('user-1');
         TestBed.tick();
@@ -1583,11 +1784,11 @@ describe('TasksStore', () => {
         });
 
         // refreshTasks() uses:
-        // .select('*').order(...).order(...)
+        // .select('*').order('id').limit(...)
         const order = vi.fn();
 
         order.mockReturnValueOnce({
-            order: vi.fn().mockReturnValue(refreshRequest),
+            ...snapshotQuery(refreshRequest),
         });
 
         select.mockReturnValueOnce({ order });
@@ -1634,7 +1835,7 @@ describe('TasksStore', () => {
         const order = vi.fn();
 
         order.mockReturnValueOnce({
-            order: vi.fn().mockReturnValue(refreshRequest),
+            ...snapshotQuery(refreshRequest),
         });
 
         select.mockReturnValueOnce({ order });
@@ -1689,7 +1890,7 @@ describe('TasksStore', () => {
         });
 
         const order = vi.fn().mockReturnValueOnce({
-            order: vi.fn().mockReturnValue(refreshRequest),
+            ...snapshotQuery(refreshRequest),
         });
 
         const insert = vi.fn().mockReturnValue({
@@ -1761,12 +1962,10 @@ describe('TasksStore', () => {
         });
 
         // Mock the query:
-        // from('tasks').select('*').order(...).order(...)
+        // from('tasks').select('*').order('id').limit(...)
         const secondOrder = vi.fn().mockReturnValue(refreshRequest);
 
-        const firstOrder = vi.fn().mockReturnValue({
-            order: secondOrder,
-        });
+        const firstOrder = vi.fn().mockImplementation(() => snapshotQuery(secondOrder()));
 
         select.mockReturnValue({
             order: firstOrder,
@@ -1806,12 +2005,7 @@ describe('TasksStore', () => {
         });
 
         // Allow the authenticated constructor effect to refresh.
-        const order = vi.fn().mockReturnValue({
-            order: vi.fn().mockResolvedValue({
-                data: [task],
-                error: null,
-            }),
-        });
+        const order = vi.fn().mockReturnValue(snapshotQuery({ data: [task], error: null }));
 
         select.mockReturnValueOnce({ order });
 
@@ -1879,9 +2073,7 @@ describe('TasksStore', () => {
             error: null,
         });
 
-        const firstOrder = vi.fn().mockReturnValue({
-            order: secondOrder,
-        });
+        const firstOrder = vi.fn().mockImplementation(() => snapshotQuery(secondOrder()));
 
         // The refresh query needs order().
         // The mutation query needs single().
@@ -2019,9 +2211,7 @@ describe('TasksStore', () => {
             error: null,
         });
 
-        const firstOrder = vi.fn().mockReturnValue({
-            order: secondOrder,
-        });
+        const firstOrder = vi.fn().mockImplementation(() => snapshotQuery(secondOrder()));
 
         select.mockReturnValue({
             order: firstOrder,
@@ -2100,9 +2290,7 @@ describe('TasksStore', () => {
             error: null,
         });
 
-        const firstOrder = vi.fn().mockReturnValue({
-            order: secondOrder,
-        });
+        const firstOrder = vi.fn().mockImplementation(() => snapshotQuery(secondOrder()));
 
         select.mockReturnValue({
             order: firstOrder,
@@ -2180,9 +2368,7 @@ describe('TasksStore', () => {
             error: null,
         });
 
-        const firstOrder = vi.fn().mockReturnValue({
-            order: secondOrder,
-        });
+        const firstOrder = vi.fn().mockImplementation(() => snapshotQuery(secondOrder()));
 
         select.mockReturnValue({
             order: firstOrder,
