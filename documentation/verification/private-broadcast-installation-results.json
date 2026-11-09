@@ -1,0 +1,127 @@
+{
+  "gate": "installation-and-api",
+  "fullChainStart": true,
+  "checks": [
+    {
+      "name": "GoTrue signup password login and session refresh after fresh-chain startup"
+    },
+    {
+      "name": "CLI confirms recorded migration 20261109020000_enforce_project_hierarchy_integrity.sql"
+    },
+    {
+      "name": "CLI confirms recorded migration 20261109040000_restrict_application_privileges.sql"
+    },
+    {
+      "name": "Complete checked-in migration chain recorded by CLI; copies are byte-identical"
+    },
+    {
+      "name": "Dedicated helper ownership, function hardening and minimal grants preserved"
+    },
+    {
+      "name": "API roles have no helper membership, SET or inheritance; migration SET and inheritance revoked"
+    },
+    {
+      "name": "Project create rename reparent root and cycle rejection over Data API"
+    },
+    {
+      "name": "Angular SDK contracts: task create read atomic content completion scheduling order assignment"
+    },
+    {
+      "name": "Two real Auth accounts and anon: RLS ownership and direct project DELETE denial"
+    },
+    {
+      "name": "delete_project real RPC preserves direct tasks children and grandchildren"
+    },
+    {
+      "name": "Explicit future function grant and schema-cache reload work",
+      "closedPrivilege": "f"
+    },
+    {
+      "name": "Post-migration session refresh logout anonymous fallback and login"
+    }
+  ],
+  "defects": [],
+  "experiments": [],
+  "environment": {
+    "project": "lits-integration-aaecb451",
+    "images": [
+      "supabase_rest_lits-integration-aaecb451 public.ecr.aws/supabase/postgrest:v16.4",
+      "supabase_realtime_lits-integration-aaecb451 public.ecr.aws/supabase/realtime:v2.140.10",
+      "supabase_inbucket_lits-integration-aaecb451 public.ecr.aws/supabase/mailpit:v1.31.3",
+      "supabase_auth_lits-integration-aaecb451 public.ecr.aws/supabase/gotrue:v2.197.0",
+      "supabase_kong_lits-integration-aaecb451 public.ecr.aws/supabase/kong:2.8.1",
+      "supabase_db_lits-integration-aaecb451 public.ecr.aws/supabase/postgres:17.11.0.004"
+    ],
+    "database": "17.11",
+    "publicationBefore": "",
+    "replicaIdentityBefore": "d",
+    "role": "postgres|f|t",
+    "helperMembership": "supabase_admin|t|f|f",
+    "migrations": [
+      {
+        "name": "20261008000000_baseline.sql",
+        "sha256": "4666482242077ff4609aef50e3a31736bd2289c26868f9676f137f024627af74"
+      },
+      {
+        "name": "20261008015654_add_delete_project_function.sql",
+        "sha256": "365c87c25dcfa0025aa0173bd6621354ca1765066b06f86a58eb6c2603751fb1"
+      },
+      {
+        "name": "20261024000602_add_task_dates.sql",
+        "sha256": "c8f840992d054324cf2cbd726a4e0427d8d3c13c575dbd70b65dc59045155c1e"
+      },
+      {
+        "name": "20261029010526_add_task_ordering.sql",
+        "sha256": "151117ff3bf5f10e878a7be5453df526a48c1ff0fb74e221f225944c20cdf94a"
+      },
+      {
+        "name": "20261109020000_enforce_project_hierarchy_integrity.sql",
+        "sha256": "bb873f034e2ba2465f407bcfce8752a8b7cabb3dbdd7355fda6cabdf1216f55b"
+      },
+      {
+        "name": "20261109040000_restrict_application_privileges.sql",
+        "sha256": "139a6e1e175a1d28eb94315c17f4b0d110b9dd2ce1cc09dde5455d3db584b2f6"
+      }
+    ],
+    "recordedVersions": [
+      "20261008000000",
+      "20261008015654",
+      "20261024000602",
+      "20261029010526",
+      "20261109020000",
+      "20261109040000"
+    ],
+    "functionSecurity": {
+      "owner": "project_hierarchy_checker",
+      "volatile": "v",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\"",
+        "row_security=on"
+      ]
+    },
+    "apiHelperCapabilities": {
+      "anon": {
+        "MEMBER": false,
+        "SET": false,
+        "USAGE": false
+      },
+      "authenticated": {
+        "MEMBER": false,
+        "SET": false,
+        "USAGE": false
+      },
+      "service_role": {
+        "MEMBER": false,
+        "SET": false,
+        "USAGE": false
+      }
+    },
+    "publicationAfter": "",
+    "replicaIdentityAfter": "d"
+  },
+  "notTested": [
+    "Realtime publication, replica identity, event delivery, metadata exposure and subscription lifecycle"
+  ],
+  "result": "passed"
+}

@@ -369,22 +369,27 @@ async function main() {
   success('Post-migration session refresh logout anonymous fallback and login');
   sql('DROP FUNCTION public.integration_open(); DROP FUNCTION public.integration_closed();');
 }
-try { await main(); }
-catch (error) {
-  report.failure = error.message;
-  console.error(`FAIL: ${error.message}`);
-  process.exitCode = 1;
-} finally {
-  for (const [client, channel] of channels) await client.removeChannel(channel).catch(() => {});
-  for (const client of clients) await client.removeAllChannels().catch(() => {});
-  fs.mkdirSync(path.join(root, 'documentation/verification'), { recursive: true });
-  const suffix = installationOnly ? (fullChainStart ? 'fresh-installation' : 'installation') : 'current';
-  report.result = report.failure ? 'failed' : report.defects.length ? 'blocked-with-conditional-results' : 'passed';
-  if (report.defects.length) process.exitCode = 1;
-  fs.writeFileSync(path.join(root, `documentation/verification/local-supabase-services-${suffix}-results.json`), JSON.stringify(report, null, 2) + '\n');
-  // No stop/reset in shared directories. Only this manifest-verified project.
-  if (owned && !process.argv.includes('--keep-stack')) {
-    try { localCli(['stop', '--no-backup']); console.log('Stopped disposable integration stack'); }
-    catch { console.error('Disposable stack cleanup failed; use its owned --workdir to stop it'); }
+export { prepare, sql, localCli, work, project, owned, root, command };
+
+// Importing these disposable-stack helpers must not run the service test suite.
+if (path.resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
+  try { await main(); }
+  catch (error) {
+    report.failure = error.message;
+    console.error(`FAIL: ${error.message}`);
+    process.exitCode = 1;
+  } finally {
+    for (const [client, channel] of channels) await client.removeChannel(channel).catch(() => {});
+    for (const client of clients) await client.removeAllChannels().catch(() => {});
+    fs.mkdirSync(path.join(root, 'documentation/verification'), { recursive: true });
+    const suffix = installationOnly ? (fullChainStart ? 'fresh-installation' : 'installation') : 'current';
+    report.result = report.failure ? 'failed' : report.defects.length ? 'blocked-with-conditional-results' : 'passed';
+    if (report.defects.length) process.exitCode = 1;
+    fs.writeFileSync(path.join(root, `documentation/verification/local-supabase-services-${suffix}-results.json`), JSON.stringify(report, null, 2) + '\n');
+    // No stop/reset in shared directories. Only this manifest-verified project.
+    if (owned && !process.argv.includes('--keep-stack')) {
+      try { localCli(['stop', '--no-backup']); console.log('Stopped disposable integration stack'); }
+      catch { console.error('Disposable stack cleanup failed; use its owned --workdir to stop it'); }
+    }
   }
 }
