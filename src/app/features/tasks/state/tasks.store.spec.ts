@@ -7,6 +7,13 @@ import { AuthStore } from '@/shared/supabase/auth.store';
 import type { Task } from '@/features/tasks/models/tasks.model';
 import { SUPABASE_CLIENT } from '@/shared/supabase/supabase.client';
 
+function deferred<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (reason: Error) => void;
+    const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
+    return { promise, resolve, reject };
+}
+
 function createTask(overrides: Partial<Task> = {}): Task {
     return {
         id: 'task-1',
@@ -87,6 +94,150 @@ describe('TasksStore', () => {
 
         // Run the constructor effect before individual tests populate the task signal. Our mocked user is unauthenticated, so the effect will clear the initially empty task list ...
         TestBed.tick();
+    });
+
+    function pendingRefresh() {
+        const response = deferred<{ data: Task[] | null; error: Error | null }>();
+        from.mockReturnValueOnce({ select: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({ order: vi.fn().mockReturnValue(response.promise) }),
+        }) });
+        return response;
+    }
+
+    it('preserves a confirmed content save when a refresh started during the mutation returns stale data', async () => {
+        const original = createTask({ description: 'Old description' });
+        store.tasks.set([original]);
+        const response = deferred<{ data: { title: string; description: string }; error: null }>();
+        const started = deferred<void>();
+        single.mockImplementationOnce(() => { started.resolve(); return response.promise; });
+        const content = { title: 'Saved title', description: '**Saved Markdown**' };
+        const saving = store.updateContent(original, content);
+        await started.promise;
+        const stale = pendingRefresh(); const refreshing = store.refreshTasks();
+        response.resolve({ data: content, error: null }); await saving;
+        expect(store.tasks()[0]).toEqual({ ...original, ...content });
+        stale.resolve({ data: [original], error: null }); await refreshing;
+        expect(store.tasks()[0]).toEqual({ ...original, ...content });
+    });
+
+    const mutationCases: { name: string; changes: Partial<Task>; mutate: (store: TasksStore, task: Task) => Promise<void> }[] = [
+        { name: 'planned date', changes: { planned_date: '2026-11-09' }, mutate: (store, task) => store.updatePlannedDate(task, '2026-11-09') },
+        { name: 'due date', changes: { due_date: '2026-11-10' }, mutate: (store, task) => store.updateDueDate(task, '2026-11-10') },
+        { name: 'project assignment', changes: { project_id: 'new-project', project_position: 2000 }, mutate: (store, task) => store.updateProject(task, 'new-project') },
+        { name: 'manual ordering', changes: { planned_position: 2500 }, mutate: (store, task) => store.updateTaskPosition(task, 'planned_position', 2500) },
+        { name: 'completion', changes: { is_done: true, status: 'done' }, mutate: (store, task) => store.toggleDone(task) },
+    ];
+    for (const { name, changes, mutate } of mutationCases) {
+        it(`preserves confirmed ${name} against a refresh started during its save`, async () => {
+            const original = createTask(); store.tasks.set([original]);
+            const response = deferred<{ data: Task; error: null }>(); const started = deferred<void>();
+            single.mockImplementationOnce(() => { started.resolve(); return response.promise; });
+            const saving = mutate(store, original); await started.promise;
+            const stale = pendingRefresh(); const refreshing = store.refreshTasks();
+            const saved = { ...store.tasks()[0], ...changes };
+            response.resolve({ data: saved, error: null }); await saving;
+            stale.resolve({ data: [original], error: null }); await refreshing;
+            expect(store.tasks()).toEqual([saved]);
+        });
+    }
+
+    it('protects a mutation begun after refresh, but accepts server data from a refresh begun after settlement', async () => {
+        const original = createTask(); store.tasks.set([original]);
+        const stale = pendingRefresh(); const refreshing = store.refreshTasks();
+        const saved = { ...original, title: 'Confirmed' };
+        single.mockResolvedValueOnce({ data: saved, error: null });
+        await store.updateTitle(original, saved.title);
+        stale.resolve({ data: [original], error: null }); await refreshing;
+        expect(store.tasks()).toEqual([saved]);
+        const fresh = pendingRefresh(); const nextRefresh = store.refreshTasks();
+        const remote = { ...saved, description: 'New remote description' };
+        fresh.resolve({ data: [remote], error: null }); await nextRefresh;
+        expect(store.tasks()).toEqual([remote]);
+    });
+
+    it('preserves content rollback when a refresh started during a failed mutation finishes afterward', async () => {
+        const original = createTask({ description: 'Original' }); store.tasks.set([original]);
+        const response = deferred<{ data: null; error: Error }>(); const started = deferred<void>();
+        single.mockImplementationOnce(() => { started.resolve(); return response.promise; });
+        const saving = store.updateContent(original, { title: 'Draft', description: 'Draft Markdown' });
+        const rejected = expect(saving).rejects.toThrow('Save failed'); await started.promise;
+        const stale = pendingRefresh(); const refreshing = store.refreshTasks();
+        const optimistic = store.tasks()[0];
+        response.resolve({ data: null, error: new Error('Save failed') }); await rejected;
+        expect(store.tasks()).toEqual([original]);
+        stale.resolve({ data: [optimistic], error: null }); await refreshing;
+        expect(store.tasks()).toEqual([original]);
+        expect(store.error()).toBe('Save failed');
+    });
+
+    for (const fails of [false, true]) {
+        it(`preserves ${fails ? 'deletion rollback' : 'a completed deletion tombstone'} against an in-flight refresh`, async () => {
+            const original = createTask(); store.tasks.set([original]);
+            const response = deferred<{ error: Error | null }>(); const started = deferred<void>();
+            const query = { eq: vi.fn(), then: response.promise.then.bind(response.promise) };
+            query.eq.mockReturnValue(query);
+            from.mockReturnValueOnce({ delete: vi.fn().mockImplementation(() => { started.resolve(); return query; }) });
+            const deleting = store.remove(original.id);
+            const settled = fails ? expect(deleting).rejects.toThrow('Delete failed') : deleting;
+            await started.promise;
+            const stale = pendingRefresh(); const refreshing = store.refreshTasks();
+            response.resolve({ error: fails ? new Error('Delete failed') : null }); await settled;
+            stale.resolve({ data: fails ? [] : [original], error: null }); await refreshing;
+            expect(store.tasks()).toEqual(fails ? [original] : []);
+        });
+    }
+
+    for (const fails of [false, true]) {
+        it(`ignores an older refresh ${fails ? 'failure' : 'success'} after a newer refresh succeeds`, async () => {
+            const older = pendingRefresh(); const first = store.refreshTasks();
+            const firstSettled = fails ? expect(first).rejects.toThrow('Old failure') : first;
+            const newer = pendingRefresh(); const second = store.refreshTasks();
+            const latest = createTask({ title: 'Newest snapshot' });
+            newer.resolve({ data: [latest], error: null }); await second;
+            if (fails) older.reject(new Error('Old failure'));
+            else older.resolve({ data: [createTask()], error: null });
+            await firstSettled;
+            expect(store.tasks()).toEqual([latest]); expect(store.error()).toBeNull(); expect(store.loading()).toBe(false);
+        });
+
+        it(`keeps newer refresh loading when the older refresh ${fails ? 'fails' : 'succeeds'} first`, async () => {
+            const older = pendingRefresh(); const first = store.refreshTasks();
+            const firstSettled = fails ? expect(first).rejects.toThrow('Old failure') : first;
+            const newer = pendingRefresh(); const second = store.refreshTasks();
+            const secondSettled = expect(second).rejects.toThrow('Current failure');
+            if (fails) older.reject(new Error('Old failure'));
+            else older.resolve({ data: [createTask()], error: null });
+            await firstSettled;
+            expect(store.loading()).toBe(true); expect(store.error()).toBeNull(); expect(store.tasks()).toEqual([]);
+            newer.resolve({ data: null, error: new Error('Current failure') }); await secondSettled;
+            expect(store.loading()).toBe(false); expect(store.error()).toBe('Current failure');
+            const retry = pendingRefresh(); const retried = store.refreshTasks();
+            expect(store.error()).toBeNull();
+            retry.resolve({ data: [createTask()], error: null }); await retried;
+            expect(store.tasks()).toEqual([createTask()]); expect(store.loading()).toBe(false);
+        });
+    }
+
+    it('does not expose old-session refresh failures or clear new-session loading', async () => {
+        const a = pendingRefresh(); userId.set('A'); TestBed.tick();
+        const b = pendingRefresh(); userId.set('B'); TestBed.tick();
+        a.reject(new Error('A failure')); await a.promise.catch(() => undefined);
+        expect(store.error()).toBeNull(); expect(store.loading()).toBe(true);
+        const taskB = createTask({ user_id: 'B' });
+        b.resolve({ data: [taskB], error: null }); await b.promise;
+        expect(store.tasks()).toEqual([taskB]); expect(store.loading()).toBe(false);
+    });
+
+    it('guards refresh errors immediately on an account change before the auth effect executes', async () => {
+        const old = pendingRefresh(); const refreshing = store.refreshTasks();
+        const rejected = expect(refreshing).rejects.toThrow('Old failure');
+        userId.set('B');
+        old.reject(new Error('Old failure')); await rejected;
+        expect(store.error()).toBeNull();
+        // Flush the new account effect and allow its refresh to finish normally.
+        const current = pendingRefresh(); TestBed.tick();
+        current.resolve({ data: [], error: null }); await current.promise;
+        expect(store.loading()).toBe(false);
     });
 
     it('clears the previous account collection before the new account refresh completes', async () => {
