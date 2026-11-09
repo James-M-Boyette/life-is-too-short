@@ -1,0 +1,762 @@
+{
+  "checks": [
+    {
+      "name": "Actual migration chain installed unchanged; Realtime catalog audited"
+    },
+    {
+      "name": "Invoker send denied by messages RLS, demonstrating need for server-only sender authority"
+    },
+    {
+      "name": "Own private joins allowed; foreign, guessed and anonymous joins rejected with explicit authorization errors"
+    },
+    {
+      "name": "Account A INSERT notifies only A",
+      "notifications": 1
+    },
+    {
+      "name": "Account B INSERT notifies only B",
+      "notifications": 1
+    },
+    {
+      "name": "Title and Markdown UPDATE",
+      "notifications": 1
+    },
+    {
+      "name": "Completion UPDATE",
+      "notifications": 1
+    },
+    {
+      "name": "Scheduling and ordering UPDATE",
+      "notifications": 1
+    },
+    {
+      "name": "Project assignment UPDATE",
+      "notifications": 1
+    },
+    {
+      "name": "delete_project RPC task-to-Inbox UPDATE",
+      "notifications": 1
+    },
+    {
+      "name": "Task DELETE notifies A without task or deletion ID",
+      "notifications": 1
+    },
+    {
+      "name": "Foreign DELETE notifies only B, never raw adversarial observer",
+      "notifications": 1
+    },
+    {
+      "name": "Account A positive-control fence",
+      "notifications": 1
+    },
+    {
+      "name": "Account B positive-control fence",
+      "notifications": 1
+    },
+    {
+      "name": "Rollback and rejected ownership produce no committed broadcast rows"
+    },
+    {
+      "name": "Three task changes in one transaction produce three per-row notifications",
+      "notifications": 3
+    },
+    {
+      "name": "25-task bulk statement emits 25 per-row notifications",
+      "notifications": 25
+    },
+    {
+      "name": "Trusted ownership transfer invalidates old and new accounts",
+      "notifications": 2
+    },
+    {
+      "name": "Account A positive-control fence",
+      "notifications": 1
+    },
+    {
+      "name": "Account B positive-control fence",
+      "notifications": 1
+    },
+    {
+      "name": "REST, websocket and SQL send paths cannot forge private database notifications"
+    },
+    {
+      "name": "Cross-owner SQL/GUC, direct partitions and Data API message-row bypasses denied"
+    },
+    {
+      "name": "Account A positive-control fence",
+      "notifications": 1
+    },
+    {
+      "name": "Account B positive-control fence",
+      "notifications": 1
+    },
+    {
+      "name": "Send-permission fault loses notification while task update commits; later Data API read is authoritative"
+    },
+    {
+      "name": "Disconnected client reads missed change via API; rejoin receives subsequent broadcast"
+    },
+    {
+      "name": "Token refresh works; switched B cannot retain A topic; valid saved A JWT remains A-authorized until expiry"
+    },
+    {
+      "name": "Account A positive-control fence",
+      "notifications": 1
+    },
+    {
+      "name": "Account B positive-control fence",
+      "notifications": 1
+    },
+    {
+      "name": "Minimal versioned payloads only; no task IDs/content; raw feeds, public twins and foreign joins receive no private task activity"
+    }
+  ],
+  "blockers": [],
+  "audit": {
+    "roles": [
+      {
+        "role": "authenticated",
+        "superuser": false,
+        "bypassRls": false,
+        "login": false
+      },
+      {
+        "role": "anon",
+        "superuser": false,
+        "bypassRls": false,
+        "login": false
+      },
+      {
+        "role": "service_role",
+        "superuser": false,
+        "bypassRls": true,
+        "login": false
+      },
+      {
+        "role": "postgres",
+        "superuser": false,
+        "bypassRls": true,
+        "login": true
+      },
+      {
+        "role": "supabase_realtime_admin",
+        "superuser": false,
+        "bypassRls": false,
+        "login": false
+      }
+    ],
+    "policies": [],
+    "relations": [
+      {
+        "relname": "schema_migrations",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false,
+        "relacl": "{supabase_admin=arwdDxtm/supabase_admin,postgres=arwdDxtm/supabase_admin,dashboard_user=arwdDxtm/supabase_admin}"
+      },
+      {
+        "relname": "messages_2026_11_08",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false,
+        "relacl": "{supabase_realtime_admin=arwdDxtm/supabase_realtime_admin,postgres=a*r*wdDxtm/supabase_realtime_admin,dashboard_user=arwdDxtm/supabase_realtime_admin}"
+      },
+      {
+        "relname": "subscription",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false,
+        "relacl": "{supabase_realtime_admin=arwdDxtm/supabase_realtime_admin,postgres=arwdDxtm/supabase_realtime_admin,dashboard_user=arwdDxtm/supabase_realtime_admin,anon=r/supabase_realtime_admin,authenticated=r/supabase_realtime_admin,service_role=r/supabase_realtime_admin}"
+      },
+      {
+        "relname": "messages_2026_11_09",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false,
+        "relacl": "{supabase_realtime_admin=arwdDxtm/supabase_realtime_admin,postgres=a*r*wdDxtm/supabase_realtime_admin,dashboard_user=arwdDxtm/supabase_realtime_admin}"
+      },
+      {
+        "relname": "messages",
+        "relrowsecurity": true,
+        "relforcerowsecurity": false,
+        "relacl": "{supabase_realtime_admin=arwdDxtm/supabase_realtime_admin,postgres=a*r*wdDxtm/supabase_realtime_admin,dashboard_user=arwdDxtm/supabase_realtime_admin,anon=arw/supabase_realtime_admin,authenticated=arw/supabase_realtime_admin,service_role=arw/supabase_realtime_admin}"
+      },
+      {
+        "relname": "messages_2026_11_10",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false,
+        "relacl": "{supabase_realtime_admin=arwdDxtm/supabase_realtime_admin,postgres=a*r*wdDxtm/supabase_realtime_admin,dashboard_user=arwdDxtm/supabase_realtime_admin}"
+      },
+      {
+        "relname": "messages_2026_11_12",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false,
+        "relacl": "{supabase_realtime_admin=arwdDxtm/supabase_realtime_admin,postgres=a*r*wdDxtm/supabase_realtime_admin,dashboard_user=arwdDxtm/supabase_realtime_admin}"
+      },
+      {
+        "relname": "messages_2026_11_11",
+        "relrowsecurity": false,
+        "relforcerowsecurity": false,
+        "relacl": "{supabase_realtime_admin=arwdDxtm/supabase_realtime_admin,postgres=a*r*wdDxtm/supabase_realtime_admin,dashboard_user=arwdDxtm/supabase_realtime_admin}"
+      }
+    ],
+    "functions": [
+      {
+        "signature": "realtime.topic()",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "proacl": "{=X/supabase_realtime_admin,supabase_realtime_admin=X/supabase_realtime_admin,postgres=X/supabase_realtime_admin,dashboard_user=X/supabase_realtime_admin}",
+        "definition": "CREATE OR REPLACE FUNCTION realtime.topic()\n RETURNS text\n LANGUAGE sql\n STABLE\nAS $function$\nselect nullif(current_setting('realtime.topic', true), '')::text;\n$function$\n"
+      },
+      {
+        "signature": "realtime.send(jsonb,text,text,boolean)",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "proacl": "{=X/supabase_realtime_admin,supabase_realtime_admin=X/supabase_realtime_admin,postgres=X/supabase_realtime_admin,dashboard_user=X/supabase_realtime_admin}",
+        "definition": "CREATE OR REPLACE FUNCTION realtime.send(payload jsonb, event text, topic text, private boolean DEFAULT true)\n RETURNS void\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n  generated_id uuid;\n  final_payload jsonb;\nBEGIN\n  BEGIN\n    generated_id := gen_random_uuid();\n\n    -- Check if payload has an 'id' key, if not, add the generated UUID\n    IF payload ? 'id' THEN\n      final_payload := payload;\n    ELSE\n      final_payload := jsonb_set(payload, '{id}', to_jsonb(generated_id));\n    END IF;\n\n    -- Set the topic configuration\n    EXECUTE format('SET LOCAL realtime.topic TO %L', topic);\n\n    INSERT INTO realtime.messages (id, payload, event, topic, private, extension)\n    VALUES (generated_id, final_payload, event, topic, private, 'broadcast');\n  EXCEPTION\n    WHEN OTHERS THEN\n      RAISE WARNING 'WarnSendingBroadcastMessage: %', SQLERRM;\n  END;\nEND;\n$function$\n"
+      },
+      {
+        "signature": "realtime.broadcast_changes(text,text,text,text,text,record,record,text)",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "proacl": "{=X/supabase_realtime_admin,supabase_realtime_admin=X/supabase_realtime_admin,postgres=X/supabase_realtime_admin,dashboard_user=X/supabase_realtime_admin}",
+        "definition": "CREATE OR REPLACE FUNCTION realtime.broadcast_changes(topic_name text, event_name text, operation text, table_name text, table_schema text, new record, old record, level text DEFAULT 'ROW'::text)\n RETURNS void\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    -- Declare a variable to hold the JSONB representation of the row\n    row_data jsonb := '{}'::jsonb;\nBEGIN\n    IF level = 'STATEMENT' THEN\n        RAISE EXCEPTION 'function can only be triggered for each row, not for each statement';\n    END IF;\n    -- Check the operation type and handle accordingly\n    IF operation = 'INSERT' OR operation = 'UPDATE' OR operation = 'DELETE' THEN\n        row_data := jsonb_build_object('old_record', OLD, 'record', NEW, 'operation', operation, 'table', table_name, 'schema', table_schema);\n        PERFORM realtime.send (row_data, event_name, topic_name);\n    ELSE\n        RAISE EXCEPTION 'Unexpected operation type: %', operation;\n    END IF;\nEXCEPTION\n    WHEN OTHERS THEN\n        RAISE EXCEPTION 'Failed to process the row: %', SQLERRM;\nEND;\n\n$function$\n"
+      }
+    ],
+    "exposedSchemas": "schemas = [\"public\", \"graphql_public\"]",
+    "publications": [],
+    "publicFunctions": [
+      {
+        "signature": "set_updated_at()",
+        "prosecdef": false,
+        "authenticated_execute": false
+      },
+      {
+        "signature": "delete_project(uuid)",
+        "prosecdef": true,
+        "authenticated_execute": true
+      }
+    ],
+    "callableInventory": [
+      {
+        "signature": "delete_project(uuid)",
+        "owner": "postgres",
+        "prosecdef": true,
+        "anon_execute": false,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.\"cast\"(text,regtype)",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.apply_rls(jsonb,integer)",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.broadcast_changes(text,text,text,text,text,record,record,text)",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.build_prepared_statement_sql(text,regclass,realtime.wal_column[])",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.check_equality_op(realtime.equality_op,regtype,text,text,boolean)",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.check_equality_op(realtime.equality_op,regtype,text,text)",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.is_visible_through_filters(realtime.wal_column[],realtime.user_defined_filter[])",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.list_changes_sync(name,name,integer,integer)",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.list_changes(name,name,integer,integer)",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.quote_wal2json(regclass)",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.send_binary(bytea,text,text,boolean)",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.send(jsonb,text,text,boolean)",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.settled_changes(name,integer,text[])",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.subscription_check_filters()",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.to_regrole(text)",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.topic()",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "realtime.wal2json_escape_identifier(text)",
+        "owner": "supabase_realtime_admin",
+        "prosecdef": false,
+        "anon_execute": true,
+        "authenticated_execute": true
+      },
+      {
+        "signature": "set_updated_at()",
+        "owner": "postgres",
+        "prosecdef": false,
+        "anon_execute": false,
+        "authenticated_execute": false
+      }
+    ],
+    "defaultPrivileges": [
+      {
+        "creator": "supabase_admin",
+        "schema": "public",
+        "defaclobjtype": "S",
+        "defaclacl": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "public",
+        "defaclobjtype": "r",
+        "defaclacl": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "public",
+        "defaclobjtype": "f",
+        "defaclacl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}"
+      },
+      {
+        "creator": "postgres",
+        "schema": "storage",
+        "defaclobjtype": "r",
+        "defaclacl": "{postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}"
+      },
+      {
+        "creator": "postgres",
+        "schema": "storage",
+        "defaclobjtype": "f",
+        "defaclacl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+      },
+      {
+        "creator": "postgres",
+        "schema": "storage",
+        "defaclobjtype": "S",
+        "defaclacl": "{postgres=rwU/postgres,anon=rwU/postgres,authenticated=rwU/postgres,service_role=rwU/postgres}"
+      },
+      {
+        "creator": "supabase_auth_admin",
+        "schema": "auth",
+        "defaclobjtype": "r",
+        "defaclacl": "{postgres=arwdDxtm/supabase_auth_admin,dashboard_user=arwdDxtm/supabase_auth_admin}"
+      },
+      {
+        "creator": "supabase_auth_admin",
+        "schema": "auth",
+        "defaclobjtype": "S",
+        "defaclacl": "{postgres=rwU/supabase_auth_admin,dashboard_user=rwU/supabase_auth_admin}"
+      },
+      {
+        "creator": "supabase_auth_admin",
+        "schema": "auth",
+        "defaclobjtype": "f",
+        "defaclacl": "{postgres=X/supabase_auth_admin,dashboard_user=X/supabase_auth_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "graphql_public",
+        "defaclobjtype": "S",
+        "defaclacl": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "graphql_public",
+        "defaclobjtype": "r",
+        "defaclacl": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "graphql_public",
+        "defaclobjtype": "f",
+        "defaclacl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "extensions",
+        "defaclobjtype": "r",
+        "defaclacl": "{postgres=a*r*w*d*D*x*t*m*/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "extensions",
+        "defaclobjtype": "f",
+        "defaclacl": "{postgres=X*/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "extensions",
+        "defaclobjtype": "S",
+        "defaclacl": "{postgres=r*w*U*/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "graphql",
+        "defaclobjtype": "r",
+        "defaclacl": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "graphql",
+        "defaclobjtype": "f",
+        "defaclacl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "graphql",
+        "defaclobjtype": "S",
+        "defaclacl": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "supabase_functions",
+        "defaclobjtype": "r",
+        "defaclacl": "{postgres=arwdDxtm/supabase_admin,anon=arwdDxtm/supabase_admin,authenticated=arwdDxtm/supabase_admin,service_role=arwdDxtm/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "supabase_functions",
+        "defaclobjtype": "f",
+        "defaclacl": "{postgres=X/supabase_admin,anon=X/supabase_admin,authenticated=X/supabase_admin,service_role=X/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "supabase_functions",
+        "defaclobjtype": "S",
+        "defaclacl": "{postgres=rwU/supabase_admin,anon=rwU/supabase_admin,authenticated=rwU/supabase_admin,service_role=rwU/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "realtime",
+        "defaclobjtype": "S",
+        "defaclacl": "{postgres=rwU/supabase_admin,dashboard_user=rwU/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "realtime",
+        "defaclobjtype": "f",
+        "defaclacl": "{postgres=X/supabase_admin,dashboard_user=X/supabase_admin}"
+      },
+      {
+        "creator": "supabase_admin",
+        "schema": "realtime",
+        "defaclobjtype": "r",
+        "defaclacl": "{postgres=a*r*wdDxtm/supabase_admin,dashboard_user=arwdDxtm/supabase_admin}"
+      },
+      {
+        "creator": "postgres",
+        "schema": "public",
+        "defaclobjtype": "r",
+        "defaclacl": "{postgres=arwdDxtm/postgres}"
+      },
+      {
+        "creator": "postgres",
+        "schema": "public",
+        "defaclobjtype": "S",
+        "defaclacl": "{postgres=rwU/postgres}"
+      },
+      {
+        "creator": "postgres",
+        "schema": "public",
+        "defaclobjtype": "f",
+        "defaclacl": "{postgres=X/postgres}"
+      },
+      {
+        "creator": "postgres",
+        "schema": "*",
+        "defaclobjtype": "f",
+        "defaclacl": "{postgres=X/postgres}"
+      }
+    ],
+    "installedPolicies": [
+      {
+        "policyname": "proof_owner_receive",
+        "roles": [
+          "authenticated"
+        ],
+        "cmd": "SELECT",
+        "qual": "((extension = 'broadcast'::text) AND (topic = ('task-invalidation:'::text || (( SELECT auth.uid() AS uid))::text)) AND (( SELECT realtime.topic() AS topic) = ('task-invalidation:'::text || (( SELECT auth.uid() AS uid))::text)))",
+        "with_check": null
+      },
+      {
+        "policyname": "proof_server_send",
+        "roles": [
+          "task_notification_sender_proof"
+        ],
+        "cmd": "INSERT",
+        "qual": null,
+        "with_check": "((extension = 'broadcast'::text) AND private AND (topic ~~ 'task-invalidation:%'::text) AND ((payload ->> 'v'::text) = '1'::text))"
+      }
+    ],
+    "graphqlStatus": 200,
+    "graphqlAvailability": "disabled: pg_graphql extension is not enabled",
+    "senderFunction": {
+      "owner": "task_notification_sender_proof",
+      "definer": true,
+      "config": [
+        "search_path=\"\"",
+        "row_security=on"
+      ]
+    }
+  },
+  "environment": {
+    "project": "lits-integration-53efcb5a",
+    "work": "tmp\\supabase-services-ceb0849f-4983-4f51-a1b2-20f65e3d6a8d",
+    "database": "17.11",
+    "images": [
+      "supabase_rest_lits-integration-53efcb5a public.ecr.aws/supabase/postgrest:v16.4",
+      "supabase_realtime_lits-integration-53efcb5a public.ecr.aws/supabase/realtime:v2.140.10",
+      "supabase_inbucket_lits-integration-53efcb5a public.ecr.aws/supabase/mailpit:v1.31.3",
+      "supabase_auth_lits-integration-53efcb5a public.ecr.aws/supabase/gotrue:v2.197.0",
+      "supabase_kong_lits-integration-53efcb5a public.ecr.aws/supabase/kong:2.8.1",
+      "supabase_db_lits-integration-53efcb5a public.ecr.aws/supabase/postgres:17.11.0.004"
+    ],
+    "cli": "2.120.0"
+  },
+  "bulkObservation": {
+    "rows": 25,
+    "notifications": 25,
+    "elapsedMilliseconds": 667,
+    "note": "Local Docker observation, not a production throughput benchmark"
+  },
+  "restForgeryResponse": {
+    "success": true
+  },
+  "ownRestForgeryResponse": {
+    "success": true
+  },
+  "websocketForgeryResponse": "error",
+  "limitations": [
+    "Enabled GraphQL behavior not tested; local gateway reports the extension disabled"
+  ],
+  "observations": [
+    {
+      "topic": "task-invalidation:929ad9e2-7d4c-4448-9b43-049583b25a8a",
+      "statuses": [
+        "SUBSCRIBED",
+        "CLOSED"
+      ],
+      "eventCount": 41,
+      "systems": []
+    },
+    {
+      "topic": "task-invalidation:0d102bdc-edd9-42f4-a233-8ca5fae0f98f",
+      "statuses": [
+        "SUBSCRIBED",
+        "CLOSED"
+      ],
+      "eventCount": 6,
+      "systems": []
+    },
+    {
+      "topic": "task-invalidation:929ad9e2-7d4c-4448-9b43-049583b25a8a",
+      "statuses": [
+        "SUBSCRIBED",
+        "CLOSED"
+      ],
+      "eventCount": 0,
+      "systems": []
+    },
+    {
+      "topic": "task-invalidation:929ad9e2-7d4c-4448-9b43-049583b25a8a",
+      "statuses": [
+        "SUBSCRIBED",
+        "CLOSED"
+      ],
+      "eventCount": 1,
+      "systems": []
+    },
+    {
+      "topic": "task-invalidation:0d102bdc-edd9-42f4-a233-8ca5fae0f98f",
+      "statuses": [
+        "CHANNEL_ERROR",
+        "CLOSED"
+      ],
+      "eventCount": 0,
+      "systems": []
+    },
+    {
+      "topic": "task-invalidation:929ad9e2-7d4c-4448-9b43-049583b25a8a",
+      "statuses": [
+        "CHANNEL_ERROR",
+        "CLOSED"
+      ],
+      "eventCount": 0,
+      "systems": []
+    },
+    {
+      "topic": "task-invalidation:929ad9e2-7d4c-4448-9b43-049583b25a8a",
+      "statuses": [
+        "CHANNEL_ERROR",
+        "CLOSED"
+      ],
+      "eventCount": 0,
+      "systems": []
+    },
+    {
+      "topic": "task-invalidation:0d102bdc-edd9-42f4-a233-8ca5fae0f98f",
+      "statuses": [
+        "CHANNEL_ERROR",
+        "CLOSED"
+      ],
+      "eventCount": 0,
+      "systems": []
+    },
+    {
+      "topic": "task-invalidation:ad7e098e-d8c3-4fd3-8f67-ec54fca7fed6",
+      "statuses": [
+        "CHANNEL_ERROR",
+        "CLOSED"
+      ],
+      "eventCount": 0,
+      "systems": []
+    },
+    {
+      "topic": "raw-proof-bbd71136-dec4-4143-a1fd-c760b1b964fd",
+      "statuses": [
+        "SUBSCRIBED",
+        "CLOSED"
+      ],
+      "eventCount": 0,
+      "systems": [
+        {
+          "message": "Unable to subscribe to changes with given parameters. Please check Realtime is enabled for the given connect parameters: [event: *, schema: public, table: tasks, filters: [], select: nil]",
+          "status": "error",
+          "extension": "postgres_changes",
+          "channel": "raw-proof-bbd71136-dec4-4143-a1fd-c760b1b964fd"
+        }
+      ]
+    },
+    {
+      "topic": "raw-messages-4d4b0845-af2b-43d8-8a02-f65f853eae8a",
+      "statuses": [
+        "SUBSCRIBED",
+        "CLOSED"
+      ],
+      "eventCount": 0,
+      "systems": [
+        {
+          "message": "Unable to subscribe to changes with given parameters. Please check Realtime is enabled for the given connect parameters: [event: *, schema: realtime, table: messages, filters: [], select: nil]",
+          "status": "error",
+          "extension": "postgres_changes",
+          "channel": "raw-messages-4d4b0845-af2b-43d8-8a02-f65f853eae8a"
+        }
+      ]
+    },
+    {
+      "topic": "task-invalidation:0d102bdc-edd9-42f4-a233-8ca5fae0f98f",
+      "statuses": [
+        "SUBSCRIBED",
+        "CLOSED"
+      ],
+      "eventCount": 3,
+      "systems": []
+    },
+    {
+      "topic": "task-invalidation:929ad9e2-7d4c-4448-9b43-049583b25a8a",
+      "statuses": [
+        "SUBSCRIBED",
+        "CLOSED",
+        "CLOSED"
+      ],
+      "eventCount": 1,
+      "systems": [
+        {
+          "message": "You do not have permissions to read from this Channel topic: task-invalidation:929ad9e2-7d4c-4448-9b43-049583b25a8a",
+          "status": "error",
+          "extension": "system",
+          "channel": "task-invalidation:929ad9e2-7d4c-4448-9b43-049583b25a8a"
+        }
+      ]
+    },
+    {
+      "topic": "task-invalidation:0d102bdc-edd9-42f4-a233-8ca5fae0f98f",
+      "statuses": [
+        "SUBSCRIBED",
+        "CLOSED"
+      ],
+      "eventCount": 2,
+      "systems": []
+    },
+    {
+      "topic": "task-invalidation:929ad9e2-7d4c-4448-9b43-049583b25a8a",
+      "statuses": [
+        "SUBSCRIBED",
+        "CLOSED"
+      ],
+      "eventCount": 1,
+      "systems": []
+    }
+  ],
+  "result": "passed"
+}
