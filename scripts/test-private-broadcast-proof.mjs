@@ -1,4 +1,4 @@
-/** Stage-1 disposable-only proof. No hosted credentials, URLs or app env files. */
+/** Production-migration verification in disposable Supabase. No hosted credentials, URLs or app env files. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -6,7 +6,8 @@ import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { prepare, sql, localCli, work, project, owned, root, command } from './test-local-supabase-services.mjs';
 
-const report = { checks: [], blockers: [], audit: {}, environment: {} };
+const migrationName = '20261109060000_add_private_task_broadcast.sql';
+const report = { migration: migrationName, checks: [], blockers: [], audit: {}, environment: {} };
 const clients = [];
 const observations = [];
 const check = (name, detail = {}) => { report.checks.push({ name, ...detail }); console.log(`PASS: ${name}`); };
@@ -63,7 +64,7 @@ function audit() {
 }
 try {
   prepare();
-  for (const name of fs.readdirSync(path.join(root,'supabase/migrations')).filter(n=>n.endsWith('.sql'))) {
+  for (const name of fs.readdirSync(path.join(root,'supabase/migrations')).filter(n=>n.endsWith('.sql') && n!==migrationName)) {
     fs.copyFileSync(path.join(root,'supabase/migrations',name),path.join(work,'supabase/migrations',name));
   }
   localCli(['migration','up','--local']);
@@ -89,10 +90,41 @@ try {
     asRole('authenticated',aid,`SELECT realtime.send('{"v":1}'::jsonb,'tasks_changed_v1','${tb}',true)`,'',true);
     assert.equal(messageCount(),invokerBefore);
     check('Invoker send denied by messages RLS, demonstrating need for server-only sender authority');
-    sql(fs.readFileSync(path.join(root,'scripts/experiments/private-task-broadcast.sql'),'utf8'));
+    const migrationSource=path.join(root,'supabase/migrations',migrationName);
+    const migrationTarget=path.join(work,'supabase/migrations',migrationName);
+    fs.copyFileSync(migrationSource,migrationTarget);
+    assert(fs.readFileSync(migrationSource).equals(fs.readFileSync(migrationTarget)));
+    // A harmless, unknown deny policy must cause an atomic abort, not adoption.
+    sql('CREATE POLICY broadcast_unknown_fixture ON realtime.messages FOR SELECT TO authenticated USING(false);');
+    assert.throws(()=>localCli(['migration','up','--local']),/Local CLI migration failed/);
+    assert(fs.readFileSync(path.join(work,'migration-failure.log'),'utf8').includes('Existing Realtime messages policies require review'));
+    assert.equal(sql("SELECT count(*) FROM pg_roles WHERE rolname='task_notification_sender';"),'0');
+    assert.equal(sql("SELECT count(*) FROM pg_policies WHERE policyname='broadcast_unknown_fixture';"),'1');
+    assert.equal(sql("SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version='20261109060000';"),'0');
+    sql('DROP POLICY broadcast_unknown_fixture ON realtime.messages;');
+    check('Unknown policy aborts transaction without removing policy, creating sender or recording migration');
+    localCli(['migration','up','--local']);
+    assert.equal(sql("SELECT count(*) FROM supabase_migrations.schema_migrations WHERE version='20261109060000';"),'1');
+    check('Actual private Broadcast migration installed unchanged and recorded by CLI');
     report.audit.installedPolicies=json("SELECT json_agg(p) FROM (SELECT policyname,roles,cmd,qual,with_check FROM pg_policies WHERE schemaname='realtime' AND tablename='messages') p;");
     const ownerA=await join(a,ta);
     let ownerB=await join(b,tb);
+    const committedProbe=randomUUID();
+    sql(`INSERT INTO realtime.messages(id,topic,extension,private) VALUES ('${committedProbe}','${ta}','broadcast',false);`);
+    assert.equal(Number(asRole('authenticated',aid,`SELECT count(*) FROM realtime.messages WHERE id='${committedProbe}'`,ta)),0);
+    const transientProbe=randomUUID();
+    const probeRead=sql(`BEGIN; INSERT INTO realtime.messages(id,topic,extension,private) VALUES ('${transientProbe}','${ta}','broadcast',false);
+      SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claim.sub='${aid}'; SET LOCAL realtime.topic='${ta}';
+      SELECT count(*) FROM realtime.messages WHERE id='${transientProbe}';
+      SET LOCAL request.jwt.claim.sub='${bid}'; SET LOCAL realtime.topic='${tb}';
+      SELECT count(*) FROM realtime.messages WHERE id='${transientProbe}'; ROLLBACK;`);
+    assert.equal(probeRead,'1\n0');
+    const publicPayload=randomUUID();
+    assert.equal(sql(`BEGIN; INSERT INTO realtime.messages(id,topic,extension,private,event,payload)
+      VALUES ('${publicPayload}','${ta}','broadcast',false,'tasks_changed_v1','{"v":1}');
+      SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claim.sub='${aid}'; SET LOCAL realtime.topic='${ta}';
+      SELECT count(*) FROM realtime.messages WHERE id='${publicPayload}'; ROLLBACK;`),'0');
+    check('Private-only reads retained: only current-transaction owner authorization probe is visible; committed/public payload rows denied');
     const publicA=await join(anon,ta,false);
     const publicObserver=await join(makeClient(),ta,false);
     const foreignA=await join(a,tb,true,true), foreignB=await join(b,ta,true,true);
@@ -164,6 +196,22 @@ try {
     await emitted('Trusted ownership transfer invalidates old and new accounts',async()=>{
       sql(`UPDATE public.tasks SET user_id='${bid}' WHERE id='${rowA.id}'`);
     },1,1);
+    const senderCases=[
+      ['wrong event',true,'not_the_event',{v:1}],
+      ['wrong version',true,'tasks_changed_v1',{v:2}],
+      ['extra payload',true,'tasks_changed_v1',{v:1,title:'forbidden'}],
+      ['public send',false,'tasks_changed_v1',{v:1}],
+    ];
+    for(const [label,privateFlag,event,payload] of senderCases) {
+      const id=randomUUID(); payload.id=id;
+      expectPermissionFailure(()=>sql(`BEGIN; GRANT task_notification_sender TO postgres WITH SET TRUE;
+        SET LOCAL ROLE task_notification_sender;
+        INSERT INTO realtime.messages(id,topic,extension,private,event,payload)
+        VALUES ('${id}','${ta}','broadcast',${privateFlag},'${event}','${JSON.stringify(payload)}');
+        RESET ROLE; REVOKE task_notification_sender FROM postgres; COMMIT;`));
+      assert.equal(sql("SELECT pg_has_role('postgres','task_notification_sender','SET');"),'f');
+    }
+    check('Server sender RLS rejects wrong event/version, extra payload and non-private messages');
     const forgedBefore=messageCount(), eventBefore=ownerA.events.length,eventBeforeB=ownerB.events.length;
     const restForge=await foreignB.channel.httpSend('tasks_changed_v1',{v:1});
     report.restForgeryResponse=restForge;
@@ -224,11 +272,11 @@ try {
     check('Cross-owner SQL/GUC, direct partitions and Data API message-row bypasses denied');
     // Fault injection proves that Broadcast is best effort and may lose a signal.
     const lostBefore=messageCount();
-    sql('REVOKE INSERT ON realtime.messages FROM task_notification_sender_proof; REVOKE INSERT(id,payload,event,topic,private,extension) ON realtime.messages FROM task_notification_sender_proof;');
+    sql('REVOKE INSERT ON realtime.messages FROM task_notification_sender; REVOKE INSERT(id,payload,event,topic,private,extension) ON realtime.messages FROM task_notification_sender;');
     ok(await b.from('tasks').update({title:'SAVED WITHOUT SIGNAL'}).eq('id',rowB.id));
     assert.equal(messageCount(),lostBefore);
     assert.equal(ok(await b.from('tasks').select('title').eq('id',rowB.id).single()).title,'SAVED WITHOUT SIGNAL');
-    sql('GRANT INSERT(id,payload,event,topic,private,extension) ON realtime.messages TO task_notification_sender_proof;');
+    sql('GRANT INSERT(id,payload,event,topic,private,extension) ON realtime.messages TO task_notification_sender;');
     await fence();
     check('Send-permission fault loses notification while task update commits; later Data API read is authoritative');
     // Offline receiver: stored broadcasts are not assumed to replay on join.
@@ -275,12 +323,12 @@ try {
         assert.match(event.payload.id,/^[a-f0-9-]{36}$/); assert(!taskIds.has(event.payload.id));
       }
     }
-    report.audit.senderFunction=json("SELECT json_build_object('owner',pg_get_userbyid(proowner),'definer',prosecdef,'config',proconfig) FROM pg_proc WHERE oid='task_notification_proof.notify_tasks()'::regprocedure;");
+    report.audit.senderFunction=json("SELECT json_build_object('owner',pg_get_userbyid(proowner),'definer',prosecdef,'config',proconfig) FROM pg_proc WHERE oid='task_notification_private.notify_tasks()'::regprocedure;");
     for(const role of ['anon','authenticated','service_role','postgres']) {
-      assert.equal(sql(`SELECT pg_has_role('${role}','task_notification_sender_proof','SET') OR pg_has_role('${role}','task_notification_sender_proof','USAGE');`),'f');
+      assert.equal(sql(`SELECT pg_has_role('${role}','task_notification_sender','SET') OR pg_has_role('${role}','task_notification_sender','USAGE');`),'f');
     }
-    assert.equal(sql("SELECT has_table_privilege('task_notification_sender_proof','public.tasks','SELECT');"),'f');
-    assert.equal(sql("SELECT has_table_privilege('task_notification_sender_proof','realtime.messages','SELECT');"),'f');
+    assert.equal(sql("SELECT has_table_privilege('task_notification_sender','public.tasks','SELECT');"),'f');
+    assert.equal(sql("SELECT has_table_privilege('task_notification_sender','realtime.messages','SELECT');"),'f');
     assert.equal(sql("SELECT relreplident FROM pg_class WHERE oid='public.tasks'::regclass;"),'d');
     assert.equal(sql("SELECT count(*) FROM pg_publication_tables WHERE schemaname='public' AND tablename='tasks';"),'0');
     check('Minimal versioned payloads only; no task IDs/content; raw feeds, public twins and foreign joins receive no private task activity');
@@ -293,6 +341,6 @@ try {
   report.observations=observations.map(o=>({topic:o.topic,statuses:o.statuses,eventCount:o.events.length,systems:o.systems}));
   report.result=report.failure?'blocked':process.argv.includes('--audit-only')?'audit-only':'passed';
   fs.mkdirSync(path.join(root,'documentation/verification'),{recursive:true});
-  fs.writeFileSync(path.join(root,'documentation/verification/private-broadcast-proof-results.json'),JSON.stringify(report,null,2)+'\n');
+  fs.writeFileSync(path.join(root,'documentation/verification/private-task-broadcast-migration-results.json'),JSON.stringify(report,null,2)+'\n');
   if (owned && !process.argv.includes('--keep-stack')) localCli(['stop','--no-backup']);
 }
