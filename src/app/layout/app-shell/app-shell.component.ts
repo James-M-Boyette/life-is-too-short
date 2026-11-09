@@ -53,18 +53,45 @@ export class AppShellComponent {
     private readonly router = inject(Router);
     private readonly projectDialogs = inject(ProjectDialogService);
     private readonly pageProjectDialog = signal<ProjectDialogRequest | null>(null);
+    private dialogOwner = this.auth.userId();
+    private dialogGeneration = 0;
+
+    private ownsDialogSession(owner: string | null, generation: number): boolean {
+        return owner !== null && owner === this.auth.userId() &&
+            owner === this.dialogOwner && generation === this.dialogGeneration;
+    }
+
+    private synchronizeDialogSession(): void {
+        const owner = this.auth.userId();
+        if (owner === this.dialogOwner) return;
+        this.dialogOwner = owner;
+        this.dialogGeneration++;
+        // Force-close account-owned drafts without restoring obsolete focus.
+        this.taskCreateDialog.close();
+        this.taskCreateError.set(null);
+        this.creatingTask.set(false);
+        this.dismissPageProjectDialog();
+        this.createProjectError.set(null);
+        this.deleteProjectError.set(null);
+        this.expandProjectRequest.set(null);
+        this.navigationOpen.set(false);
+    }
 
     private restoreProjectActionFocus(): void {
         const context = this.pageProjectDialog();
+        const owner = this.dialogOwner;
+        const generation = this.dialogGeneration;
         this.pageProjectDialog.set(null);
         if (context?.trigger.isConnected && context.userId === this.auth.userId() && !context.trigger.closest('[hidden], [inert]')) {
             afterNextRender(() => {
-                if (context.trigger.isConnected && context.userId === this.auth.userId()) context.trigger.focus({ preventScroll: true });
+                if (this.ownsDialogSession(owner, generation) && context.trigger.isConnected && !context.trigger.closest('[hidden], [inert]')) context.trigger.focus({ preventScroll: true });
             }, { injector: this.injector });
         } else this.restoreMobileActionFocus();
     }
 
     private dismissPageProjectDialog(): void {
+        this.creatingProject.set(false);
+        this.deletingProject.set(false);
         this.createProjectDialogVisible.set(false);
         this.projectToDelete.set(null);
         this.editingProject.set(null);
@@ -107,7 +134,11 @@ export class AppShellComponent {
         if (!this.navigationOpen()) return;
         this.accountMenu()?.dismiss(false);
         this.navigationOpen.set(false);
-        afterNextRender(() => this.restoreNavigationFocus(), { injector: this.injector });
+        const owner = this.dialogOwner;
+        const generation = this.dialogGeneration;
+        afterNextRender(() => {
+            if (this.ownsDialogSession(owner, generation)) this.restoreNavigationFocus();
+        }, { injector: this.injector });
     }
     protected navigationShown(): void {
         this.navigationDrawer()?.container?.querySelector<HTMLElement>('[aria-label="Close navigation"]')?.focus();
@@ -125,8 +156,10 @@ export class AppShellComponent {
 
     private restoreMobileActionFocus(label = 'Show navigation'): void {
         if (!this.mobile()) return;
+        const owner = this.dialogOwner;
+        const generation = this.dialogGeneration;
         afterNextRender(() => {
-            if (this.mobile()) this.element.nativeElement.querySelector<HTMLElement>(`[aria-label="${label}"]`)?.focus();
+            if (this.ownsDialogSession(owner, generation) && this.mobile()) this.element.nativeElement.querySelector<HTMLElement>(`[aria-label="${label}"]`)?.focus();
         }, { injector: this.injector });
     }
 
@@ -160,7 +193,7 @@ export class AppShellComponent {
         if (path.startsWith('/tasks/project/')) {
             const projectId = path.split('/')[3];
 
-            if (projectId && this.projectsStore.getProject(projectId)) {
+            if (projectId && this.projectsStore.getProject(projectId)?.user_id === this.auth.userId()) {
                 return {
                     projectId,
                     plannedDate: null,
@@ -175,6 +208,8 @@ export class AppShellComponent {
     }
 
     protected openTaskDialog(): void {
+        this.synchronizeDialogSession();
+        if (!this.auth.userId()) return;
         this.closeNavigation();
         if (this.taskDialogVisible() || this.creatingTask()) {
             return;
@@ -185,7 +220,7 @@ export class AppShellComponent {
     }
 
     protected closeTaskDialog(): void {
-        if (this.creatingTask()) return;
+        if (this.creatingTask() || !this.taskDialogVisible()) return;
 
         this.taskCreateDialog.close();
         this.taskCreateError.set(null);
@@ -199,20 +234,27 @@ export class AppShellComponent {
     }
 
     protected async createTask(payload: CreateTaskPayload): Promise<void> {
-        if (this.creatingTask()) return;
+        const owner = this.dialogOwner;
+        const generation = this.dialogGeneration;
+        const context = this.taskCreateDialog.context();
+        const ownsInteraction = () => this.ownsDialogSession(owner, generation) && context === this.taskCreateDialog.context();
+        if (!context || this.creatingTask() || !ownsInteraction()) return;
 
         this.creatingTask.set(true);
         this.taskCreateError.set(null);
 
         try {
             await this.tasksStore.addTask(payload);
+            if (!ownsInteraction()) return;
+            this.creatingTask.set(false);
             this.closeTaskDialogAfterSave();
         } catch (error: unknown) {
+            if (!ownsInteraction()) return;
             this.taskCreateError.set(
                 error instanceof Error ? error.message : 'Could not create task. Please try again.',
             );
         } finally {
-            this.creatingTask.set(false);
+            if (ownsInteraction()) this.creatingTask.set(false);
         }
     }
 
@@ -249,6 +291,7 @@ export class AppShellComponent {
     });
 
     constructor() {
+        effect(() => this.synchronizeDialogSession());
         this.projectDialogs.requests.pipe(takeUntilDestroyed()).subscribe(request => {
             const project = this.projectsStore.getProject(request.projectId);
             if (!project || project.user_id !== request.userId || this.auth.userId() !== request.userId || this.router.url !== request.sourceUrl ||
@@ -286,6 +329,8 @@ export class AppShellComponent {
     }
 
     protected openCreateProjectDialog(): void {
+        this.synchronizeDialogSession();
+        if (!this.auth.userId() || this.creatingProject() || this.deletingProject()) return;
         this.closeNavigation();
         this.pageProjectDialog.set(null);
         this.editingProject.set(null);
@@ -294,11 +339,13 @@ export class AppShellComponent {
     }
 
     protected openEditProjectDialog(projectId: string): void {
+        this.synchronizeDialogSession();
+        if (!this.auth.userId() || this.creatingProject() || this.deletingProject()) return;
         this.pageProjectDialog.set(null);
         this.closeNavigation();
         const project = this.projectsStore.getProject(projectId);
 
-        if (!project) {
+        if (!project || project.user_id !== this.auth.userId()) {
             return;
         }
 
@@ -316,8 +363,11 @@ export class AppShellComponent {
             return;
         }
 
-        const owner = this.auth.userId();
+        const owner = this.dialogOwner;
+        const generation = this.dialogGeneration;
         const context = this.pageProjectDialog();
+        const ownsInteraction = () => this.ownsDialogSession(owner, generation) && context === this.pageProjectDialog();
+        if (!this.createProjectDialogVisible() || !ownsInteraction()) return;
         if (context && (context.userId !== owner || context.sourceUrl !== this.router.url || !this.projectsStore.getProject(context.projectId))) return;
         this.creatingProject.set(true);
         this.createProjectError.set(null);
@@ -332,43 +382,46 @@ export class AppShellComponent {
                   })
                 : await this.projectsStore.createProject(payload);
 
-            if (owner !== this.auth.userId() || context !== this.pageProjectDialog()) return;
+            if (!ownsInteraction()) return;
             if (savedProject.parent_project_id) {
                 this.expandProjectRequest.set({
                     projectId: savedProject.parent_project_id,
                 });
             }
 
+            this.creatingProject.set(false);
             this.closeCreateProjectDialog();
         } catch (error: unknown) {
-            if (owner !== this.auth.userId() || context !== this.pageProjectDialog()) return;
+            if (!ownsInteraction()) return;
             this.createProjectError.set(
                 error instanceof Error ? error.message : 'Failed to save project',
             );
         } finally {
-            this.creatingProject.set(false);
+            if (ownsInteraction()) this.creatingProject.set(false);
         }
     }
 
     protected closeCreateProjectDialog(): void {
+        if (!this.createProjectDialogVisible()) return;
         this.createProjectDialogVisible.set(false);
         this.restoreProjectActionFocus();
     }
 
     protected openDeleteProjectDialog(projectId: string): void {
+        this.synchronizeDialogSession();
+        if (!this.auth.userId() || this.creatingProject() || this.deletingProject()) return;
         this.pageProjectDialog.set(null);
         this.closeNavigation();
         const project = this.projectsStore.getProject(projectId);
 
-        if (!project) return;
+        if (!project || project.user_id !== this.auth.userId()) return;
 
         this.projectToDelete.set(project);
         this.deleteProjectError.set(null);
     }
 
     protected closeDeleteProjectDialog(): void {
-        if (this.deletingProject()) return;
-
+        if (this.deletingProject() || !this.projectToDelete()) return;
         this.projectToDelete.set(null);
         this.deleteProjectError.set(null);
         this.restoreProjectActionFocus();
@@ -379,8 +432,12 @@ export class AppShellComponent {
 
         if (!project || this.deletingProject()) return;
 
-        const owner = this.auth.userId();
+        const owner = this.dialogOwner;
+        const generation = this.dialogGeneration;
         const context = this.pageProjectDialog();
+        const ownsSession = () => this.ownsDialogSession(owner, generation);
+        const ownsInteraction = () => ownsSession() && context === this.pageProjectDialog();
+        if (!ownsInteraction() || project.user_id !== owner) return;
         if (context && (context.userId !== owner || context.sourceUrl !== this.router.url || !this.projectsStore.getProject(context.projectId))) return;
         this.deletingProject.set(true);
         this.deleteProjectError.set(null);
@@ -389,10 +446,7 @@ export class AppShellComponent {
             // Only this operation determines whether deletion succeeded.
             await this.projectsStore.deleteProject(project.id);
         } catch (error: unknown) {
-            if (owner !== this.auth.userId() || context !== this.pageProjectDialog()) {
-                this.deletingProject.set(false);
-                return;
-            }
+            if (!ownsInteraction()) return;
             this.deleteProjectError.set(
                 error instanceof Error ? error.message : 'Failed to delete project',
             );
@@ -401,19 +455,24 @@ export class AppShellComponent {
             return;
         }
 
-        this.deletingProject.set(false);
-        if (owner !== this.auth.userId()) return;
+        if (ownsInteraction()) this.deletingProject.set(false);
+        if (!ownsSession()) return;
 
         // Dialog cleanup belongs only to the still-current interaction.
-        if (context === this.pageProjectDialog()) {
+        if (ownsInteraction()) {
             this.projectToDelete.set(null);
             this.restoreProjectActionFocus();
         }
 
         // Successful persistence still needs reconciliation after same-account navigation.
         // refreshTasks retains its existing session protections for an account change in flight.
-        await this.tasksStore.refreshTasks();
-        if (owner !== this.auth.userId()) return;
+        try {
+            await this.tasksStore.refreshTasks();
+        } catch {
+            // TasksStore owns current-session refresh errors. A stale rejection
+            // must not escape this UI event handler or revive the deleted dialog.
+        }
+        if (!ownsSession()) return;
 
         // Navigate away if the deleted project was being viewed.
         if (this.router.url.split('?')[0] === `/tasks/project/${project.id}`) {
