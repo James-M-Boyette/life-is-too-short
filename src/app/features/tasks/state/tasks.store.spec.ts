@@ -7,6 +7,13 @@ import { AuthStore } from '@/shared/supabase/auth.store';
 import type { Task } from '@/features/tasks/models/tasks.model';
 import { SUPABASE_CLIENT } from '@/shared/supabase/supabase.client';
 
+function creationDeferred<T>() {
+    let resolve!: (value: T) => void;
+    let reject!: (reason: Error) => void;
+    const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
+    return { promise, resolve, reject };
+}
+
 function createTask(overrides: Partial<Task> = {}): Task {
     return {
         id: 'task-1',
@@ -35,6 +42,7 @@ describe('TasksStore', () => {
     let update: ReturnType<typeof vi.fn>;
     let eq: ReturnType<typeof vi.fn>;
     let select: ReturnType<typeof vi.fn>;
+    let realtimeEvent: (payload: { eventType: string; new?: Task; old?: Task }) => void;
 
     beforeEach(() => {
         from = vi.fn();
@@ -49,7 +57,10 @@ describe('TasksStore', () => {
             subscribe: vi.fn(),
         };
 
-        channel.on.mockReturnValue(channel);
+        channel.on.mockImplementation((_event, _filter, callback) => {
+            realtimeEvent = callback;
+            return channel;
+        });
         channel.subscribe.mockReturnValue(channel);
 
         const query = {
@@ -87,6 +98,35 @@ describe('TasksStore', () => {
 
         // Run the constructor effect before individual tests populate the task signal. Our mocked user is unauthenticated, so the effect will clear the initially empty task list ...
         TestBed.tick();
+    });
+
+    async function authenticateForCreation(id = 'user-1') {
+        const loaded = creationDeferred<{ data: Task[]; error: null }>();
+        from.mockReturnValueOnce({ select: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({ order: vi.fn().mockReturnValue(loaded.promise) }),
+        }) });
+        userId.set(id); TestBed.tick();
+        loaded.resolve({ data: [], error: null }); await loaded.promise;
+    }
+
+    it('keeps one task identity when Realtime INSERT arrives before the HTTP creation response', async () => {
+        await authenticateForCreation();
+        const response = creationDeferred<{ data: Task; error: null }>();
+        let persisted!: Task;
+        const insert = vi.fn().mockImplementation(payload => {
+            // Model the database UUID default when the client omits an id.
+            persisted = createTask({ ...payload, id: payload.id ?? 'server-generated-id', created_at: '2026-11-08T12:00:00Z' });
+            return { select: vi.fn().mockReturnValue({ single: vi.fn().mockReturnValue(response.promise) }) };
+        });
+        from.mockReturnValueOnce({ insert });
+        const creation = store.addTask({ title: 'Created', description: '**Markdown**', projectId: null });
+        const optimistic = store.tasks()[0];
+        realtimeEvent({ eventType: 'INSERT', new: persisted });
+        const duringCreation = store.tasks();
+        response.resolve({ data: persisted, error: null }); await creation;
+        expect(new Set(store.tasks().map(task => task.id)).size).toBe(store.tasks().length);
+        expect(duringCreation).toEqual([optimistic]);
+        expect(store.tasks()).toEqual([persisted]);
     });
 
     it('clears the previous account collection before the new account refresh completes', async () => {
