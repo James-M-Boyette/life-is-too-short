@@ -1,6 +1,6 @@
 # Baseline privilege correction: inventory, proposal and isolated verification
 
-> Follow-up: [full local Supabase service verification](../verification/local-supabase-services.md) exercised Auth/Data API/Realtime conditionally after an ownership-installation experiment for PR #70. The unmodified chain remains blocked, and task publication/DELETE delivery require additional review. Neither migration has been deployed to hosted Supabase.
+> Follow-up: [historical local service verification](../verification/local-supabase-services.md) found an ownership-installation defect in #70. Its [controlled unreleased correction](../verification/hierarchy-migration-ownership.md) now passes installation/API gates without SQL rewriting. Task publication/DELETE delivery remain unresolved and separately scoped. Neither migration has been deployed to hosted Supabase.
 
 ## Status and scope
 
