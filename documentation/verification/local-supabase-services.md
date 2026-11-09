@@ -1,4 +1,6 @@
-# PR #70/#71: full local Supabase integration verification
+# PR #72: historical pre-correction Supabase integration verification
+
+> Pre-correction reproduction retained: the SQLSTATE 42501 and conditional experiments below describe #70 before its controlled unreleased ownership amendment. See [the focused ownership correction report](hierarchy-migration-ownership.md) for passing installation/API gates against actual checked-in SQL. The Realtime findings below remain unresolved; this historical evidence is not a current installation failure claim or deployment approval.
 
 ## Decision: deployment is blocked
 
@@ -9,6 +11,8 @@ Fresh local installation also has no tasks membership in `supabase_realtime`. Af
 No hosted Supabase access, hosted credentials, production data/configuration/grants, remote db push or deployment were used. Checked-in migration history and production Angular code remain unchanged. PRs #70/#71 are merged but remain **undeployed to hosted Supabase**.
 
 ## Reproduction and safety
+
+The commands/results in this historical section refer to PR #72 commit `0301916`. The current harness has retired SQL rewriting and the `--ownership-experiment` option; use the [ownership report's installation-only commands](hierarchy-migration-ownership.md#harness-correction) for the amended SQL. The pre-correction JSON evidence is retained unchanged.
 
 Run from the repository root:
 

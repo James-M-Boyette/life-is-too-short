@@ -1,10 +1,11 @@
 /** Local-only Supabase service integration. No environment/hosted credentials read.
- * node scripts/test-local-supabase-services.mjs [--workdir tmp/<owned-workspace>]
+ * node scripts/test-local-supabase-services.mjs --installation-only [--full-chain-start]
+ * Full-services diagnostics remain available separately (without installation-only).
  * Uses the installed CLI and SDK. Creates a new stack unless an owned test
  * workspace is supplied; never adopts the application's existing local stack.
  */
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,11 +15,14 @@ import { createClient } from '@supabase/supabase-js';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cli = path.join(root, 'node_modules/supabase/dist/supabase.js');
 const supplied = process.argv.indexOf('--workdir');
-const ownershipExperiment = process.argv.includes('--ownership-experiment');
+const installationOnly = process.argv.includes('--installation-only');
+const fullChainStart = process.argv.includes('--full-chain-start');
+assert(!process.argv.includes('--ownership-experiment'), 'Historical experiment retired; checked-in SQL is now tested unchanged');
+assert(!fullChainStart || (installationOnly && supplied < 0), 'Full-chain startup requires a fresh installation-only workspace');
 const work = supplied < 0 ? path.join(root, 'tmp', `supabase-services-${randomUUID()}`)
   : path.resolve(root, process.argv[supplied + 1]);
 assert(work.startsWith(path.join(root, 'tmp') + path.sep));
-const report = { ownershipExperiment, checks: [], defects: [], experiments: [], environment: {} };
+const report = { gate: installationOnly ? 'installation-and-api' : 'full-services', fullChainStart, checks: [], defects: [], experiments: [], environment: {} };
 const clients = [];
 const channels = [];
 const success = (name, detail = {}) => { report.checks.push({ name, ...detail }); console.log(`PASS: ${name}`); };
@@ -53,7 +57,7 @@ function prepare() {
       .replace(/543(\d\d)/g, '563$1').replace('sql_paths = ["./seed.sql"]', 'sql_paths = []');
     fs.writeFileSync(path.join(work, 'supabase/config.toml'), config);
     fs.writeFileSync(path.join(work, 'integration-owned.json'), JSON.stringify({ project }));
-    for (const name of fs.readdirSync(path.join(root, 'supabase/migrations')).filter(n => n.startsWith('202610'))) {
+    for (const name of fs.readdirSync(path.join(root, 'supabase/migrations')).filter(n => n.endsWith('.sql') && (fullChainStart || n.startsWith('202610')))) {
       fs.copyFileSync(path.join(root, 'supabase/migrations', name), path.join(work, 'supabase/migrations', name));
     }
   } else {
@@ -131,24 +135,22 @@ async function main() {
   const ownerA = authA.user.id, ownerB = authB.user.id;
   ok(await a.auth.signInWithPassword({ email: emailA, password }));
   ok(await a.auth.refreshSession());
-  success('GoTrue signup password login and session refresh before migration');
+  success(fullChainStart ? 'GoTrue signup password login and session refresh after fresh-chain startup'
+    : 'GoTrue signup password login and session refresh before migration');
   report.environment.images = command('docker', ['ps', '--filter', `name=${project}`, '--format', '{{.Names}} {{.Image}}']).stdout.trim().split('\n');
   report.environment.database = sql('SHOW server_version;');
   report.environment.publicationBefore = sql("SELECT schemaname||'.'||tablename FROM pg_publication_tables WHERE pubname='supabase_realtime';");
+  report.environment.replicaIdentityBefore = sql("SELECT relreplident FROM pg_class WHERE oid='public.tasks'::regclass;");
   report.environment.role = sql("SELECT current_user, rolsuper, rolcreaterole FROM pg_roles WHERE rolname=current_user;");
+  assert.equal(sql('SELECT NOT rolsuper FROM pg_roles WHERE rolname=current_user;'), 't');
 
   // Apply immutable checked-in migrations in order while live services and sessions exist.
   for (const name of fs.readdirSync(path.join(root, 'supabase/migrations')).filter(n => n.startsWith('20261109')).sort()) {
-    let migration = fs.readFileSync(path.join(root, 'supabase/migrations', name), 'utf8');
-    if (ownershipExperiment && name.includes('enforce_project_hierarchy')) {
-      // Deliberate experiment ONLY in this disposable copy, not migration history.
-      migration = migration.replace('ALTER FUNCTION project_hierarchy_private.enforce_acyclic_projects() OWNER',
-        'GRANT project_hierarchy_checker TO postgres WITH SET TRUE;\nALTER FUNCTION project_hierarchy_private.enforce_acyclic_projects() OWNER');
-      migration = migration.replace('COMMIT;', 'REVOKE project_hierarchy_checker FROM postgres;\nCOMMIT;');
-      report.experiments.push({ name: 'Temporary helper-role membership around ownership assignment', sourceUnchanged: true });
-    }
-    fs.writeFileSync(path.join(work, 'supabase/migrations', name), migration);
-    try { localCli(['migration', 'up', '--local']); success(`CLI migration ${name}`); }
+    const source = path.join(root, 'supabase/migrations', name);
+    const target = path.join(work, 'supabase/migrations', name);
+    fs.copyFileSync(source, target);
+    assert(fs.readFileSync(source).equals(fs.readFileSync(target)));
+    try { localCli(['migration', 'up', '--local']); success(`CLI ${fullChainStart ? 'confirms recorded migration' : 'migration'} ${name}`); }
     catch (error) {
       const log = fs.readFileSync(path.join(work, 'migration-failure.log'), 'utf8');
       const detail = log.split('\n').find(line => line.includes('MigrationApplyError'));
@@ -157,9 +159,56 @@ async function main() {
   }
   report.environment.helperMembership = sql("SELECT pg_get_userbyid(grantor),admin_option,inherit_option,set_option FROM pg_auth_members WHERE roleid='project_hierarchy_checker'::regrole;");
   // PG17 CREATEROLE can retain an ADMIN-only creator membership. What must be
-  // removed after the experiment is SET/inherited object authority, not ADMIN.
+  // removed after installation is SET/inherited object authority, not ADMIN.
   assert.equal(sql("SELECT pg_has_role('postgres','project_hierarchy_checker','SET');"), 'f');
   assert.equal(sql("SELECT pg_has_role('postgres','project_hierarchy_checker','USAGE');"), 'f');
+  const migrationNames = fs.readdirSync(path.join(root, 'supabase/migrations')).filter(n => n.endsWith('.sql')).sort();
+  for (const name of migrationNames) {
+    assert(fs.readFileSync(path.join(root, 'supabase/migrations', name))
+      .equals(fs.readFileSync(path.join(work, 'supabase/migrations', name))));
+  }
+  const installed = sql('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version;').split('\n');
+  assert.deepEqual(installed, migrationNames.map(name => name.split('_')[0]));
+  report.environment.migrations = migrationNames.map(name => ({ name,
+    sha256: createHash('sha256').update(fs.readFileSync(path.join(root, 'supabase/migrations', name))).digest('hex'),
+  }));
+  report.environment.recordedVersions = installed;
+  success('Complete checked-in migration chain recorded by CLI; copies are byte-identical');
+  const functionSecurity = JSON.parse(sql(`SELECT json_build_object(
+    'owner', pg_get_userbyid(proowner), 'volatile', provolatile, 'securityDefiner', prosecdef,
+    'configuration', proconfig) FROM pg_proc
+    WHERE oid='project_hierarchy_private.enforce_acyclic_projects()'::regprocedure;`));
+  assert.equal(functionSecurity.owner, 'project_hierarchy_checker');
+  assert.equal(functionSecurity.volatile, 'v');
+  assert.equal(functionSecurity.securityDefiner, true);
+  assert(functionSecurity.configuration.includes('search_path=""'));
+  assert(functionSecurity.configuration.includes('row_security=on'));
+  report.environment.functionSecurity = functionSecurity;
+  assert.equal(sql("SELECT NOT rolcanlogin AND NOT rolsuper AND NOT rolbypassrls AND NOT rolcreaterole AND NOT rolcreatedb FROM pg_roles WHERE rolname='project_hierarchy_checker';"), 't');
+  const roleCapabilities = {};
+  for (const role of ['anon', 'authenticated', 'service_role']) {
+    roleCapabilities[role] = {};
+    for (const capability of ['MEMBER', 'SET', 'USAGE']) {
+      const granted = sql(`SELECT pg_has_role('${role}','project_hierarchy_checker','${capability}');`);
+      assert.equal(granted, 'f'); roleCapabilities[role][capability] = false;
+    }
+    assert.equal(sql(`SELECT has_schema_privilege('${role}','project_hierarchy_private','USAGE');`), 'f');
+    assert.equal(sql(`SELECT has_function_privilege('${role}','project_hierarchy_private.enforce_acyclic_projects()','EXECUTE');`), 'f');
+  }
+  report.environment.apiHelperCapabilities = roleCapabilities;
+  for (const column of ['id', 'user_id', 'parent_project_id']) {
+    assert.equal(sql(`SELECT has_column_privilege('project_hierarchy_checker','public.projects','${column}','SELECT');`), 't');
+  }
+  assert.equal(sql("SELECT has_column_privilege('project_hierarchy_checker','public.projects','name','SELECT');"), 'f');
+  assert.equal(sql("SELECT has_table_privilege('project_hierarchy_checker','public.projects','UPDATE');"), 'f');
+  for (const privilege of ['SELECT', 'INSERT']) {
+    assert.equal(sql(`SELECT has_table_privilege('project_hierarchy_checker','project_hierarchy_private.account_guards','${privilege}');`), 't');
+  }
+  assert.equal(sql("SELECT has_column_privilege('project_hierarchy_checker','project_hierarchy_private.account_guards','revision','UPDATE');"), 't');
+  assert.equal(sql("SELECT has_table_privilege('project_hierarchy_checker','project_hierarchy_private.account_guards','DELETE');"), 'f');
+  assert.equal(sql("SELECT has_schema_privilege('project_hierarchy_checker','project_hierarchy_private','CREATE');"), 'f');
+  success('Dedicated helper ownership, function hardening and minimal grants preserved');
+  success('API roles have no helper membership, SET or inheritance; migration SET and inheritance revoked');
   // No service restart before exercising cached schema and existing access tokens.
   const projectRow = async (c, owner, name, parent = null) => ok(await c.from('projects')
     .insert({ user_id: owner, name, parent_project_id: parent }).select('*').single());
@@ -230,74 +279,82 @@ async function main() {
   denied(await anon.rpc('integration_open'), ['42501', 'PGRST202']);
   success('Explicit future function grant and schema-cache reload work', { closedPrivilege });
 
-  const realtime = async (label, a = clients[0], b = clients[1]) => {
-    const eventsA = [], eventsB = [], unfiltered = [];
-    const ca = await subscription(a, ownerA, eventsA);
-    const cb = await subscription(b, ownerB, eventsB);
-    const cu = await subscription(a, ownerA, unfiltered, true);
-    const probeA = await taskRow(a, ownerA, `${label} A`);
-    const probeB = await taskRow(b, ownerB, `${label} B SECRET`);
-    const inserted = await eventually(() => eventsA.some(e => e.eventType === 'INSERT' && e.new.id === probeA.id)
-      && eventsB.some(e => e.eventType === 'INSERT' && e.new.id === probeB.id));
-    report.experiments.push({ label, insertObservation: {
-      ownerA: eventsA.map(e => ({ event: e.eventType, id: e.new?.id })),
-      ownerB: eventsB.map(e => ({ event: e.eventType, id: e.new?.id })),
-      unfiltered: unfiltered.map(e => ({ event: e.eventType, id: e.new?.id })),
-    } });
-    if (!inserted) {
-      defect(`${label}: task INSERT events missing`, 'Subscriptions joined, but own-account INSERT did not arrive within 12 seconds');
-    } else {
-      ok(await a.from('tasks').update({ title: `${label} updated` }).eq('id', probeA.id));
-      assert(await eventually(() => eventsA.some(e => e.eventType === 'UPDATE' && e.new.id === probeA.id)));
-      ok(await b.from('tasks').delete().eq('id', probeB.id));
-      ok(await a.from('tasks').delete().eq('id', probeA.id));
-      const removed = await eventually(() => eventsA.some(e => e.eventType === 'DELETE' && e.old.id === probeA.id));
-      if (!removed) defect(`${label}: app-filtered DELETE missing`, 'user_id filter with current replica identity did not deliver own DELETE');
-      const unfilteredDelete = unfiltered.find(e => e.eventType === 'DELETE' && e.old.id === probeA.id);
-      const foreignDelete = unfiltered.find(e => e.eventType === 'DELETE' && e.old.id === probeB.id);
-      report.experiments.push({ label, inserted, filteredDelete: removed, unfilteredDelete: !!unfilteredDelete,
-        deleteFields: unfilteredDelete ? Object.keys(unfilteredDelete.old) : [],
-        foreignDeleteDelivered: !!foreignDelete, foreignDeleteFields: foreignDelete ? Object.keys(foreignDelete.old) : [],
-        foreignDeleteOnAppFilter: eventsA.some(e => e.eventType === 'DELETE' && e.old.id === probeB.id) });
-      assert(![...eventsA, ...unfiltered].some(e => e.new?.id === probeB.id || e.new?.title?.includes('B SECRET')));
-      assert(![...eventsA, ...unfiltered].some(e => e.old?.id === probeB.id
-        && (e.old?.title?.includes('B SECRET') || e.old?.description)));
-      success(`${label}: authorized INSERT UPDATE; foreign INSERT content not delivered`, { filteredDelete: removed });
-      // Test a fresh connection after migrations and token refresh.
-      await a.removeChannel(ca);
-      const reconnect = [];
-      const cr = await subscription(a, ownerA, reconnect);
-      const marker = await taskRow(a, ownerA, 'Reconnect marker');
-      assert(await eventually(() => reconnect.some(e => e.new?.id === marker.id)));
-      await a.removeChannel(cr);
-      success(`${label}: Realtime resubscription receives current account events`);
-    }
-    await a.removeChannel(ca); await b.removeChannel(cb); await a.removeChannel(cu);
-    return inserted;
-  };
-  await realtime('Checked-in migrations');
-  const published = sql("SELECT EXISTS(SELECT 1 FROM pg_publication_tables WHERE pubname='supabase_realtime' AND schemaname='public' AND tablename='tasks');");
-  if (published === 'f') {
-    report.experiments.push({ name: 'Disposable-only publication diagnostic', sql: 'ALTER PUBLICATION supabase_realtime ADD TABLE public.tasks' });
-    sql('ALTER PUBLICATION supabase_realtime ADD TABLE public.tasks;');
-    const hotPublication = await realtime('Publication experiment');
-    if (!hotPublication) {
-      report.experiments.push({ name: 'Disposable-only Realtime restart and fresh authenticated clients after publication change' });
-      assert.equal(command('docker', ['restart', `supabase_realtime_${project}`]).status, 0);
-      assert(await eventually(() => command('docker', ['inspect', '--format', '{{.State.Health.Status}}',
-        `supabase_realtime_${project}`]).stdout.trim() === 'healthy', 30000));
-      const freshA = client(), freshB = client();
-      for (const [oldClient, freshClient] of [[a, freshA], [b, freshB]]) {
-        const session = ok(await oldClient.auth.getSession()).session;
-        ok(await freshClient.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token }));
+  if (!installationOnly) {
+    const realtime = async (label, a = clients[0], b = clients[1]) => {
+      const eventsA = [], eventsB = [], unfiltered = [];
+      const ca = await subscription(a, ownerA, eventsA);
+      const cb = await subscription(b, ownerB, eventsB);
+      const cu = await subscription(a, ownerA, unfiltered, true);
+      const probeA = await taskRow(a, ownerA, `${label} A`);
+      const probeB = await taskRow(b, ownerB, `${label} B SECRET`);
+      const inserted = await eventually(() => eventsA.some(e => e.eventType === 'INSERT' && e.new.id === probeA.id)
+        && eventsB.some(e => e.eventType === 'INSERT' && e.new.id === probeB.id));
+      report.experiments.push({ label, insertObservation: {
+        ownerA: eventsA.map(e => ({ event: e.eventType, id: e.new?.id })),
+        ownerB: eventsB.map(e => ({ event: e.eventType, id: e.new?.id })),
+        unfiltered: unfiltered.map(e => ({ event: e.eventType, id: e.new?.id })),
+      } });
+      if (!inserted) {
+        defect(`${label}: task INSERT events missing`, 'Subscriptions joined, but own-account INSERT did not arrive within 12 seconds');
+      } else {
+        ok(await a.from('tasks').update({ title: `${label} updated` }).eq('id', probeA.id));
+        assert(await eventually(() => eventsA.some(e => e.eventType === 'UPDATE' && e.new.id === probeA.id)));
+        ok(await b.from('tasks').delete().eq('id', probeB.id));
+        ok(await a.from('tasks').delete().eq('id', probeA.id));
+        const removed = await eventually(() => eventsA.some(e => e.eventType === 'DELETE' && e.old.id === probeA.id));
+        if (!removed) defect(`${label}: app-filtered DELETE missing`, 'user_id filter with current replica identity did not deliver own DELETE');
+        const unfilteredDelete = unfiltered.find(e => e.eventType === 'DELETE' && e.old.id === probeA.id);
+        const foreignDelete = unfiltered.find(e => e.eventType === 'DELETE' && e.old.id === probeB.id);
+        report.experiments.push({ label, inserted, filteredDelete: removed, unfilteredDelete: !!unfilteredDelete,
+          deleteFields: unfilteredDelete ? Object.keys(unfilteredDelete.old) : [],
+          foreignDeleteDelivered: !!foreignDelete, foreignDeleteFields: foreignDelete ? Object.keys(foreignDelete.old) : [],
+          foreignDeleteOnAppFilter: eventsA.some(e => e.eventType === 'DELETE' && e.old.id === probeB.id) });
+        assert(![...eventsA, ...unfiltered].some(e => e.new?.id === probeB.id || e.new?.title?.includes('B SECRET')));
+        assert(![...eventsA, ...unfiltered].some(e => e.old?.id === probeB.id
+          && (e.old?.title?.includes('B SECRET') || e.old?.description)));
+        success(`${label}: authorized INSERT UPDATE; foreign INSERT content not delivered`, { filteredDelete: removed });
+        // Test a fresh connection after migrations and token refresh.
+        await a.removeChannel(ca);
+        const reconnect = [];
+        const cr = await subscription(a, ownerA, reconnect);
+        const marker = await taskRow(a, ownerA, 'Reconnect marker');
+        assert(await eventually(() => reconnect.some(e => e.new?.id === marker.id)));
+        await a.removeChannel(cr);
+        success(`${label}: Realtime resubscription receives current account events`);
       }
-      await realtime('Publication plus Realtime restart experiment', freshA, freshB);
+      await a.removeChannel(ca); await b.removeChannel(cb); await a.removeChannel(cu);
+      return inserted;
+    };
+    await realtime('Checked-in migrations');
+    const published = sql("SELECT EXISTS(SELECT 1 FROM pg_publication_tables WHERE pubname='supabase_realtime' AND schemaname='public' AND tablename='tasks');");
+    if (published === 'f') {
+      report.experiments.push({ name: 'Disposable-only publication diagnostic', sql: 'ALTER PUBLICATION supabase_realtime ADD TABLE public.tasks' });
+      sql('ALTER PUBLICATION supabase_realtime ADD TABLE public.tasks;');
+      const hotPublication = await realtime('Publication experiment');
+      if (!hotPublication) {
+        report.experiments.push({ name: 'Disposable-only Realtime restart and fresh authenticated clients after publication change' });
+        assert.equal(command('docker', ['restart', `supabase_realtime_${project}`]).status, 0);
+        assert(await eventually(() => command('docker', ['inspect', '--format', '{{.State.Health.Status}}',
+          `supabase_realtime_${project}`]).stdout.trim() === 'healthy', 30000));
+        const freshA = client(), freshB = client();
+        for (const [oldClient, freshClient] of [[a, freshA], [b, freshB]]) {
+          const session = ok(await oldClient.auth.getSession()).session;
+          ok(await freshClient.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token }));
+        }
+        await realtime('Publication plus Realtime restart experiment', freshA, freshB);
+      }
     }
-  }
-  if (report.experiments.some(e => e.filteredDelete === false)) {
-    report.experiments.push({ name: 'Disposable-only replica identity diagnostic', sql: 'ALTER TABLE public.tasks REPLICA IDENTITY FULL' });
-    sql('ALTER TABLE public.tasks REPLICA IDENTITY FULL;');
-    await realtime('Replica identity FULL experiment');
+    if (report.experiments.some(e => e.filteredDelete === false)) {
+      report.experiments.push({ name: 'Disposable-only replica identity diagnostic', sql: 'ALTER TABLE public.tasks REPLICA IDENTITY FULL' });
+      sql('ALTER TABLE public.tasks REPLICA IDENTITY FULL;');
+      await realtime('Replica identity FULL experiment');
+    }
+  } else {
+    report.environment.publicationAfter = sql("SELECT schemaname||'.'||tablename FROM pg_publication_tables WHERE pubname='supabase_realtime';");
+    report.environment.replicaIdentityAfter = sql("SELECT relreplident FROM pg_class WHERE oid='public.tasks'::regclass;");
+    assert.equal(report.environment.publicationAfter, report.environment.publicationBefore);
+    assert.equal(report.environment.replicaIdentityAfter, report.environment.replicaIdentityBefore);
+    report.notTested = ['Realtime publication, replica identity, event delivery, metadata exposure and subscription lifecycle'];
   }
   ok(await a.from('tasks').delete().eq('user_id', ownerA));
   ok(await a.auth.refreshSession());
@@ -321,7 +378,7 @@ catch (error) {
   for (const [client, channel] of channels) await client.removeChannel(channel).catch(() => {});
   for (const client of clients) await client.removeAllChannels().catch(() => {});
   fs.mkdirSync(path.join(root, 'documentation/verification'), { recursive: true });
-  const suffix = ownershipExperiment ? 'ownership-experiment' : 'original';
+  const suffix = installationOnly ? (fullChainStart ? 'fresh-installation' : 'installation') : 'current';
   report.result = report.failure ? 'failed' : report.defects.length ? 'blocked-with-conditional-results' : 'passed';
   if (report.defects.length) process.exitCode = 1;
   fs.writeFileSync(path.join(root, `documentation/verification/local-supabase-services-${suffix}-results.json`), JSON.stringify(report, null, 2) + '\n');

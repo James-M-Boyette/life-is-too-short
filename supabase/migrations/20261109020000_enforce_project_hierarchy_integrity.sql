@@ -110,6 +110,9 @@ $$;
 
 -- ALTER OWNER requires CREATE on the containing schema; remove it immediately.
 GRANT CREATE ON SCHEMA project_hierarchy_private TO project_hierarchy_checker;
+-- Controlled amendment before hosted release: Supabase's postgres is not a
+-- superuser. Permit ownership transfer only inside this installation transaction.
+GRANT project_hierarchy_checker TO postgres WITH SET TRUE;
 ALTER FUNCTION project_hierarchy_private.enforce_acyclic_projects() OWNER TO project_hierarchy_checker;
 REVOKE CREATE ON SCHEMA project_hierarchy_private FROM project_hierarchy_checker;
 REVOKE ALL ON FUNCTION project_hierarchy_private.enforce_acyclic_projects() FROM PUBLIC, anon, authenticated, service_role;
@@ -121,4 +124,7 @@ CREATE TRIGGER projects_hierarchy_acyclic
 AFTER INSERT OR UPDATE ON public.projects
 FOR EACH ROW EXECUTE FUNCTION project_hierarchy_private.enforce_acyclic_projects();
 
+-- Revoke the temporary grant before committing. PG17 may retain the creator's
+-- ADMIN-only membership, which does not confer SET or inherited object rights.
+REVOKE project_hierarchy_checker FROM postgres;
 COMMIT;
