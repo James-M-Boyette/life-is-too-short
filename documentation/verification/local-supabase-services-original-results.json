@@ -1,0 +1,37 @@
+{
+  "checks": [
+    {
+      "name": "GoTrue signup password login and session refresh before migration"
+    }
+  ],
+  "defects": [
+    {
+      "name": "Migration installation failed: 20261109020000_enforce_project_hierarchy_integrity.sql",
+      "detail": "ERROR: must be able to SET ROLE \"project_hierarchy_checker\" (SQLSTATE 42501)\nAt statement: 19\nALTER FUNCTION project_hierarchy_private.enforce_acyclic_projects() OWNER TO project_hierarchy_checker"
+    }
+  ],
+  "experiments": [],
+  "environment": {
+    "project": "lits-integration-8718ba9d",
+    "images": [
+      "supabase_studio_lits-integration-8718ba9d public.ecr.aws/supabase/studio:2026.10.05-sha-94b8b06",
+      "supabase_pg_meta_lits-integration-8718ba9d public.ecr.aws/supabase/postgres-meta:v0.100.0",
+      "supabase_edge_runtime_lits-integration-8718ba9d public.ecr.aws/supabase/edge-runtime:v1.77.4",
+      "supabase_storage_lits-integration-8718ba9d public.ecr.aws/supabase/storage-api:v1.79.36",
+      "supabase_rest_lits-integration-8718ba9d public.ecr.aws/supabase/postgrest:v16.4",
+      "supabase_realtime_lits-integration-8718ba9d public.ecr.aws/supabase/realtime:v2.140.10",
+      "supabase_inbucket_lits-integration-8718ba9d public.ecr.aws/supabase/mailpit:v1.31.3",
+      "supabase_auth_lits-integration-8718ba9d public.ecr.aws/supabase/gotrue:v2.197.0",
+      "supabase_kong_lits-integration-8718ba9d public.ecr.aws/supabase/kong:2.8.1",
+      "supabase_vector_lits-integration-8718ba9d public.ecr.aws/supabase/vector:0.58.0-alpine",
+      "supabase_analytics_lits-integration-8718ba9d public.ecr.aws/supabase/logflare:1.52.0",
+      "supabase_db_lits-integration-8718ba9d public.ecr.aws/supabase/postgres:17.11.0.004"
+    ],
+    "database": "17.11",
+    "publicationBefore": "",
+    "role": "postgres|f|t"
+  },
+  "failure": "Local CLI migration failed; see owned workspace logs",
+  "ownershipExperiment": false,
+  "result": "failed"
+}

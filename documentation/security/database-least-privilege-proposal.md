@@ -1,5 +1,7 @@
 # Baseline privilege correction: inventory, proposal and isolated verification
 
+> Follow-up: [full local Supabase service verification](../verification/local-supabase-services.md) exercised Auth/Data API/Realtime conditionally after an ownership-installation experiment for PR #70. The unmodified chain remains blocked, and task publication/DELETE delivery require additional review. Neither migration has been deployed to hosted Supabase.
+
 ## Status and scope
 
 This is a locally implemented **proposal**, based on main after PR #70. PR #70's hierarchy migration is merged but has not been deployed to hosted Supabase. Neither that migration nor this candidate has been applied to hosted Supabase here. No hosted queries, data/grant/configuration changes, remote db push or deployment were performed.
