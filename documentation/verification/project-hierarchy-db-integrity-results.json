@@ -1,0 +1,201 @@
+{
+  "server": "17.6",
+  "image": "public.ecr.aws/supabase/postgres:17.6.1.063",
+  "network": "none",
+  "results": [
+    {
+      "test": "preflight rejects existing rootless cycles without repairs",
+      "migration_aborted": true,
+      "acyclic_rows": 8
+    },
+    {
+      "test": "sequential creation rename reparent root and cycle checks",
+      "acyclic_rows": 9
+    },
+    {
+      "test": "multi-row updates and inserts rollback invalid graphs",
+      "acyclic_rows": 10
+    },
+    {
+      "test": "upsert cannot bypass integrity trigger",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "repeated ancestor check terminates and rejects corrupt ancestry",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "READ COMMITTED",
+      "existing_guard": true,
+      "winner": "first",
+      "loser_sqlstate": "23514",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "READ COMMITTED",
+      "existing_guard": false,
+      "winner": "first",
+      "loser_sqlstate": "23514",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "REPEATABLE READ",
+      "existing_guard": true,
+      "winner": "first",
+      "loser_sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "REPEATABLE READ",
+      "existing_guard": false,
+      "winner": "first",
+      "loser_sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "SERIALIZABLE",
+      "existing_guard": true,
+      "winner": "first",
+      "loser_sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "reciprocal reparenting",
+      "isolation": "SERIALIZABLE",
+      "existing_guard": false,
+      "winner": "first",
+      "loser_sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "READ COMMITTED",
+      "existing_guard": true,
+      "outcomes": {
+        "A_to_B": "00000",
+        "C_to_A": "00000",
+        "B_to_C": "23514"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "READ COMMITTED",
+      "existing_guard": false,
+      "outcomes": {
+        "A_to_B": "00000",
+        "B_to_C": "00000",
+        "C_to_A": "23514"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "REPEATABLE READ",
+      "existing_guard": true,
+      "outcomes": {
+        "A_to_B": "00000",
+        "C_to_A": "40001",
+        "B_to_C": "40001"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "REPEATABLE READ",
+      "existing_guard": false,
+      "outcomes": {
+        "A_to_B": "00000",
+        "B_to_C": "40001",
+        "C_to_A": "40001"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "SERIALIZABLE",
+      "existing_guard": true,
+      "outcomes": {
+        "A_to_B": "00000",
+        "C_to_A": "40001",
+        "B_to_C": "40001"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "three-project concurrent cycle",
+      "isolation": "SERIALIZABLE",
+      "existing_guard": false,
+      "outcomes": {
+        "A_to_B": "00000",
+        "B_to_C": "40001",
+        "C_to_A": "40001"
+      },
+      "acyclic_rows": 8
+    },
+    {
+      "test": "serialization failure rolls back prior writes",
+      "sqlstate": "40001",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "installation lock timeout aborts transaction",
+      "sqlstate": "55P03",
+      "configured_timeout": "5s",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "different accounts do not share the guard",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "deadlock rolls back prior writes",
+      "sqlstate": "40P01",
+      "victim_project": 1,
+      "acyclic_rows": 8
+    },
+    {
+      "test": "delete_project preserves promotion and task semantics",
+      "acyclic_rows": 7
+    },
+    {
+      "test": "delete wins reparent race",
+      "loser_sqlstate": "23503",
+      "acyclic_rows": 7
+    },
+    {
+      "test": "reparent wins deletion race and child is promoted",
+      "acyclic_rows": 7
+    },
+    {
+      "test": "RLS and new guard permission boundaries",
+      "role_checks": [
+        "authenticated",
+        "anon",
+        "service_role"
+      ],
+      "acyclic_rows": 8
+    },
+    {
+      "test": "separate baseline TRUNCATE finding (rolled back)",
+      "allowed_roles": [
+        "authenticated",
+        "anon"
+      ],
+      "acyclic_rows": 8
+    },
+    {
+      "test": "function owner least privilege",
+      "acyclic_rows": 8
+    },
+    {
+      "test": "account deletion cascades guard cleanup",
+      "acyclic_rows": 4
+    }
+  ]
+}
