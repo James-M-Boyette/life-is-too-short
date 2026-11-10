@@ -1,5 +1,7 @@
 # Stage 3 — private task synchronization verification
 
+> November 10 status: #70/#71 hosted deployment/verification is operator-reported complete; #75/Broadcast is not deployed. The [API-only bridge](api-only-task-sync-bridge.md) is a separate local production-build preparation awaiting deployment approval. Legacy-default statements and test results below remain historical Stage 3 evidence; they do not describe the new bridge setting or certify hosted/physical-device cutover.
+
 ## Decision and scope
 
 **Source review: ready. Hosted deployment: NO-GO pending separate authorization and the checklist below.** PR #77 was already merged at main `7364bb9` before branch `codex/task-sync-end-to-end-verification` was created. AGENTS.md, dated project context and PR #74–#77 reports were consulted; checked-in code and current main outrank historical status descriptions.
