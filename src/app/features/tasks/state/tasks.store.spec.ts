@@ -90,6 +90,8 @@ describe('TasksStore', () => {
         TestBed.configureTestingModule({
             providers: [
                 TasksStore,
+                // Keep raw-event regressions independent of the production rollout mode.
+                { provide: TASK_SYNC_CONFIG, useValue: { mode: 'postgres-changes', safetyRefreshMs: 120_000 } },
                 {
                     provide: AuthStore,
                     useValue: { userId },
@@ -118,13 +120,38 @@ describe('TasksStore', () => {
         loaded.resolve({ data: [], error: null }); await loaded.promise; await vi.waitFor(() => expect(store.loading()).toBe(false));
     }
 
-    it('defaults to the deployed PostgreSQL Changes contract until Broadcast rollout is explicitly configured', async () => {
+    it('preserves the explicitly selected PostgreSQL Changes contract for pre-cutover development', async () => {
         expect(TestBed.inject(TASK_SYNC_CONFIG).mode).toBe('postgres-changes');
         await authenticateForCreation();
         const client = TestBed.inject(SUPABASE_CLIENT);
         expect(client.channel).toHaveBeenCalledExactlyOnceWith('tasks:user-1');
         realtimeEvent({ eventType: 'INSERT', new: createTask() });
         expect(store.tasks()).toEqual([createTask()]);
+    });
+
+    it('performs authenticated CRUD, scheduling and project reassignment in API-only mode without a channel', async () => {
+        TestBed.inject(TASK_SYNC_CONFIG).mode = 'api-only';
+        await authenticateForCreation();
+        const insert = vi.fn(payload => ({ select: () => ({
+            single: async () => ({ data: createTask(payload), error: null }),
+        }) }));
+        from.mockReturnValueOnce({ insert });
+        await store.addTask({ title: 'API bridge', description: '**Source**', projectId: null });
+        expect(store.tasks()).toHaveLength(1);
+        expect(store.tasks()[0].id).toBe(insert.mock.calls[0][0].id);
+        single.mockImplementation(async () => ({ data: { ...store.tasks()[0] }, error: null }));
+        await store.updateContent(store.tasks()[0], { title: 'Edited', description: '**Kept**' });
+        await store.updatePlannedDate(store.tasks()[0], '2026-11-10');
+        await store.updateDueDate(store.tasks()[0], '2026-11-11');
+        await store.updateProject(store.tasks()[0], 'project-b');
+        await store.toggleDone(store.tasks()[0]);
+        expect(store.tasks()[0]).toMatchObject({ title: 'Edited', description: '**Kept**',
+            planned_date: '2026-11-10', due_date: '2026-11-11', project_id: 'project-b', is_done: true });
+        const deletion = { eq: vi.fn().mockReturnThis(), error: null };
+        from.mockReturnValueOnce({ delete: vi.fn().mockReturnValue(deletion) });
+        await store.remove(store.tasks()[0].id);
+        expect(store.tasks()).toEqual([]);
+        expect(TestBed.inject(SUPABASE_CLIENT).channel).not.toHaveBeenCalled();
     });
 
     it('keeps one task identity when Realtime INSERT arrives before the HTTP creation response', async () => {

@@ -1,5 +1,7 @@
 # Stage 2C — task invalidation consumption
 
+> November 10 rollout update: #70/#71 are deployed and verified per operator; #75 is not deployed. The [API-only bridge](api-only-task-sync-bridge.md) now changes the effective production source setting to `api-only`, pending separate deployment approval. Development remains unchanged. References below to both tracked defaults being legacy describe the original Stage 2C result, not the bridge branch.
+
 ## Scope and rollout default
 
 PR #76 was already merged at main `3f76071` before creating `codex/tasks-broadcast-invalidation-sync`. Reviewed AGENTS.md, the dated project context, private Broadcast migration/proof, pagination and F1/F2/F3/F4 verification against current code/tests. **No hosted access or database deployment occurred or is authorized.** No SQL migration, RLS, ownership, scheduling or project CRUD changed.

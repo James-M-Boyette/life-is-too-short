@@ -1,6 +1,10 @@
 # Hosted Supabase deployment-readiness assessment
 
-**Recommendation: NO-GO for hosted deployment or Broadcast activation today.** Local implementation evidence is strong; actual hosted state, recovery capability, native compatibility, operating limits and device acceptance remain unverified. This is a **November 9, 2026 read-only planning assessment**, based on main `1e3d34d` after approved PR #78 was already merged. No hosted connection, credential access, remote SQL, backup operation, migration, setting change or frontend-mode change was performed. No implementation defect requiring another code PR was established in this assessment.
+**Status update — November 10, 2026:** the operator reports that **#70 and #71 have been successfully deployed and verified on hosted Supabase**. Earlier operator-provided preflight identified PostgreSQL 17.6, 22 projects, 112 tasks, no invalid relationships/cycles and nine validated original constraints; the November 9 application-data backup and non-superuser #70/#71 installation were subsequently rehearsed in isolated PostgreSQL 17.6. This is attributed operator/local-rehearsal evidence, not a new hosted inspection by this agent. It does not establish complete Auth/platform recovery or completion of the security audit.
+
+**#75/private Broadcast remains undeployed and requires separate cutover approval.** The [API-only bridge preparation](api-only-task-sync-bridge.md) selects `api-only` in the effective production build; deployment of that build is **not yet authorized or performed**. Development behavior remains unchanged. No hosted SQL, publication/RLS/configuration or credentials are accessed by the bridge work.
+
+The assessment below originated as a **November 9, 2026 read-only planning assessment**, based on main `1e3d34d` after PR #78. Native Broadcast compatibility, operating limits, cached-client transition and physical-device acceptance remain gates; the original blanket NO-GO must not be read as saying the now-completed #70/#71 deployment is still pending. No implementation blocker was found by that planning assessment.
 
 The [proposed read-only query/check appendix](hosted-deployment-preflight-queries.md) is **not executed and not authorization to connect**. Catalog inspection needs its own approval; installation and canary test writes need a later, separate approval.
 
@@ -9,14 +13,14 @@ The [proposed read-only query/check appendix](hosted-deployment-preflight-querie
 - #70/#71: isolated PostgreSQL 17.6 concurrency/permission matrices passed, including longer/concurrent cycles, transaction rollback, same-owner FKs, guard cleanup and prohibited whole-table operations. These do not establish hosted grants or HTTP exposure.
 - #72 exposed a real non-superuser ownership-installation failure; #73 corrected it through bounded temporary role membership. Real local Supabase PostgreSQL 17.11 installation/API gates then passed. Historical #72 failure is superseded for installation, not erased.
 - #74/#75: actual private Broadcast authorization proof passed; fresh full chain installed, native probe compatibility was tested, and no tested foreign/private/raw/message path exposed another account's task content or deletion IDs.
-- #76/#77: complete ID-keyset snapshots, atomic reconciliation, session/revision/creation safeguards, opt-in Broadcast, API-only recovery, SDK-owned rejoin, bounded retries and visible/online safety reads were verified. **Legacy `postgres-changes` remains the checked-in default.**
+- #76/#77: complete ID-keyset snapshots, atomic reconciliation, session/revision/creation safeguards, opt-in Broadcast, API-only recovery, SDK-owned rejoin, bounded retries and visible/online safety reads were verified. **The bridge branch now selects `api-only` for production; deployment remains separate.** Development still selects the prior legacy path.
 - #78: two independent A sessions/stores, a B store and adversarial subscribers passed ordinary cross-device task operations, project reassignment/delete_project, outage/rejoin and actual safety recovery. The stalled-background defect was fixed with a 30-second snapshot deadline/cancellation race. Final recorded checks: **130 targeted tests, 391 full-suite tests, 34 server authorization groups**, production build and syntax/diff checks passed. Two live tests were opt-in, not silently counted as full-suite passes.
 
 These are prior executed results, not new test runs in this documentation assignment. Native versions tested: PostgreSQL 17.11, Realtime 2.140.10, GoTrue 2.197.0, PostgREST 16.4, CLI 2.120.0. They do not attest to the hosted versions, plan, currently deployed bundle or existing data. Earlier minimal PostgreSQL fixtures did not exercise real Supabase services; subsequent gates did. No production backup restoration or physical iPhone/Safari acceptance is established by these reports.
 
 ## 2. Every checked-in migration
 
-Names below are under `supabase/migrations/`. Inspect the **actual ledger and runtime state** before selecting files. The first four are the expected foundation, not permission to replay them into an existing application. User-provided status says the last three are undeployed; that has not been independently checked against hosted history.
+Names below are under `supabase/migrations/`. Inspect the **actual ledger and runtime state** before selecting files. The first four plus #70/#71 are now applied according to the operator; do not replay them. #75 remains undeployed. This update does not independently query the hosted ledger.
 
 | Migration | Dependencies and effects | Lock/transaction behavior and evidence |
 | --- | --- | --- |
@@ -32,7 +36,9 @@ The chain is **not one all-or-nothing release transaction**: #70 can commit befo
 
 #70's controlled unreleased ownership amendment was already applied in disposable environments; a recorded older version may be skipped by the CLI. “Not deployed to hosted” does not mean “never applied anywhere.” Compare owner/body/config/effective role rights, ledger provenance and exact approved source; do not rerun CREATE ROLE/schema blindly or use migration repair to pretend reconciliation occurred.
 
-## 3. Hosted preflight evidence still required
+## 3. Hosted preflight evidence for subsequent cutover
+
+The table records the original evidence requirements. #70/#71 deployment/verification and the application-data restore are now reported complete as noted above. Retain their private evidence and recheck changed state as appropriate; unresolved native Broadcast, full recovery, operational and device gates remain. Do not infer that all original unknowns remain unknown or that all have been resolved.
 
 The [appendix](hosted-deployment-preflight-queries.md) supplies bounded SELECT-only catalog, graph, grants and contention checks, with full-visibility/version gates. Obtain redacted results privately from a separately authorized operator; do not export user content, keys, JWTs or credential settings.
 
@@ -99,11 +105,11 @@ Before activation, capture actual organization/project usage and approve a budge
 
 ## 7. Controlled future deployment and validation sequence
 
-Every action below is **proposed, not authorized or executed**. DB hardening and Broadcast activation need not be one release: #70/#71 may advance after their own gates even while Broadcast cost/device gates remain closed.
+This is the staged runbook: **step 3 (#70/#71) is now operator-reported complete; do not repeat it.** Step 4's bridge is prepared locally, not deployed. Remaining publication cutover/#75/Broadcast actions are proposed only and need separate approval. Original prerequisite evidence in steps 1–2 should be retained and refreshed where needed.
 
 1. Obtain read-only authorization, project identity, private evidence handling and operator ownership. Run approved appendix blocks; resolve drift/cycles/ACL/role/version/exposure blockers without changing history or data. Confirm all seven source versions and runner behavior; rehearse the exact pending chain against an authorized isolated representative restore/version match.
 2. Obtain a verified recovery point and successful isolated restoration, approved RPO/RTO and a maintenance/contingency window. The repo has no established global maintenance/write gate: do not assume notifying users stops cached clients/jobs. Establish any required enforceable write-quiescence procedure separately; do not invent an ad-hoc privilege revocation during deployment.
-3. With explicit deployment approval, apply only genuinely pending **#70 then #71**, verifying each committed ledger/runtime state and scoped canary CRUD/RPC/authorization compatibility. Abort on lock timeout, cycles, unexpected dependencies or role collision; retain any previously committed successful hardening and review fix-forward options.
+3. **Completed per operator, November 10:** #70 then #71 deployed and verified. Retain their committed ledger/runtime and canary evidence. Do not replay either migration or undo their hardening for a frontend rollback.
 4. Prepare an approved **api-only bridge/recovery build** before private-only cutover if the hosted raw feed exists. Pages deploys independently; verify loaded bundle hashes on the small beta fleet, save/cancel drafts before reload, and plan old tabs/caches. Do not assume changing a source flag changes already-running clients. If no raw publication exists, document that evidence rather than presuming it.
 5. Inventory all raw publication consumers and separately approve the precise privacy-preserving cutover if needed. #75 intentionally refuses existing raw tasks publications; **no as-is deployment can bypass that gate**. Any required removal/reconfiguration needs a reviewed procedure/change, not a casual command to make installation pass. Verify old and fresh adversarial raw subscribers stop receiving task metadata. Do not apply the historical publication/FULL proposal.
 6. Apply #75 only after native/policy/grant/partition compatibility review and explicit authorization. Verify intended owner/ACL/RLS/helper membership/probe policy and default replica identity. Each migration has its own transaction; do not assume a later failure unwinds earlier ones. API-only remains the degraded client while installation/delivery is validated.
@@ -126,6 +132,6 @@ A public-table-only dump is not proof of complete recovery: account/Auth state, 
 
 ## Final authorization gates
 
-Proceed only when an authorized reviewer signs off on **(a)** hosted history/data/schema/permissions/native compatibility, **(b)** restored recovery and cutover/rollback rehearsals, **(c)** actual plan, resource envelope, monitoring and bulk-rate/egress acceptance, **(d)** canary and device results, and **(e)** explicit write/deployment authorization. Until then: **NO-GO**, no new beta expansion based on these local results, and leave the deployed synchronization mode unchanged.
+For the **remaining #75/private Broadcast cutover**, proceed only when an authorized reviewer signs off on **(a)** hosted history/data/schema/permissions/native compatibility, **(b)** restored recovery and cutover/rollback rehearsals, **(c)** actual plan, resource envelope, monitoring and bulk-rate/egress acceptance, **(d)** canary and device results, and **(e)** explicit write/deployment authorization. Until then: **NO-GO for that cutover**, no new beta expansion based on these local results. #70/#71 are operator-reported complete. The prepared API-only frontend bridge needs its own deployment approval; this document does not authorize changing the deployed mode.
 
 Assessment validation was documentation/source/link/query review and whitespace checking only; no tests were rerun or new test infrastructure added. The SELECT appendix was not executed. Existing source verification remains evidence with the limitations above.

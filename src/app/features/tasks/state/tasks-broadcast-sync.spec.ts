@@ -103,6 +103,32 @@ describe('TasksStore private Broadcast synchronization', () => {
         expect(store.tasks()[0].title).toBe('Recovery mode'); expect(store.lastInvalidationAt()).toBeNull();
     });
 
+    it('recovers complete API-only snapshots on resume/online and isolates late account responses', async () => {
+        TestBed.inject(TASK_SYNC_CONFIG).mode = 'api-only';
+        user.set('B'); TestBed.tick(); await empty(1);
+        online.mockReturnValue(false); window.dispatchEvent(new Event('offline'));
+        await advance(120_000); expect(pages).toHaveLength(2);
+        online.mockReturnValue(true); visible.mockReturnValue('hidden'); window.dispatchEvent(new Event('online'));
+        await advance(); expect(pages).toHaveLength(2);
+        visible.mockReturnValue('visible'); document.dispatchEvent(new Event('visibilitychange')); await flush();
+        const firstPage = Array.from({ length: 500 }, (_, i) => row(String(i).padStart(4, '0'), 'B task', 'B'));
+        pages[2].resolve({ data: firstPage, error: null }); await flush();
+        expect(store.tasks()).toEqual([]); // Partial snapshots are never published.
+        await snapshot(3, [row('0500', 'Last page', 'B')]);
+        expect(store.tasks()).toHaveLength(501);
+        window.dispatchEvent(new Event('pageshow')); await flush();
+        const oldPage = pages.at(-1)!;
+        user.set('C'); TestBed.tick(); expect(store.tasks()).toEqual([]);
+        await snapshot(pages.length - 1, [row('C-task', 'C only', 'C')]);
+        oldPage.resolve({ data: firstPage, error: null }); await flush();
+        expect(store.tasks().map(task => task.user_id)).toEqual(['C']);
+        expect(store.error()).toBeNull(); expect(store.syncError()).toBeNull();
+        expect(channels).toHaveLength(1); // Only the original Broadcast fixture, never B/C.
+        user.set(null); TestBed.tick(); const count = pages.length;
+        await advance(120_000); window.dispatchEvent(new Event('pageshow')); await flush();
+        expect(pages).toHaveLength(count); expect(store.tasks()).toEqual([]);
+    });
+
     it('coalesces duplicate/burst hints without trusting row content or executing mutations', async () => {
         for (let i = 0; i < 100; i++) channels[0].notify({ payload: { v: 1, title: 'Not authoritative', id: 'fake task' } });
         expect(store.tasks()).toEqual([]); expect(pages).toHaveLength(1);
