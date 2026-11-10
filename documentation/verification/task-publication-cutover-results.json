@@ -1,0 +1,113 @@
+{
+  "checks": [
+    {
+      "name": "Fresh no-membership migration is a safe no-op"
+    },
+    {
+      "name": "Actual Angular API-only store: before-removal"
+    },
+    {
+      "name": "Complete bounded preflight SQL executes against real local catalogs (results are not hosted evidence)"
+    },
+    {
+      "name": "Unexpected additional task publication aborts atomically"
+    },
+    {
+      "name": "ALL TABLES and public-schema publication coverage each abort atomically"
+    },
+    {
+      "name": "Row-filtered and column-limited membership each abort atomically"
+    },
+    {
+      "name": "Non-superuser table owner cannot remove membership owned by an unavailable publication role"
+    },
+    {
+      "name": "CLI records removal; unrelated publications/members/options and replica identity preserved; retry is a no-op"
+    },
+    {
+      "name": "Actual Angular API-only store: after-removal-before-broadcast"
+    },
+    {
+      "name": "Unchanged #75 installed by CLI; complete owner/adversarial/API/RPC proof passed",
+      "result": "passed",
+      "groups": 34
+    },
+    {
+      "name": "Actual Angular API-only store: after-broadcast-api-only-recovery"
+    },
+    {
+      "name": "Actual API-only task/project operations recover with sender notifications unavailable"
+    }
+  ],
+  "environment": {
+    "project": "lits-integration-ffc075a8",
+    "database": "17.11",
+    "cli": "2.120.0",
+    "role": "postgres|f|t",
+    "images": [
+      "supabase_rest_lits-integration-ffc075a8 public.ecr.aws/supabase/postgrest:v16.4",
+      "supabase_realtime_lits-integration-ffc075a8 public.ecr.aws/supabase/realtime:v2.140.10",
+      "supabase_inbucket_lits-integration-ffc075a8 public.ecr.aws/supabase/mailpit:v1.31.3",
+      "supabase_auth_lits-integration-ffc075a8 public.ecr.aws/supabase/gotrue:v2.197.0",
+      "supabase_kong_lits-integration-ffc075a8 public.ecr.aws/supabase/kong:2.8.1",
+      "supabase_db_lits-integration-ffc075a8 public.ecr.aws/supabase/postgres:17.11.0.004"
+    ],
+    "publicationOwner": "postgres",
+    "migrations": [
+      {
+        "name": "20261008000000_baseline.sql",
+        "sha256": "4666482242077ff4609aef50e3a31736bd2289c26868f9676f137f024627af74"
+      },
+      {
+        "name": "20261008015654_add_delete_project_function.sql",
+        "sha256": "365c87c25dcfa0025aa0173bd6621354ca1765066b06f86a58eb6c2603751fb1"
+      },
+      {
+        "name": "20261024000602_add_task_dates.sql",
+        "sha256": "c8f840992d054324cf2cbd726a4e0427d8d3c13c575dbd70b65dc59045155c1e"
+      },
+      {
+        "name": "20261029010526_add_task_ordering.sql",
+        "sha256": "151117ff3bf5f10e878a7be5453df526a48c1ff0fb74e221f225944c20cdf94a"
+      },
+      {
+        "name": "20261109020000_enforce_project_hierarchy_integrity.sql",
+        "sha256": "bb873f034e2ba2465f407bcfce8752a8b7cabb3dbdd7355fda6cabdf1216f55b"
+      },
+      {
+        "name": "20261109040000_restrict_application_privileges.sql",
+        "sha256": "139a6e1e175a1d28eb94315c17f4b0d110b9dd2ce1cc09dde5455d3db584b2f6"
+      },
+      {
+        "name": "20261109050000_remove_raw_task_publication.sql",
+        "sha256": "26e4c8b1d7de7036eddc3c3ffb83befc58ed240cbfe35a87df573955f1bcc3cb"
+      },
+      {
+        "name": "20261109060000_add_private_task_broadcast.sql",
+        "sha256": "c097f5794abae14b5a93e355639c30e62de1b798120f1a521676936e6273efe7"
+      }
+    ],
+    "recordedVersions": [
+      "20261008000000",
+      "20261008015654",
+      "20261024000602",
+      "20261029010526",
+      "20261109020000",
+      "20261109040000",
+      "20261109050000",
+      "20261109060000"
+    ]
+  },
+  "limitations": [
+    "Local native services/PG17.11 are not hosted PG17.6 or proof of its publication ownership.",
+    "No hosted credentials, consumers, client builds or native configuration were inspected.",
+    "Synthetic fixtures do not establish physical-device or arbitrary administrator-DDL behavior."
+  ],
+  "broadcastProof": {
+    "result": "passed",
+    "groups": 34
+  },
+  "result": "passed",
+  "disposableRemoved": true,
+  "existingDevelopmentResourcesPreserved": true
+}

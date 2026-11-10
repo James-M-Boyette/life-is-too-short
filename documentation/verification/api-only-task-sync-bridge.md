@@ -1,5 +1,7 @@
 # API-only task synchronization bridge — preparation, November 10, 2026
 
+> Subsequent operator status: PR #80 merged and Pages deployed; live API-only checks passed. The text below retains the original bridge preparation evidence/checklist. Raw task publication removal and #75 are still pending; see [cutover preparation](task-publication-cutover.md). This work performs no hosted action.
+
 **Code review only. Feature-branch commit/push and a PR targeting main are authorized; merge and production deployment are not.** No Pages deployment, hosted connection/SQL, publication/RLS change or #75 installation is performed by this work. The operator reports #70/#71 successfully deployed and verified; this work does not independently inspect that evidence or declare the security audit complete.
 
 ## Code and build selection

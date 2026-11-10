@@ -4,6 +4,7 @@ import { signal } from '@angular/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 import { TasksStore } from './tasks.store';
+import { ProjectsStore } from '@/features/projects/state/projects.store';
 import { TASK_SYNC_CONFIG, type TaskSyncConfig } from './task-sync.config';
 import { SUPABASE_CLIENT } from '@/shared/supabase/supabase.client';
 import { AuthStore } from '@/shared/supabase/auth.store';
@@ -76,6 +77,28 @@ describe.runIf(local)('TasksStore actual disposable Supabase synchronization', (
             expect((await a.from('tasks').update({ title: 'Recovery API read' }).eq('id', seed[0].id)).error).toBeNull();
             await store.refreshTasks();
             expect(store.tasks().find(task => task.id === seed[0].id)?.title).toBe('Recovery API read');
+            const projects = TestBed.inject(ProjectsStore); TestBed.tick();
+            const parent = await projects.createProject({ name: 'API-only parent', parentProjectId: null });
+            const child = await projects.createProject({ name: 'API-only child', parentProjectId: parent.id });
+            await projects.updateProject({ projectId: child.id, name: 'Renamed child', parentProjectId: parent.id });
+            await store.addTask({ title: 'API-only created', description: '**Draft**', projectId: parent.id });
+            const created = store.tasks().find(task => task.title === 'API-only created')!;
+            await store.updateContent(created, { title: 'API-only edited', description: '**Saved**' });
+            await store.updatePlannedDate(created, '2026-11-10');
+            await store.updateDueDate(created, '2026-11-11');
+            await store.updateTaskPosition(created, 'project_position', 1234);
+            await store.toggleDone(created);
+            await store.updateProject(created, child.id);
+            expect(store.tasks().find(task => task.id === created.id)).toMatchObject({
+                title: 'API-only edited', description: '**Saved**', is_done: true,
+                planned_date: '2026-11-10', due_date: '2026-11-11', project_id: child.id,
+            });
+            await projects.deleteProject(child.id); await store.refreshTasks();
+            expect(store.tasks().find(task => task.id === created.id)?.project_id).toBeNull();
+            await projects.deleteProject(parent.id);
+            await store.remove(created.id);
+            expect(store.tasks().some(task => task.id === created.id)).toBe(false);
+            expect(channel).not.toHaveBeenCalled();
         }
         userId.set(null); TestBed.tick(); expect(store.tasks()).toEqual([]);
     }, 60000);
