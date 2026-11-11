@@ -97,8 +97,35 @@ CREATE ROLE task_notification_sender NOLOGIN NOINHERIT NOSUPERUSER NOBYPASSRLS N
 CREATE SCHEMA task_notification_private AUTHORIZATION postgres;
 REVOKE ALL ON SCHEMA task_notification_private FROM PUBLIC, anon, authenticated, service_role;
 GRANT USAGE ON SCHEMA realtime, task_notification_private TO task_notification_sender;
-GRANT EXECUTE ON FUNCTION realtime.send(jsonb,text,text,boolean) TO task_notification_sender;
 GRANT INSERT (id,payload,event,topic,private,extension) ON realtime.messages TO task_notification_sender;
+
+-- EXECUTE can be inherited through PUBLIC without the migration role holding grant authority.
+-- Verify effective permissions because GRANT can warn and apply only a subset.
+DO $$
+DECLARE
+    required_column text;
+BEGIN
+    IF NOT pg_catalog.has_function_privilege(
+        'task_notification_sender', 'realtime.send(jsonb,text,text,boolean)', 'EXECUTE'
+    ) THEN
+        RAISE EXCEPTION 'Task notification sender lacks EXECUTE on realtime.send';
+    END IF;
+
+    IF NOT pg_catalog.has_schema_privilege('task_notification_sender', 'realtime', 'USAGE')
+        OR NOT pg_catalog.has_schema_privilege('task_notification_sender', 'task_notification_private', 'USAGE')
+    THEN
+        RAISE EXCEPTION 'Task notification sender lacks required schema USAGE';
+    END IF;
+
+    FOREACH required_column IN ARRAY ARRAY['id','payload','event','topic','private','extension'] LOOP
+        IF NOT pg_catalog.has_column_privilege(
+            'task_notification_sender', 'realtime.messages', required_column, 'INSERT'
+        ) THEN
+            RAISE EXCEPTION 'Task notification sender lacks INSERT on realtime.messages.%', required_column;
+        END IF;
+    END LOOP;
+END;
+$$;
 CREATE POLICY task_notifications_server_send ON realtime.messages FOR INSERT TO task_notification_sender
 WITH CHECK (
     extension = 'broadcast' AND private = true AND event = 'tasks_changed_v1'
