@@ -1,8 +1,23 @@
-# Raw task publication cutover — local preparation
+# Raw task publication cutover — production completed
 
-November 10, 2026. **No hosted access, SQL, deployment, settings, credentials, publication change or frontend activation is authorized or performed here.** Operator-provided status: #70/#71 deployed and validated; PR #80 merged and Pages deployed; API-only live synchronization checks passed. Raw public.tasks membership remains; #75 remains undeployed. This report does not independently certify hosted state or complete the security audit.
+On November 10, 2026, the operator successfully applied `20261109050000_remove_raw_task_publication.sql` to Supabase project `xvrcqlecgxmttrixvpln`. This source review records the operator's verification; it did not connect to Supabase, rerun database commands, or deploy anything. #70/#71 were already deployed. **Production remains API-only; #75 is not installed or approved here.**
 
-## Proposed changes
+| Production check | Operator-reported result |
+| --- | --- |
+| Migration ledger | Seven versions, including `20261109050000`; #75 absent |
+| Raw task membership | `public.tasks` absent from every publication |
+| Native publications | `supabase_realtime` and `supabase_realtime_messages_publication` intact; seven native Realtime message partitions remain published |
+| Task table | RLS enabled; replica identity `d` (default) |
+| Post-cutover counts | 116 tasks, 22 projects |
+| App smoke check | Normal behavior on PC and phone |
+
+The source file matches the approved and operator-applied SHA-256 `26e4c8b1d7de7036eddc3c3ffb83befc58ed240cbfe35a87df573955f1bcc3cb`. The counts are a point-in-time observation, not a row-by-row audit. The PC/phone check is not a full physical-device, cache, two-device, or adversarial-feed test. No hosted Broadcast delivery or #75 authorization checks are claimed. A November 10 application-data backup was reported complete; this is not a new restore test or evidence of full Auth/platform recovery.
+
+The checked-in Pages workflow builds and deploys Angular on pushes to `main` or manual dispatch. It does not run Supabase migrations. Merging this source PR would trigger Pages via the resulting push to `main`, with the API-only frontend setting unchanged. Do not replay the applied migration. External database automation was not inspected.
+
+Source-review checks: verified the migration hash, unchanged #75 and Angular environment, and documentation links; `node --check` passed for both rehearsal scripts. The non-live Angular suite passed **393 tests**, with both opt-in database tests skipped, and the production build passed with the existing 7.62 kB TaskRow and 4.31 kB sidebar style warnings. Whitespace checks passed. No database commands, including local database rehearsals, were rerun during source review. The rehearsal evidence below is historical and unchanged.
+
+## Migration design
 
 Branch `codex/raw-task-publication-cutover`, from main after PR #80. Add [20261109050000_remove_raw_task_publication.sql](../../supabase/migrations/20261109050000_remove_raw_task_publication.sql), ordered between #71 and unchanged #75. This makes the security transition reviewable, reproducible and ledger-tracked instead of relying on undocumented manual DDL. No Angular runtime, task/project persistence, RLS, replica identity or production synchronization setting changes.
 
@@ -14,9 +29,9 @@ PostgreSQL requires publication ownership for ALTER PUBLICATION; task ownership 
 
 Publication membership removal is transactional ([PG17 publication](https://www.postgresql.org/docs/17/logical-replication-publication.html)). The table lock does not provide a universal administrator/publication-DDL mutex. Freeze unrelated publication/schema DDL during the controlled window, inspect independently after COMMIT, and retain #75's own publication preflight. Unknown operators can otherwise change topology after any check; the migration does not claim to constrain trusted administrators forever.
 
-## Exact hosted preflight — prepared, NOT executed
+## Historical preflight and remaining #75 checks
 
-Copyable bounded queries are in [task-publication-cutover-preflight.sql](task-publication-cutover-preflight.sql). Each complete BEGIN READ ONLY / SET LOCAL / SELECT / ROLLBACK block must run in **one session/submission**. A SQL dashboard need not preserve transactions across requests. Stop on missing objects, denied visibility, timeout or any inconclusive result; do not increase timeouts casually or query task content, emails, JWT claims or credentials. These catalog queries were syntax/execution checked against disposable native Supabase, not hosted.
+Copyable bounded queries are in [task-publication-cutover-preflight.sql](task-publication-cutover-preflight.sql). Each complete BEGIN READ ONLY / SET LOCAL / SELECT / ROLLBACK block must run in **one session/submission**. A SQL dashboard need not preserve transactions across requests. Stop on missing objects, denied visibility, timeout or any inconclusive result; do not increase timeouts casually or query task content, emails, JWT claims or credentials. The operator reports the publication-removal preflight passed. This copy of the query file was exercised in disposable native Supabase; no hosted query was run during source review. Items describing the old ledger and membership below are historical pre-removal expectations. Refresh the applicable native compatibility checks before any separately authorized #75 review.
 
 Expected gates:
 
@@ -28,7 +43,7 @@ Expected gates:
 6. Operator must obtain the actual native Realtime service version/protocol evidence separately. Local proof tested v2.140.10: its read-authorization probe inserts a payload-free private=false row, SELECTs it in the same transaction and rolls back. #75 admits only that owner/topic-scoped current-transaction probe; committed/public payload-bearing messages stay denied. Independently review this narrow exception and confirm deployed native behavior/version compatibility. A SQL signature or SUBSCRIBED callback cannot establish that compatibility.
 7. Inventory both beta users' **every active browser tab/home-screen window/device**, verify the approved API-only CI artifact actually loaded, and confirm no raw task join in a fresh task-store session. Inventory scripts, external integrations and replication consumers with the operator. Slot/application aggregates and optional subscription counts provide clues, not proof of no consumers: catalogs cannot identify all browser builds or dormant clients. Quiet sockets are not evidence that all clients updated.
 
-## Local rehearsal and infrastructure
+## Historical local rehearsal and infrastructure
 
 Run `node scripts/test-task-publication-cutover.mjs`. It reuses manifest-owned local-stack helpers, refuses supplied workdirs, uses fixed loopback API/alternate 563xx ports, random local Auth accounts and a unique disposable stack. It never reads application environment/hosted credentials or adopts/reset an existing database. #70/#71 are installed **once into this new fixture**, not replayed into any existing environment. Cleanup stops only that manifest-owned stack with --no-backup and checks pre-existing containers/volumes remain.
 
@@ -60,7 +75,9 @@ git diff --check
 
 Source SHA-256 provenance: removal `26e4c8b1d7de7036eddc3c3ffb83befc58ed240cbfe35a87df573955f1bcc3cb`; unchanged #75 `c097f5794abae14b5a93e355639c30e62de1b798120f1a521676936e6273efe7`. Machine-readable results contain hashes of all installed copies/versions. The only post-run script adjustment adds explicit known limitations to report metadata; SQL/test behavior is unchanged.
 
-## Staged operator procedure — each production action needs approval
+## Staged operator procedure — removal completed; later stages pending
+
+Steps 1–5 describe the original removal procedure. The removal is complete; use the production evidence above and do not repeat it. Remaining validation and steps 6–8 are separate work, not authorized by this source review.
 
 1. **Review/approve source only first.** #75 and environment.ts remain unchanged. Do not assume source merge authorizes CLI execution; no Supabase deployment is tied to Pages. Confirm both beta users' current API-only adoption from actual loaded CI bundle identities, fresh task joins and successful reads/saves. Save/cancel drafts before reload and close/update all old tabs. Establish a support/operator contact, accepted delay and an inventory of other raw consumers. Dormant clients that later reopen old JS remain a risk; no automatic client upgrade is promised.
 2. **Fresh backup and contingency approval:** create a new authorized backup/recovery point, rehearse/verify integrity as appropriate and record a write-window baseline. November 9's application dump does not contain later writes, real Auth identities, full schema/ACL/ledger/roles or hosted configuration. Preserve approved schema/default-ACL/role/publication snapshots privately; agree RPO/RTO and full-platform recovery limitations before changing production. Do not export keys or customer content into Git/GitHub.
