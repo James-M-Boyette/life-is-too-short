@@ -2,7 +2,24 @@
 
 ## Scope and installation
 
-PR #74 was already merged at main `6d32cb2` before creating `codex/private-task-broadcast-migration`. This change promotes its experiment into the additive migration `20261109060000_add_private_task_broadcast.sql`. Earlier migration files, frontend code, TasksStore and the independent PostgreSQL harness are unchanged. **Hosted deployment remains blocked and unauthorized.** All database verification uses disposable loopback-only environments, never the existing application's local database or hosted credentials.
+PR #74 was already merged at main `6d32cb2` before creating `codex/private-task-broadcast-migration`. That change promoted its experiment into the additive migration `20261109060000_add_private_task_broadcast.sql`. Earlier migration files, frontend code, TasksStore and the independent PostgreSQL harness are unchanged. **Hosted deployment remains blocked and unauthorized.** Database rehearsals use disposable environments.
+
+## Native function grant correction
+
+The hosted operator reports that `postgres` has EXECUTE on `realtime.send(jsonb,text,text,boolean)` without grant option or membership in its owner role, and that PUBLIC has EXECUTE. The revised, still-undeployed migration relies on effective sender EXECUTE and leaves the managed function ACL untouched. It checks both schema USAGE privileges and all six INSERT column privileges after issuing the existing grants. A missing privilege raises an exception inside the installation transaction. No sender privileges were added.
+
+- Previous SHA-256 from the historical Windows rehearsal (CRLF): `c097f5794abae14b5a93e355639c30e62de1b798120f1a521676936e6273efe7`. The previous Git LF digest is `baab85038b92455ad4e0741b6e32d2b3044a92ab915cdf6becfcee9268419ab5`.
+- Revised SHA-256 for the rehearsed Windows checkout (CRLF): `5168a90d00978c67e6eba25927ec40ccddbcf5645bd3f401145c39b13ed7dfec`. The Git-normalized LF digest is `7817aff0ee0490b986da830bc79ef695a12ca2154432c031cc362370b2d06e88`.
+- `python scripts/test-broadcast-grant-authority.py` passed five checks in disposable PostgreSQL 17.6. The old GRANT warned under the reported authority. The revised sender setup succeeded with PUBLIC EXECUTE and no direct function grant. Missing EXECUTE, missing schema USAGE grant authority, and a missing grant option on one INSERT column each aborted and rolled back role and schema creation. This fixture executes the exact sender setup against synthetic ACLs.
+- `node scripts/test-private-broadcast-proof.mjs --report-file tmp/broadcast-grant-review/native-proof.json` passed all 34 groups against a fresh local Supabase stack (CLI 2.120.0, PostgreSQL 17.11, Realtime v2.140.10), including unchanged-file installation, owner delivery, cross-account denial, partition access denial, and send-failure recovery.
+
+Supabase's managed Realtime schema restrictions preserve supported RLS policy customization. The remaining lock and grant operations still require hosted migration-role compatibility. The native function's hosted signature and ACL cannot establish the hosted service's authorization-probe behavior. Reconfirm the managed privileges and runtime compatibility before activation. Any environment that already recorded the previous migration version needs separate review because its migration ledger will not automatically replay this amendment. [Supabase managed Realtime schema changelog](https://supabase.com/changelog/realtime-schema-locked-down-against-modification)
+
+## Release package verification
+
+The two revised digests differ exclusively because of line endings. Choose the byte representation during packaging and record its approved SHA-256 in the release manifest. Hash the final SQL file in the isolated CLI workdir with `Get-FileHash -LiteralPath $migrationPath -Algorithm SHA256` and require an exact match to that manifest before the dry run and again before applying. Copy bytes unchanged and keep the same verified package between steps. A digest from Git or another checkout is insufficient evidence about the packaged file. Stop on a mismatch and review the package before proceeding.
+
+## Migration behavior
 
 The migration adds:
 
@@ -58,7 +75,7 @@ Each changed task emits one message, or two for an owner transfer. The twenty-fi
 
 Private topic authorization prevents the tested ordinary foreign accounts from receiving even deletion identifiers. Public client-created messages are a separate namespace and are not trusted task notifications. A saved, still-valid A JWT remains A-authorized until expiration; logout is not immediate server revocation. GraphQL-enabled deployments were not tested because GraphQL is disabled in this disposable configuration. Privileged database/platform administrators remain trusted.
 
-The current Angular client still uses its earlier synchronization path. This server-only PR does not make it Broadcast-aware or fix reconnect/pagination. Before deployment, the next client phase must implement complete paginated authoritative reads, coalesced invalidation, reconnect catch-up and session guards. No hosted privacy or compatibility guarantee is claimed from local testing.
+Production Angular remains in API-only mode following the completed raw-publication cutover. The later client implementation supports private Broadcast with paginated authoritative reads, coalesced invalidation, reconnect catch-up and session guards. Hosted migration and frontend activation remain separate release decisions. See the [cutover record](task-publication-cutover.md) and [client verification](tasks-broadcast-invalidation-sync.md).
 
 ## Rollback and recovery
 
