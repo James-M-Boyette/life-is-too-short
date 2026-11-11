@@ -42,6 +42,7 @@ export class ProjectsStore {
     private requestId = 0;
     private latestRefresh = 0;
     private latestErrorOwner = 0;
+    private mutationRevision = 0;
 
     // Synchronize at public entry points too, before Angular's auth effect may run.
     private session(): ProjectSession {
@@ -59,6 +60,12 @@ export class ProjectsStore {
 
     private isCurrent(session: ProjectSession) {
         return session.generation === this.generation && session.userId === this.auth.userId();
+    }
+
+    private applyMutation(session: ProjectSession, update: (projects: Project[]) => Project[]): void {
+        if (!this.isCurrent(session)) return;
+        this.mutationRevision++;
+        this.projects.update(update);
     }
 
     private beginRequest() {
@@ -90,23 +97,35 @@ export class ProjectsStore {
         if (!session.userId) return;
         const id = this.beginRequest();
         this.latestRefresh = id;
+        const ownsRefresh = () => this.isCurrent(session) && id === this.latestRefresh;
         this.loading.set(true);
         try {
-            const { data, error } = await this.supabase
-                .from('projects').select('*').order('name', { ascending: true });
-            if (error) throw error;
-            if (this.isCurrent(session) && id === this.latestRefresh) {
-                this.loadError.set(null);
-                this.projects.set((data ?? []) as Project[]);
+            // A confirmed mutation invalidates this read. Allow one catch-up
+            // attempt under the same request so loading and error ownership stay intact.
+            for (let attempt = 0; attempt < 2 && ownsRefresh(); attempt++) {
+                const revision = this.mutationRevision;
+                try {
+                    const { data, error } = await this.supabase
+                        .from('projects').select('*').order('name', { ascending: true });
+                    if (error) throw error;
+                    if (!ownsRefresh()) return;
+                    if (revision !== this.mutationRevision) continue;
+                    this.loadError.set(null);
+                    this.projects.set((data ?? []) as Project[]);
+                    return;
+                } catch (error: unknown) {
+                    if (ownsRefresh() && revision !== this.mutationRevision) continue;
+                    throw error;
+                }
             }
         } catch (error: unknown) {
-            if (this.isCurrent(session) && id === this.latestRefresh) {
+            if (ownsRefresh()) {
                 this.loadError.set(error instanceof Error ? error.message : 'Failed to load projects');
             }
             this.recordError(session, id, error);
             throw error;
         } finally {
-            if (this.isCurrent(session) && id === this.latestRefresh) this.loading.set(false);
+            if (ownsRefresh()) this.loading.set(false);
         }
     }
 
@@ -158,7 +177,7 @@ export class ProjectsStore {
 
             const createdProject = data as Project;
 
-            if (this.isCurrent(session)) this.projects.update(projects => [
+            this.applyMutation(session, projects => [
                 ...projects,
                 createdProject,
             ]);
@@ -242,7 +261,7 @@ export class ProjectsStore {
 
             const updatedProject = data as Project;
 
-            if (this.isCurrent(session)) this.projects.update(projects =>
+            this.applyMutation(session, projects =>
                 projects.map(existing =>
                     existing.id === updatedProject.id
                         ? updatedProject
@@ -283,7 +302,7 @@ export class ProjectsStore {
 
             // The database operation succeeded. Remove the deleted project
             // from our local state so the sidebar updates immediately.
-            if (this.isCurrent(session)) this.projects.update(projects =>
+            this.applyMutation(session, projects =>
                 projects
                     .filter(existing => existing.id !== projectId)
                     .map(existing =>

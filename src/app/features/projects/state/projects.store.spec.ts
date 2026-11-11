@@ -140,6 +140,99 @@ describe('ProjectsStore account isolation', () => {
         expect(client.rpc).toHaveBeenCalledWith('delete_project', { p_project_id: 'parent' });
     });
 
+    it.each(['create', 'update', 'delete'] as const)(
+        'preserves a confirmed %s when an older snapshot completes',
+        async operation => {
+            const parent = project('parent');
+            const child = project('child', 'A', 'parent');
+            const initial = query(); userId.set('A'); TestBed.tick();
+            await finish(initial, [parent, child]);
+
+            const stale = query();
+            const refresh = store.refresh();
+            const mutation = operation === 'delete' ? deferred<Result>() : query();
+            if (operation === 'delete') client.rpc.mockReturnValueOnce(mutation.promise);
+            const changed = operation === 'create'
+                ? project('new')
+                : { ...child, name: 'renamed', parent_project_id: null };
+            const pending = operation === 'create'
+                ? store.createProject({ name: 'new', parentProjectId: null })
+                : operation === 'update'
+                    ? store.updateProject({ projectId: 'child', name: 'renamed', parentProjectId: null })
+                    : store.deleteProject('parent');
+            mutation.resolve({ data: operation === 'delete' ? null : changed, error: null });
+            await pending;
+            const confirmed = operation === 'create' ? [parent, child, changed]
+                : operation === 'update' ? [parent, changed]
+                : [{ ...child, parent_project_id: null }];
+            expect(store.projects()).toEqual(confirmed);
+
+            const followUp = query();
+            await finish(stale, [parent, child]);
+            expect(store.projects()).toEqual(confirmed);
+            expect(store.loading()).toBe(true);
+            const authoritative = [...confirmed, project('external')];
+            await finish(followUp, authoritative);
+            await refresh;
+            expect(store.projects()).toEqual(authoritative);
+            expect(store.loading()).toBe(false);
+            expect(store.loadError()).toBeNull();
+            expect(store.error()).toBeNull();
+        },
+    );
+
+    it('ignores an invalidated failure and bounds follow-up reads across overlapping mutations', async () => {
+        const parent = project('parent');
+        const initial = query(); userId.set('A'); TestBed.tick(); await finish(initial, [parent]);
+        const stale = query();
+        const refresh = store.refresh().then(() => null, error => error);
+        const first = query();
+        const create = store.createProject({ name: 'new', parentProjectId: null });
+        const second = query();
+        const rename = store.updateProject({ projectId: 'parent', name: 'renamed', parentProjectId: null });
+        const renamed = { ...parent, name: 'renamed' };
+        second.resolve({ data: renamed, error: null }); await rename;
+
+        const followUp = query();
+        stale.resolve({ data: null, error: new Error('obsolete snapshot') });
+        await stale.promise; TestBed.tick();
+        expect(store.loadError()).toBeNull();
+        expect(store.error()).toBeNull();
+        expect(store.loading()).toBe(true);
+
+        const created = project('new');
+        first.resolve({ data: created, error: null }); await create;
+        await finish(followUp, [renamed]);
+        expect(await refresh).toBeNull();
+        expect(store.projects()).toEqual([renamed, created]);
+        expect(store.loading()).toBe(false);
+        expect(client.from).toHaveBeenCalledTimes(5);
+
+        const fresh = query(); const manual = store.refresh();
+        await finish(fresh, [created, renamed]); await manual;
+        expect(store.projects()).toEqual([created, renamed]);
+    });
+
+    it('reports a current follow-up failure without discarding confirmed projects', async () => {
+        const initial = query(); userId.set('A'); TestBed.tick(); await finish(initial, []);
+        const stale = query();
+        const refresh = store.refresh();
+        const create = query();
+        const mutation = store.createProject({ name: 'new', parentProjectId: null });
+        const created = project('new');
+        create.resolve({ data: created, error: null }); await mutation;
+
+        const followUp = query();
+        await finish(stale, []);
+        const failure = new Error('catch-up failed');
+        const rejected = expect(refresh).rejects.toBe(failure);
+        followUp.reject(failure); await rejected;
+        expect(store.projects()).toEqual([created]);
+        expect(store.loading()).toBe(false);
+        expect(store.loadError()).toBe('catch-up failed');
+        expect(store.error()).toBeNull();
+    });
+
     it('keeps a newer mutation error when an older refresh fails, and permits retry', async () => {
         const initial = query(); userId.set('A'); TestBed.tick(); await finish(initial, [project('existing')]);
         const old = query(); const refresh = store.refresh().catch(() => undefined);
