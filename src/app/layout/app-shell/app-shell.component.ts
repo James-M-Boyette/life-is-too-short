@@ -333,7 +333,7 @@ export class AppShellComponent {
         });
         // Keep shell protected even if someone deep-links into /tasks
         effect(() => {
-            if (!this.auth.isAuthed()) void this.router.navigateByUrl('/login');
+            if (!this.auth.initializing() && !this.auth.isAuthed()) void this.router.navigateByUrl('/login');
         });
     }
 

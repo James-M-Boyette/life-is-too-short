@@ -14,10 +14,9 @@
 
                 const redirectUrl = new URL(basePath, window.location.origin);
 
-                redirectUrl.searchParams.set(
-                    'redirect',
-                    route + search + hash
-                );
+                // Auth callback fragments may contain session tokens. Keep
+                // the handoff out of the HTTP request to the app root.
+                redirectUrl.hash = new URLSearchParams({ redirect: route + search + hash }).toString();
 
                 window.location.replace(redirectUrl.href);
             }

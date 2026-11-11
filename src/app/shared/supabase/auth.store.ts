@@ -1,9 +1,12 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import type { Session } from '@supabase/supabase-js';
-import { supabase } from './supabase.client';
+import { SUPABASE_CLIENT } from './supabase.client';
 
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
+    private readonly auth = inject(SUPABASE_CLIENT).auth;
+    private readonly pendingInitialSession = signal(true);
+    readonly initializing = this.pendingInitialSession.asReadonly();
     readonly session = signal<Session | null>(null);
 
     readonly user = computed(() => this.session()?.user ?? null);
@@ -11,19 +14,20 @@ export class AuthStore {
     readonly isAuthed = computed(() => !!this.userId());
 
     constructor() {
-        supabase.auth.getSession().then(({ data, error }) => {
-            if (!error) this.session.set(data.session);
-        });
-
-        supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = this.auth.onAuthStateChange((event, session) => {
+            // INITIAL_SESSION follows SDK restoration and URL handling. A
+            // live event may already have provided a newer session decision.
+            if (event === 'INITIAL_SESSION' && !this.initializing()) return;
             this.session.set(session);
+            this.pendingInitialSession.set(false);
         });
+        inject(DestroyRef).onDestroy(() => subscription.unsubscribe());
     }
 
     async signUp(email: string, password: string) {
         const emailRedirectTo = new URL('auth/callback', document.baseURI).toString();
 
-        const { error } = await supabase.auth.signUp({
+        const { error } = await this.auth.signUp({
             email,
             password,
             options: { emailRedirectTo },
@@ -33,12 +37,12 @@ export class AuthStore {
     }
 
     async signIn(email: string, password: string) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await this.auth.signInWithPassword({ email, password });
         if (error) throw error;
     }
 
     async signOut() {
-        const { error } = await supabase.auth.signOut();
+        const { error } = await this.auth.signOut();
         if (error) throw error;
     }
 }
