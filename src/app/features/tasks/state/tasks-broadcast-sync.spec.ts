@@ -71,6 +71,7 @@ describe('TasksStore private Broadcast synchronization', () => {
         ] });
         store = TestBed.inject(TasksStore); TestBed.tick();
         await empty(0);
+        signals.length = 0;
     });
     afterEach(() => { TestBed.resetTestingModule(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
@@ -146,6 +147,68 @@ describe('TasksStore private Broadcast synchronization', () => {
         await snapshot(2, [row('1', 'Recovered')]);
         pages[1].resolve({ data: [row('1', 'Obsolete timeout response')], error: null }); await flush();
         expect(store.tasks()[0].title).toBe('Recovered'); expect(store.loading()).toBe(false);
+    });
+
+    it('releases a stalled foreground refresh so API-only recovery can preserve an optimistic edit', async () => {
+        TestBed.inject(TASK_SYNC_CONFIG).mode = 'api-only';
+        user.set('B'); TestBed.tick();
+        const task = row('1', 'Confirmed', 'B');
+        await snapshot(1, [task]);
+
+        const foreground = store.refreshTasks().catch(error => error);
+        const stalled = pages.at(-1)!;
+        const foregroundSignal = signals.at(-1);
+        window.dispatchEvent(new Event('pageshow'));
+        await advance(29_999);
+        expect(store.loading()).toBe(true);
+        expect(pages).toHaveLength(4); // Recovery is waiting for the foreground read.
+
+        await advance(1);
+        expect(store.loading()).toBe(false);
+        expect((await foreground).message).toContain('timed out');
+        expect(foregroundSignal?.aborted).toBe(true);
+        expect(store.tasks()).toEqual([task]);
+        expect(store.error()).toContain('timed out');
+
+        const save = deferred<{ data: { title: string; description: null }; error: null }>();
+        single.mockReturnValueOnce(save.promise);
+        const mutation = store.updateContent(task, { title: 'Optimistic', description: null });
+        await advance();
+        await snapshot(4, [task, row('2', 'Recovered', 'B')]);
+        expect(store.tasks().find(current => current.id === task.id)?.title).toBe('Optimistic');
+        expect(store.tasks().find(current => current.id === '2')?.title).toBe('Recovered');
+        expect(store.loading()).toBe(false);
+
+        stalled.reject(new Error('Late transport failure')); await flush();
+        expect(store.error()).toBeNull();
+        expect(store.syncError()).toBeNull();
+        expect(store.tasks().find(current => current.id === task.id)?.title).toBe('Optimistic');
+
+        save.resolve({ data: { title: 'Optimistic', description: null }, error: null }); await mutation;
+        await advance(); await snapshot(6, [row('1', 'Optimistic', 'B'), row('2', 'Recovered', 'B')]);
+        expect(update).toHaveBeenCalledTimes(1);
+        expect(pages).toHaveLength(8);
+    });
+
+    it.each(['manual refresh', 'account switch'])('ignores an old foreground deadline after a newer %s', async transition => {
+        const timedOut = vi.fn();
+        const old = store.refreshTasks().catch(timedOut);
+        const oldPage = pages.at(-1)!;
+        await advance(1000);
+        const newer = transition === 'manual refresh' ? store.refreshTasks() : undefined;
+        if (transition === 'account switch') { user.set('B'); TestBed.tick(); }
+        const nextPage = pages.length - 1;
+        await advance(29_000);
+        expect(timedOut).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('timed out') }));
+        await old;
+        expect(store.loading()).toBe(true);
+        expect(store.error()).toBeNull();
+        const latest = row('1', 'New snapshot', transition === 'account switch' ? 'B' : 'A');
+        await snapshot(nextPage, [latest]); await newer;
+        oldPage.resolve({ data: [row('1', 'Late response')], error: null }); await flush();
+        expect(store.tasks()).toEqual([latest]);
+        expect(store.loading()).toBe(false);
+        expect(store.error()).toBeNull();
     });
 
     it('times out a later page atomically and passes one cancellation signal through all pages', async () => {

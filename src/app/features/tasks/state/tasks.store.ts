@@ -264,18 +264,10 @@ export class TasksStore {
             firstDirtyAt = null;
             const controller = new AbortController();
             this.backgroundAbort = controller;
-            // Bound the whole snapshot, not just each page. The race releases
-            // coordination even if a transport ignores AbortSignal entirely.
-            const deadline = setTimeout(() => controller.abort(new Error('Task synchronization timed out')), 30_000);
-            let rejectAbort!: () => void;
-            const aborted = new Promise<never>((_, reject) => {
-                rejectAbort = () => reject(controller.signal.reason);
-                controller.signal.addEventListener('abort', rejectAbort, { once: true });
-            });
             const snapshot = this.refreshSnapshot(true, controller.signal);
             const request = this.latestRefreshRequest;
             try {
-                const result = await Promise.race([snapshot, aborted]);
+                const result = await this.withSnapshotDeadline(snapshot, controller, 'Task synchronization timed out');
                 if (!current()) return;
                 if (result.applied) {
                     attempts = 0; retryAt = 0;
@@ -291,8 +283,6 @@ export class TasksStore {
                 attempts++;
                 retryAt = Date.now() + ([1000, 5000, 15000][attempts - 1] ?? 15000);
             } finally {
-                clearTimeout(deadline);
-                controller.signal.removeEventListener('abort', rejectAbort);
                 if (this.backgroundAbort === controller) this.backgroundAbort = null;
                 running = false;
                 if (current()) schedule();
@@ -400,10 +390,45 @@ export class TasksStore {
 
     async refreshTasks(): Promise<void> {
         this.backgroundAbort?.abort(new Error('Task synchronization superseded by manual refresh'));
-        await this.refreshSnapshot(false);
+        const generation = this.sessionGeneration;
+        const userId = this.auth.userId();
+        const controller = new AbortController();
+        const timeoutMessage = 'Task refresh timed out. Check your connection and try again.';
+        const snapshot = this.refreshSnapshot(false, controller.signal);
+        const request = this.latestRefreshRequest;
+        try {
+            await this.withSnapshotDeadline(snapshot, controller, timeoutMessage);
+        } catch (error: unknown) {
+            // A timed-out transport may never run refreshSnapshot's finally block.
+            if (controller.signal.aborted && request === this.latestRefreshRequest &&
+                generation === this.sessionGeneration && userId === this.auth.userId()) {
+                this.error.set(timeoutMessage);
+                this.loading.set(false);
+                this.wakeSync?.();
+            }
+            throw error;
+        }
     }
 
-    private async refreshSnapshot(background: boolean, signal?: AbortSignal): Promise<{ applied: boolean; protected: boolean }> {
+    private async withSnapshotDeadline<T>(snapshot: Promise<T>, controller: AbortController, message: string): Promise<T> {
+        // Bound the complete snapshot even if the transport ignores cancellation.
+        const { signal } = controller;
+        const deadline = setTimeout(() => controller.abort(new Error(message)), 30_000);
+        let rejectAbort!: () => void;
+        const aborted = new Promise<never>((_, reject) => {
+            rejectAbort = () => reject(signal.reason);
+            if (signal.aborted) rejectAbort();
+            else signal.addEventListener('abort', rejectAbort, { once: true });
+        });
+        try {
+            return await Promise.race([snapshot, aborted]);
+        } finally {
+            clearTimeout(deadline);
+            signal.removeEventListener('abort', rejectAbort);
+        }
+    }
+
+    private async refreshSnapshot(background: boolean, signal: AbortSignal): Promise<{ applied: boolean; protected: boolean }> {
         const generationAtStart = this.sessionGeneration;
         const userIdAtStart = this.auth.userId();
         const requestId = ++this.latestRefreshRequest;
@@ -412,7 +437,7 @@ export class TasksStore {
         const ownsRefresh = () =>
             generationAtStart === this.sessionGeneration &&
             userIdAtStart === this.auth.userId() &&
-            requestId === this.latestRefreshRequest && !signal?.aborted;
+            requestId === this.latestRefreshRequest && !signal.aborted;
 
         // Snapshot the revisions when this particular query starts.
         const revisionsAtStart = new Map(this.taskRevisions);
@@ -432,8 +457,7 @@ export class TasksStore {
                 let query = this.supabase.from('tasks').select('*')
                     .order('id', { ascending: true });
                 if (cursor !== undefined) query = query.gt('id', cursor);
-                if (signal) query = query.abortSignal(signal);
-                const { data, error } = await query.limit(500);
+                const { data, error } = await query.abortSignal(signal).limit(500);
                 if (error) throw error;
                 if (!ownsRefresh()) return { applied: false, protected: false };
                 if (!Array.isArray(data)) throw new Error('Incomplete task snapshot: invalid page');
@@ -514,7 +538,7 @@ export class TasksStore {
             throw error;
         } finally {
             if (!background && ownsRefresh()) this.loading.set(false);
-            if (!background && generationAtStart === this.sessionGeneration && userIdAtStart === this.auth.userId()) this.wakeSync?.();
+            if (!background && !signal.aborted && generationAtStart === this.sessionGeneration && userIdAtStart === this.auth.userId()) this.wakeSync?.();
         }
     }
 

@@ -38,7 +38,11 @@ function createTask(overrides: Partial<Task> = {}): Task {
 function snapshotQuery(response: unknown, continuation = false) {
     const query = {
         order: vi.fn().mockReturnThis(),
-        gt: vi.fn().mockImplementation(() => continuation ? query : { limit: vi.fn().mockResolvedValue({ data: [], error: null }) }),
+        gt: vi.fn().mockImplementation(() => continuation ? query : {
+            abortSignal: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+        abortSignal: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnValue(response),
     };
     return query;
@@ -359,6 +363,7 @@ describe('TasksStore', () => {
             const query = {
                 select: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(),
                 gt: vi.fn((_field, value) => { cursor = value; return query; }),
+                abortSignal: vi.fn().mockReturnThis(),
                 limit: vi.fn(value => { limit = value; return query; }),
                 then: (resolve: (result: { data: Task[]; error: null }) => unknown) => {
                     const data = rows.filter(row => row.id > cursor).slice(0, Math.min(limit, 1000));
@@ -390,6 +395,7 @@ describe('TasksStore', () => {
                     expect(field).toBe('id'); expect(options).toEqual({ ascending: true }); return query;
                 }),
                 gt: vi.fn((field, value) => { expect(field).toBe('id'); cursor = value; return query; }),
+                abortSignal: vi.fn().mockReturnThis(),
                 limit: vi.fn(value => { limit = value; return query; }),
                 then: (resolve: (result: { data: Task[]; error: null }) => unknown) => {
                     requests.push({ cursor, limit });
