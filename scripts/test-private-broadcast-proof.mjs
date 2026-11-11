@@ -7,6 +7,10 @@ import { createClient } from '@supabase/supabase-js';
 import { prepare, sql, localCli, work, project, owned, root, command } from './test-local-supabase-services.mjs';
 
 const migrationName = '20261109060000_add_private_task_broadcast.sql';
+const reportArg = process.argv.indexOf('--report-file');
+const reportFile = reportArg < 0 ? path.join(root,'documentation/verification/private-task-broadcast-migration-results.json')
+  : path.resolve(process.argv[reportArg + 1] ?? '');
+assert(reportArg < 0 || reportFile.startsWith(path.join(root,'tmp') + path.sep), 'Alternate report must stay in ignored local tmp');
 const report = { migration: migrationName, checks: [], blockers: [], audit: {}, environment: {} };
 const clients = [];
 const observations = [];
@@ -341,6 +345,6 @@ try {
   report.observations=observations.map(o=>({topic:o.topic,statuses:o.statuses,eventCount:o.events.length,systems:o.systems}));
   report.result=report.failure?'blocked':process.argv.includes('--audit-only')?'audit-only':'passed';
   fs.mkdirSync(path.join(root,'documentation/verification'),{recursive:true});
-  fs.writeFileSync(path.join(root,'documentation/verification/private-task-broadcast-migration-results.json'),JSON.stringify(report,null,2)+'\n');
+  fs.writeFileSync(reportFile,JSON.stringify(report,null,2)+'\n');
   if (owned && !process.argv.includes('--keep-stack')) localCli(['stop','--no-backup']);
 }
