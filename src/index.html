@@ -5,8 +5,9 @@
         <title>LifeIsTooShort</title>
         <base href="/" />
         <script>
-            const params = new URLSearchParams(window.location.search);
-            const redirect = params.get('redirect');
+            const fragmentParams = new URLSearchParams(window.location.hash.slice(1));
+            const redirect = fragmentParams.get('redirect') ??
+                new URLSearchParams(window.location.search).get('redirect');
 
             if (redirect !== null) {
                 const basePath = document.querySelector('base').getAttribute('href');

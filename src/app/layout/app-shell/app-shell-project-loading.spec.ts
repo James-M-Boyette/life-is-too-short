@@ -34,7 +34,7 @@ describe('Shell project loading recovery', () => {
         await TestBed.configureTestingModule({ imports: [AppShellComponent], providers: [
             provideRouter([]),
             { provide: BreakpointObserver, useValue: { isMatched: () => false, observe: () => of({ matches: false }) } },
-            { provide: AuthStore, useValue: { userId: owner, isAuthed: computed(() => owner() !== null), user: computed(() => owner() ? { id: owner(), email: 'fixture@example.test' } : null) } },
+            { provide: AuthStore, useValue: { initializing: signal(false), userId: owner, isAuthed: computed(() => owner() !== null), user: computed(() => owner() ? { id: owner(), email: 'fixture@example.test' } : null) } },
             { provide: SUPABASE_CLIENT, useValue: { from } },
             { provide: TasksStore, useValue: { tasks: signal([]) } },
         ] }).compileComponents();

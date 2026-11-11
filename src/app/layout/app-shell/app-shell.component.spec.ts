@@ -28,6 +28,8 @@ describe('responsive AppShellComponent', () => {
     let fixture: ComponentFixture<AppShellComponent>;
     let viewport: ReplaySubject<BreakpointState>;
     let tree: ReturnType<typeof signal<ProjectNode[]>>;
+    const initializing = signal(false);
+    const isAuthed = signal(true);
     const signOut = vi.fn().mockResolvedValue(undefined);
     const button = (name: string) => Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
         .find(b => b.getAttribute('aria-label') === name || b.textContent?.trim() === name)!;
@@ -42,6 +44,8 @@ describe('responsive AppShellComponent', () => {
     async function open() { button('Show navigation').click(); await settle(); }
     beforeEach(async () => {
         signOut.mockClear();
+        initializing.set(false);
+        isAuthed.set(true);
         viewport = new ReplaySubject<BreakpointState>(1);
         viewport.next({ matches: true, breakpoints: {} });
         tree = signal([project('Parent', [project('Child')])]);
@@ -50,7 +54,7 @@ describe('responsive AppShellComponent', () => {
             providers: [
                 provideRouter([{ path: '**', component: TestPage }]),
                 { provide: BreakpointObserver, useValue: { isMatched: () => true, observe: () => viewport.asObservable() } },
-                { provide: AuthStore, useValue: { isAuthed: signal(true), user: signal({ id: 'test', email: 'test@example.com' }), userId: signal<string | null>('test'), signOut } },
+                { provide: AuthStore, useValue: { initializing, isAuthed, user: signal({ id: 'test', email: 'test@example.com' }), userId: signal<string | null>('test'), signOut } },
                 { provide: ProjectsStore, useValue: { loadError: signal(null), projectTree: tree, projects: signal([project('Parent').project]), getProject: () => project('Parent').project } },
                 { provide: TasksStore, useValue: { tasks: signal([]) } },
             ],
@@ -60,6 +64,37 @@ describe('responsive AppShellComponent', () => {
         await settle();
     });
     afterEach(() => { fixture.destroy(); viewport.complete(); });
+
+    it.each(['/tasks/project/Parent', '/tasks/today'])('preserves %s while the stored session is restored', async path => {
+        const router = TestBed.inject(Router);
+        fixture.destroy();
+        initializing.set(true);
+        isAuthed.set(false);
+        await router.navigateByUrl(path);
+        fixture = TestBed.createComponent(AppShellComponent);
+        await settle();
+        expect(router.url).toBe(path);
+
+        isAuthed.set(true);
+        initializing.set(false);
+        await settle();
+        expect(router.url).toBe(path);
+    });
+
+    it('redirects to login once startup confirms there is no session', async () => {
+        const router = TestBed.inject(Router);
+        fixture.destroy();
+        initializing.set(true);
+        isAuthed.set(false);
+        await router.navigateByUrl('/tasks/today');
+        fixture = TestBed.createComponent(AppShellComponent);
+        await settle();
+        expect(router.url).toBe('/tasks/today');
+
+        initializing.set(false);
+        await settle();
+        expect(router.url).toBe('/login');
+    });
 
     it('opens a modal drawer, closes explicitly and by backdrop, and restores toggle focus', async () => {
         const toggle = button('Show navigation');
