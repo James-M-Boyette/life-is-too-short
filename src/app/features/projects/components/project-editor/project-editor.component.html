@@ -15,9 +15,7 @@
         />
 
         @if (form.controls.name.touched && form.controls.name.invalid) {
-            <small class="field-error">
-                Project name is required.
-            </small>
+            <small class="field-error"> Project name is required. </small>
         }
     </div>
 
@@ -30,12 +28,20 @@
             formControlName="parentProject"
             placeholder="None (top-level project)"
             [showClear]="true"
-            [pt]="{ hiddenInput: { 'aria-describedby': form.controls.parentProject.invalid ? 'parent-project-error' : undefined, 'aria-invalid': form.controls.parentProject.invalid } }"
+            [pt]="{
+                hiddenInput: {
+                    'aria-describedby': form.controls.parentProject.invalid
+                        ? 'parent-project-error'
+                        : undefined,
+                    'aria-invalid': form.controls.parentProject.invalid,
+                },
+            }"
             appendTo="body"
         />
         @if (form.controls.parentProject.hasError('unavailableParent')) {
             <small id="parent-project-error" class="field-error" role="alert">
-                The selected parent is no longer available. Choose another parent or clear the selection.
+                The selected parent is no longer available. Choose another parent or clear the
+                selection.
             </small>
         }
     </div>
@@ -52,11 +58,7 @@
             <span pButtonLabel>Cancel</span>
         </button>
 
-        <button
-            pButton
-            type="submit"
-            [disabled]="form.invalid || disabled()"
-        >
+        <button pButton type="submit" [disabled]="form.invalid || disabled()">
             <span pButtonLabel>{{ isEditing() ? 'Save Changes' : 'Create Project' }}</span>
         </button>
     </footer>

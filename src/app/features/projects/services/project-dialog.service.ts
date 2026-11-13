@@ -15,5 +15,7 @@ export class ProjectDialogService {
     private readonly intentions = new Subject<ProjectDialogRequest>();
     readonly requests = this.intentions.asObservable();
 
-    open(request: ProjectDialogRequest): void { this.intentions.next(request); }
+    open(request: ProjectDialogRequest): void {
+        this.intentions.next(request);
+    }
 }

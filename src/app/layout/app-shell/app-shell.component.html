@@ -1,7 +1,11 @@
 <div class="app-shell" [class.is-mobile]="mobile()" [attr.inert]="navigationOpen() ? '' : null">
     <!-- App Header -->
     @if (mobile()) {
-        <app-top-bar [navigationOpen]="navigationOpen()" (showNavigation)="openNavigation()" (createTask)="openTaskDialog()" />
+        <app-top-bar
+            [navigationOpen]="navigationOpen()"
+            (showNavigation)="openNavigation()"
+            (createTask)="openTaskDialog()"
+        />
     }
 
     <div class="app-body" [style.grid-template-columns]="shellColumns()">
@@ -9,45 +13,88 @@
         <div class="desktop-navigation" [hidden]="mobile()">
             @if (!mobile() && desktopCollapsed()) {
                 <nav class="navigation-rail" aria-label="Quick navigation">
-                    <button type="button" class="navigation-control expand-navigation" aria-label="Expand navigation"
-                        aria-expanded="false" aria-controls="desktop-sidebar-content" pTooltip="Expand navigation" tooltipPosition="right"
-                        (click)="setDesktopCollapsed(false)"><i class="pi pi-angle-double-right" aria-hidden="true"></i></button>
+                    <button
+                        type="button"
+                        class="navigation-control expand-navigation"
+                        aria-label="Expand navigation"
+                        aria-expanded="false"
+                        aria-controls="desktop-sidebar-content"
+                        pTooltip="Expand navigation"
+                        tooltipPosition="right"
+                        (click)="setDesktopCollapsed(false)"
+                        ><i class="pi pi-angle-double-right" aria-hidden="true"></i
+                    ></button>
                     @for (destination of railDestinations; track destination.route) {
-                        <a class="navigation-control" [routerLink]="destination.route" routerLinkActive="active" ariaCurrentWhenActive="page"
-                            [attr.aria-label]="destination.label" [pTooltip]="destination.label" tooltipPosition="right">
+                        <a
+                            class="navigation-control"
+                            [routerLink]="destination.route"
+                            routerLinkActive="active"
+                            ariaCurrentWhenActive="page"
+                            [attr.aria-label]="destination.label"
+                            [pTooltip]="destination.label"
+                            tooltipPosition="right"
+                        >
                             <i [class]="destination.icon" aria-hidden="true"></i>
                         </a>
                     }
                 </nav>
             } @else if (!mobile()) {
-                <button type="button" class="navigation-control collapse-navigation" aria-label="Collapse navigation"
-                    aria-expanded="true" aria-controls="desktop-sidebar-content" pTooltip="Collapse navigation" tooltipPosition="right"
-                    (click)="setDesktopCollapsed(true)"><i class="pi pi-angle-double-left" aria-hidden="true"></i></button>
+                <button
+                    type="button"
+                    class="navigation-control collapse-navigation"
+                    aria-label="Collapse navigation"
+                    aria-expanded="true"
+                    aria-controls="desktop-sidebar-content"
+                    pTooltip="Collapse navigation"
+                    tooltipPosition="right"
+                    (click)="setDesktopCollapsed(true)"
+                    ><i class="pi pi-angle-double-left" aria-hidden="true"></i
+                ></button>
             }
-            <aside #sidebarContent id="desktop-sidebar-content" class="app-sidebar" [hidden]="desktopHidden()" [attr.inert]="desktopHidden() ? '' : null">
-            <app-account-controls [user]="auth.user()" [available]="mobile() ? navigationOpen() : !desktopCollapsed()" [mobile]="mobile()"
-                [pending]="signingOut()" [error]="signOutError()" (signOut)="signOut()" />
-            @if (projectsStore.loadError()) {
-                <div class="project-load-error" role="alert">
-                    <p>Could not load projects. Check your connection and try again.</p>
-                    <p-button label="Retry loading projects" [text]="true" [loading]="projectsStore.loading()" [disabled]="projectsStore.loading()" (onClick)="retryProjects()" />
-                </div>
-            }
-            <app-sidebar
-                [projects]="projectsStore.projectTree()"
-                [expandProjectRequest]="expandProjectRequest()"
-                [available]="mobile() ? navigationOpen() : !desktopCollapsed()" [mobile]="mobile()"
-                (editProject)="openEditProjectDialog($event)"
-                (deleteProject)="openDeleteProjectDialog($event)"
-                (navigated)="closeNavigation()"
-                (createTask)="openTaskDialog()"
-                (createProject)="openCreateProjectDialog()"
-            />
-        </aside></div>
+            <aside
+                #sidebarContent
+                id="desktop-sidebar-content"
+                class="app-sidebar"
+                [hidden]="desktopHidden()"
+                [attr.inert]="desktopHidden() ? '' : null"
+            >
+                <app-account-controls
+                    [user]="auth.user()"
+                    [available]="mobile() ? navigationOpen() : !desktopCollapsed()"
+                    [mobile]="mobile()"
+                    [pending]="signingOut()"
+                    [error]="signOutError()"
+                    (signOut)="signOut()"
+                />
+                @if (projectsStore.loadError()) {
+                    <div class="project-load-error" role="alert">
+                        <p>Could not load projects. Check your connection and try again.</p>
+                        <p-button
+                            label="Retry loading projects"
+                            [text]="true"
+                            [loading]="projectsStore.loading()"
+                            [disabled]="projectsStore.loading()"
+                            (onClick)="retryProjects()"
+                        />
+                    </div>
+                }
+                <app-sidebar
+                    [projects]="projectsStore.projectTree()"
+                    [expandProjectRequest]="expandProjectRequest()"
+                    [available]="mobile() ? navigationOpen() : !desktopCollapsed()"
+                    [mobile]="mobile()"
+                    (editProject)="openEditProjectDialog($event)"
+                    (deleteProject)="openDeleteProjectDialog($event)"
+                    (navigated)="closeNavigation()"
+                    (createTask)="openTaskDialog()"
+                    (createProject)="openCreateProjectDialog()"
+                /> </aside
+        ></div>
 
         <!-- Vertical Border Handle (for re-sizing) -->
         <div
-            class="sidebar-resize-handle" [hidden]="mobile() || desktopCollapsed()"
+            class="sidebar-resize-handle"
+            [hidden]="mobile() || desktopCollapsed()"
             role="separator"
             aria-label="Resize sidebar"
             aria-orientation="vertical"
@@ -71,12 +118,31 @@
     </div>
 </div>
 
-<p-drawer #navigationDrawer [visible]="mobile() && navigationOpen()" (visibleChange)="!$event && closeNavigation()"
-    header="Navigation" ariaCloseLabel="Close navigation" [modal]="true" [blockScroll]="true"
-    [dismissible]="true" [closeOnEscape]="true" [style]="drawerStyle" appendTo="body"
-    [pt]="{ root: { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Navigation', id: 'mobile-navigation' } }"
-    (onShow)="navigationShown()">
-    <ng-template #content><ng-template [cdkPortalOutlet]="mobile() ? sidebarPortal() : null" /></ng-template>
+<p-drawer
+    #navigationDrawer
+    [visible]="mobile() && navigationOpen()"
+    (visibleChange)="!$event && closeNavigation()"
+    header="Navigation"
+    ariaCloseLabel="Close navigation"
+    [modal]="true"
+    [blockScroll]="true"
+    [dismissible]="true"
+    [closeOnEscape]="true"
+    [style]="drawerStyle"
+    appendTo="body"
+    [pt]="{
+        root: {
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-label': 'Navigation',
+            id: 'mobile-navigation',
+        },
+    }"
+    (onShow)="navigationShown()"
+>
+    <ng-template #content
+        ><ng-template [cdkPortalOutlet]="mobile() ? sidebarPortal() : null"
+    /></ng-template>
 </p-drawer>
 
 <p-dialog

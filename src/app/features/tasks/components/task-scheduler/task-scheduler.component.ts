@@ -35,7 +35,9 @@ export class TaskSchedulerComponent {
     ];
     protected readonly quickDates = computed(() => getQuickDates(this.today()));
     protected readonly currentDate = computed(() => parseLocalDate(this.task()[this.field()]));
-    protected readonly persistedDate = computed(() => parseLocalDate(this.persistedTask()[this.field()]));
+    protected readonly persistedDate = computed(() =>
+        parseLocalDate(this.persistedTask()[this.field()]),
+    );
     protected readonly calendarStart = computed(() => parseLocalDate(this.today())!);
     protected readonly blocked = computed(() => this.pending() || this.disabled());
 

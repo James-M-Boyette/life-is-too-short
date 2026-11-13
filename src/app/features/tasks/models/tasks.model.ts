@@ -1,11 +1,5 @@
 // What state(s) can a task have?
-export type TaskStatus =
-    'todo' |
-    'in_progress' |
-    'waiting' |
-    'deferred' |
-    'cancelled' |
-    'done';
+export type TaskStatus = 'todo' | 'in_progress' | 'waiting' | 'deferred' | 'cancelled' | 'done';
 
 // What makes-up a "Task"?
 export type Task = {

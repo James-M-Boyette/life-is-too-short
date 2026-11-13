@@ -62,7 +62,10 @@ export class ProjectsStore {
         return session.generation === this.generation && session.userId === this.auth.userId();
     }
 
-    private applyMutation(session: ProjectSession, update: (projects: Project[]) => Project[]): void {
+    private applyMutation(
+        session: ProjectSession,
+        update: (projects: Project[]) => Project[],
+    ): void {
         if (!this.isCurrent(session)) return;
         this.mutationRevision++;
         this.projects.update(update);
@@ -106,7 +109,9 @@ export class ProjectsStore {
                 const revision = this.mutationRevision;
                 try {
                     const { data, error } = await this.supabase
-                        .from('projects').select('*').order('name', { ascending: true });
+                        .from('projects')
+                        .select('*')
+                        .order('name', { ascending: true });
                     if (error) throw error;
                     if (!ownsRefresh()) return;
                     if (revision !== this.mutationRevision) continue;
@@ -120,7 +125,9 @@ export class ProjectsStore {
             }
         } catch (error: unknown) {
             if (ownsRefresh()) {
-                this.loadError.set(error instanceof Error ? error.message : 'Failed to load projects');
+                this.loadError.set(
+                    error instanceof Error ? error.message : 'Failed to load projects',
+                );
             }
             this.recordError(session, id, error);
             throw error;
@@ -152,10 +159,7 @@ export class ProjectsStore {
         }
 
         // Validate that the selected parent belongs to the loaded project set.
-        if (
-            input.parentProjectId !== null &&
-            !this.projectsById().has(input.parentProjectId)
-        ) {
+        if (input.parentProjectId !== null && !this.projectsById().has(input.parentProjectId)) {
             throw new Error('Selected parent project does not exist');
         }
 
@@ -177,10 +181,7 @@ export class ProjectsStore {
 
             const createdProject = data as Project;
 
-            this.applyMutation(session, projects => [
-                ...projects,
-                createdProject,
-            ]);
+            this.applyMutation(session, (projects) => [...projects, createdProject]);
 
             return createdProject;
         } catch (error: unknown) {
@@ -225,9 +226,7 @@ export class ProjectsStore {
 
             while (current) {
                 if (current.id === project.id) {
-                    throw new Error(
-                        'A project cannot be moved beneath itself or its descendants'
-                    );
+                    throw new Error('A project cannot be moved beneath itself or its descendants');
                 }
 
                 if (visited.has(current.id)) {
@@ -261,12 +260,10 @@ export class ProjectsStore {
 
             const updatedProject = data as Project;
 
-            this.applyMutation(session, projects =>
-                projects.map(existing =>
-                    existing.id === updatedProject.id
-                        ? updatedProject
-                        : existing
-                )
+            this.applyMutation(session, (projects) =>
+                projects.map((existing) =>
+                    existing.id === updatedProject.id ? updatedProject : existing,
+                ),
             );
 
             return updatedProject;
@@ -302,14 +299,14 @@ export class ProjectsStore {
 
             // The database operation succeeded. Remove the deleted project
             // from our local state so the sidebar updates immediately.
-            this.applyMutation(session, projects =>
+            this.applyMutation(session, (projects) =>
                 projects
-                    .filter(existing => existing.id !== projectId)
-                    .map(existing =>
+                    .filter((existing) => existing.id !== projectId)
+                    .map((existing) =>
                         existing.parent_project_id === projectId
                             ? { ...existing, parent_project_id: null }
-                            : existing
-                    )
+                            : existing,
+                    ),
             );
         } catch (error: unknown) {
             this.recordError(session, requestId, error);

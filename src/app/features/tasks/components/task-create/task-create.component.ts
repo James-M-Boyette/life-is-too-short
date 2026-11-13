@@ -16,10 +16,7 @@ import {
     findTreeNodeByKey,
 } from '@/features/projects/utils/project-tree-node.util';
 import { DatePickerModule } from 'primeng/datepicker';
-import {
-    parseLocalDate,
-    formatLocalDate,
-} from '@/shared/utils/date.util';
+import { parseLocalDate, formatLocalDate } from '@/shared/utils/date.util';
 
 export type CreateTaskPayload = {
     title: string;

@@ -1,6 +1,1 @@
-export type TaskView =
-    | 'all'
-    | 'inbox'
-    | 'today'
-    | 'upcoming'
-    | 'project';
+export type TaskView = 'all' | 'inbox' | 'today' | 'upcoming' | 'project';

@@ -6,10 +6,7 @@ export function getTaskDisplayDate(task: Task): string | null {
     return task.planned_date ?? task.due_date;
 }
 
-export function getTaskDateGroup(
-    task: Task,
-    today: string,
-): TaskDateGroup {
+export function getTaskDateGroup(task: Task, today: string): TaskDateGroup {
     const displayDate = getTaskDisplayDate(task);
 
     if (!displayDate) return 'unscheduled';

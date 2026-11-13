@@ -6,7 +6,9 @@
         height: 100%;
         display: grid;
         grid-template-rows: minmax(0, 1fr);
-        &.is-mobile { grid-template-rows: auto minmax(0, 1fr); }
+        &.is-mobile {
+            grid-template-rows: auto minmax(0, 1fr);
+        }
     }
 
     div.app-body {
@@ -17,7 +19,13 @@
         //     var(--app-sidebar-width)
         //     minmax(0, 1fr);
 
-        .desktop-navigation { position: relative; min-width: 0; min-height: 0; overflow-y: auto; background: var(--surface-sidebar); }
+        .desktop-navigation {
+            position: relative;
+            min-width: 0;
+            min-height: 0;
+            overflow-y: auto;
+            background: var(--surface-sidebar);
+        }
 
         div.sidebar-resize-handle {
             width: 6px;
@@ -70,20 +78,71 @@
 
 // Also applies after CDK relocates the same aside into PrimeNG's body-appended drawer.
 // The grid wrapper / drawer content owns scrolling; this surface can grow with its content.
-.app-sidebar { min-width: 0; min-height: 100%; box-sizing: border-box; background: var(--surface-sidebar); }
+.app-sidebar {
+    min-width: 0;
+    min-height: 100%;
+    box-sizing: border-box;
+    background: var(--surface-sidebar);
+}
 :host .app-shell.is-mobile {
-    .app-main { padding: var(--space-3); padding-bottom: max(var(--space-3), env(safe-area-inset-bottom)); padding-left: max(var(--space-3), env(safe-area-inset-left)); padding-right: max(var(--space-3), env(safe-area-inset-right)); }
-    .sidebar-resize-handle, .desktop-navigation { display: none; }
+    .app-main {
+        padding: var(--space-3);
+        padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+        padding-left: max(var(--space-3), env(safe-area-inset-left));
+        padding-right: max(var(--space-3), env(safe-area-inset-right));
+    }
+    .sidebar-resize-handle,
+    .desktop-navigation {
+        display: none;
+    }
 }
 
-.navigation-control { display: grid; place-items: center; box-sizing: border-box; width: 2.75rem; height: 2.75rem; flex: none; padding: 0; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--color-text-secondary); text-decoration: none; cursor: pointer; }
-.navigation-control:hover { background: var(--color-surface-hover); }
-.navigation-control:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: -2px; }
-.navigation-control.active { background: var(--color-surface-selected); color: var(--color-action-primary); }
-.navigation-rail { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); box-sizing: border-box; min-height: 100%; padding: var(--space-2); border-inline-end: 1px solid var(--color-border-subtle); }
-.collapse-navigation { position: absolute; inset-inline-end: var(--space-3); top: var(--space-3); z-index: 1; }
+.navigation-control {
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: none;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    cursor: pointer;
+}
+.navigation-control:hover {
+    background: var(--color-surface-hover);
+}
+.navigation-control:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: -2px;
+}
+.navigation-control.active {
+    background: var(--color-surface-selected);
+    color: var(--color-action-primary);
+}
+.navigation-rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    box-sizing: border-box;
+    min-height: 100%;
+    padding: var(--space-2);
+    border-inline-end: 1px solid var(--color-border-subtle);
+}
+.collapse-navigation {
+    position: absolute;
+    inset-inline-end: var(--space-3);
+    top: var(--space-3);
+    z-index: 1;
+}
 // Reserve a fixed target beside the account trigger without affecting the relocated mobile aside.
-.desktop-navigation > .app-sidebar > app-account-controls { padding-inline-end: calc(var(--space-3) + 2.75rem); }
+.desktop-navigation > .app-sidebar > app-account-controls {
+    padding-inline-end: calc(var(--space-3) + 2.75rem);
+}
 
 .project-load-error {
     padding: var(--space-3);

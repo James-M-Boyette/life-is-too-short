@@ -4,9 +4,7 @@
 
     <form [formGroup]="form" (ngSubmit)="signIn()" class="login-form">
         <div class="input-wrapper">
-            <label #email>
-                Email
-            </label>
+            <label #email> Email </label>
             <input type="email" formControlName="email" autocomplete="email" />
         </div>
 
@@ -19,10 +17,14 @@
         </label> -->
 
         <div class="input-wrapper">
-            <label #password>
-                Password
-            </label>
-            <p-password formControlName="password"  [toggleMask]="true" autocomplete="current-password" [showClear]="true" [feedback]="false"/>
+            <label #password> Password </label>
+            <p-password
+                formControlName="password"
+                [toggleMask]="true"
+                autocomplete="current-password"
+                [showClear]="true"
+                [feedback]="false"
+            />
         </div>
         <!-- <label>
             Password

@@ -31,19 +31,13 @@ export function toProjectTreeNodes(
             leaf: !hasChildren,
             expanded: expandedProjectIds.has(node.project.id),
             children: hasChildren
-                ? toProjectTreeNodes(
-                    node.children,
-                    expandedProjectIds,
-                )
+                ? toProjectTreeNodes(node.children, expandedProjectIds)
                 : undefined,
         };
     });
 }
 
-export function findTreeNodeByKey(
-    nodes: TreeNode[],
-    key: string,
-): TreeNode | null {
+export function findTreeNodeByKey(nodes: TreeNode[], key: string): TreeNode | null {
     for (const node of nodes) {
         if (node.key === key) {
             return node;

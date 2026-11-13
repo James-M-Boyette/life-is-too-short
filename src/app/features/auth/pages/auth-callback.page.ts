@@ -12,7 +12,9 @@ export class AuthCallbackPage {
     constructor() {
         effect(() => {
             if (this.auth.initializing()) return;
-            void this.router.navigateByUrl(this.auth.isAuthed() ? '/tasks' : '/login', { replaceUrl: true });
+            void this.router.navigateByUrl(this.auth.isAuthed() ? '/tasks' : '/login', {
+                replaceUrl: true,
+            });
         });
     }
 }

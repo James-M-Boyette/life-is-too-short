@@ -19,9 +19,13 @@ export class TaskDescriptionComponent {
 
     protected requestEdit(event: MouseEvent): void {
         const target = event.target;
-        if (!this.editable() || !(target instanceof Element) ||
+        if (
+            !this.editable() ||
+            !(target instanceof Element) ||
             target.closest('a, button, input, textarea, select, [role="button"]') ||
-            !window.getSelection()?.isCollapsed) return;
+            !window.getSelection()?.isCollapsed
+        )
+            return;
         this.editRequested.emit();
     }
 

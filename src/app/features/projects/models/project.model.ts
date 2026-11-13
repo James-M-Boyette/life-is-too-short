@@ -7,7 +7,8 @@ export type Project = {
     updated_at: string;
 };
 
-export type ProjectNode = { // 'ProjectNode' is a tree node / an hierarchical representation that contains a Project and its children.
+export type ProjectNode = {
+    // 'ProjectNode' is a tree node / an hierarchical representation that contains a Project and its children.
     project: Project;
     children: ProjectNode[];
 };

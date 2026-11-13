@@ -9,26 +9,52 @@
         (signOut)="signOut()"
     >
         @if (viewedProject(); as project) {
-            <button page-actions pButton [text]="true" [rounded]="true" severity="secondary" type="button" class="project-page-more" aria-haspopup="menu"
-                aria-controls="project-page-actions" [attr.aria-expanded]="projectMenuOpen()"
-                [attr.aria-label]="'More actions for project ' + project.name" title="Project actions"
-                (click)="toggleProjectMenu($event)"><i pButtonIcon class="pi pi-ellipsis-h" aria-hidden="true"></i></button>
+            <button
+                page-actions
+                pButton
+                [text]="true"
+                [rounded]="true"
+                severity="secondary"
+                type="button"
+                class="project-page-more"
+                aria-haspopup="menu"
+                aria-controls="project-page-actions"
+                [attr.aria-expanded]="projectMenuOpen()"
+                [attr.aria-label]="'More actions for project ' + project.name"
+                title="Project actions"
+                (click)="toggleProjectMenu($event)"
+                ><i pButtonIcon class="pi pi-ellipsis-h" aria-hidden="true"></i
+            ></button>
         }
     </app-tasks-header>
     @if (error() || tasksStore.error() || tasksStore.syncError()) {
-        <p-button label="Refresh task list" [text]="true" [disabled]="tasksStore.loading() || tasksStore.mutating()"
-            (onClick)="refreshTaskList()" />
+        <p-button
+            label="Refresh task list"
+            [text]="true"
+            [disabled]="tasksStore.loading() || tasksStore.mutating()"
+            (onClick)="refreshTaskList()"
+        />
     }
-    <p-menu #projectPageMenu id="project-page-actions" [model]="projectMenuItems" [popup]="true"
-        appendTo="body" ariaLabel="Project actions" (onHide)="projectMenuHidden()" />
+    <p-menu
+        #projectPageMenu
+        id="project-page-actions"
+        [model]="projectMenuItems"
+        [popup]="true"
+        appendTo="body"
+        ariaLabel="Project actions"
+        (onHide)="projectMenuHidden()"
+    />
 
     @if (scheduleError(); as message) {
         <div class="schedule-save-error" role="alert">
             <p>{{ message }}</p>
             @if (failedSchedule()) {
-                <p-button label="Retry scheduling" [text]="true"
+                <p-button
+                    label="Retry scheduling"
+                    [text]="true"
                     [disabled]="scheduleSaving() || tasksStore.mutating() || bulkScheduleBusy()"
-                    (onClick)="retrySchedule()" />
+                    (onClick)="retrySchedule()"
+                />
             }
         </div>
     }
@@ -98,7 +124,11 @@
                             size="small"
                             [text]="true"
                             [loading]="clearingToday()"
-                            [disabled]="tasksStore.mutating() || bulkScheduleBusy() || clearableTodayTasks().length === 0"
+                            [disabled]="
+                                tasksStore.mutating() ||
+                                bulkScheduleBusy() ||
+                                clearableTodayTasks().length === 0
+                            "
                             (onClick)="clearTodaySchedule()"
                         />
                     }
@@ -130,7 +160,7 @@
                     [planningTransition]="{
                         sourceGroupId: 'due-today-unplanned',
                         targetGroupId: 'planned-today',
-                        plannedDate: calendarClock.today()
+                        plannedDate: calendarClock.today(),
                     }"
                     [projects]="projectsStore.projectTree()"
                     [contentFeedback]="contentFeedback()"
@@ -147,9 +177,7 @@
                     (scheduleRequested)="openSchedule($event)"
                     (toggleDone)="toggleTask($event)"
                     (remove)="confirmDeleteTask($event)"
-                    (contentSaved)="
-                        saveContent($event)
-                    "
+                    (contentSaved)="saveContent($event)"
                 />
             </section>
 
@@ -179,14 +207,20 @@
             @if (isTodayPlanning()) {
                 <section class="today-board__column" aria-labelledby="unscheduled-heading">
                     <div class="today-board__column-header">
-                        <h2 id="unscheduled-heading">Unscheduled ({{ unscheduledTasks().length }})</h2>
+                        <h2 id="unscheduled-heading"
+                            >Unscheduled ({{ unscheduledTasks().length }})</h2
+                        >
                         <p-button
                             label="Reschedule for today"
                             icon="pi pi-calendar"
                             size="small"
                             [text]="true"
                             [loading]="reschedulingUnscheduled()"
-                            [disabled]="tasksStore.mutating() || bulkScheduleBusy() || unscheduledTasks().length === 0"
+                            [disabled]="
+                                tasksStore.mutating() ||
+                                bulkScheduleBusy() ||
+                                unscheduledTasks().length === 0
+                            "
                             (onClick)="rescheduleUnscheduledToToday()"
                         />
                     </div>
@@ -194,7 +228,9 @@
                         <p role="alert">{{ message }}</p>
                     }
                     @if (draggingAvailable()) {
-                        <p class="schedule-drop-hint">Drop to clear the planned date; due dates still apply.</p>
+                        <p class="schedule-drop-hint"
+                            >Drop to clear the planned date; due dates still apply.</p
+                        >
                     }
 
                     <app-task-list
@@ -214,9 +250,7 @@
                         (scheduleRequested)="openSchedule($event)"
                         (toggleDone)="toggleTask($event)"
                         (remove)="confirmDeleteTask($event)"
-                        (contentSaved)="
-                            saveContent($event)
-                        "
+                        (contentSaved)="saveContent($event)"
                     />
                 </section>
 
@@ -229,7 +263,11 @@
                             size="small"
                             [text]="true"
                             [loading]="reschedulingOverdue()"
-                            [disabled]="tasksStore.mutating() || bulkScheduleBusy() || overdueTasks().length === 0"
+                            [disabled]="
+                                tasksStore.mutating() ||
+                                bulkScheduleBusy() ||
+                                overdueTasks().length === 0
+                            "
                             (onClick)="rescheduleOverdueToToday()"
                         />
                     </div>
@@ -252,9 +290,7 @@
                         (scheduleRequested)="openSchedule($event)"
                         (toggleDone)="toggleTask($event)"
                         (remove)="confirmDeleteTask($event)"
-                        (contentSaved)="
-                            saveContent($event)
-                        "
+                        (contentSaved)="saveContent($event)"
                     />
                 </section>
             }
@@ -309,9 +345,7 @@
                         (scheduleRequested)="openSchedule($event)"
                         (toggleDone)="toggleTask($event)"
                         (remove)="confirmDeleteTask($event)"
-                        (contentSaved)="
-                            saveContent($event)
-                        "
+                        (contentSaved)="saveContent($event)"
                     />
                 </section>
             }
@@ -324,22 +358,22 @@
                 <h2>Open ({{ openTasks().length }})</h2>
 
                 <!-- @if (view() === 'inbox' || view() === 'project') { -->
-                    <div class="add-task-wrapper">
-                        <button
-                            pButton
-                            type="button"
-                            class="add-task-button"
-                            (click)="
-                                openTaskDialog({
-                                    projectId: view() === 'project' ? (projectId() ?? null) : null,
-                                    plannedDate: null,
-                                })
-                            "
-                        >
-                            <i class="pi pi-plus" pButtonIcon aria-hidden="true"></i>
-                            <span pButtonLabel>Add Task</span>
-                        </button>
-                    </div>
+                <div class="add-task-wrapper">
+                    <button
+                        pButton
+                        type="button"
+                        class="add-task-button"
+                        (click)="
+                            openTaskDialog({
+                                projectId: view() === 'project' ? (projectId() ?? null) : null,
+                                plannedDate: null,
+                            })
+                        "
+                    >
+                        <i class="pi pi-plus" pButtonIcon aria-hidden="true"></i>
+                        <span pButtonLabel>Add Task</span>
+                    </button>
+                </div>
                 <!-- } -->
 
                 <app-task-list
@@ -347,7 +381,9 @@
                     [projects]="projectsStore.projectTree()"
                     [contentFeedback]="contentFeedback()"
                     [disabled]="tasksStore.mutating()"
-                    [draggable]="draggingAvailable() && (view() === 'inbox' || view() === 'project')"
+                    [draggable]="
+                        draggingAvailable() && (view() === 'inbox' || view() === 'project')
+                    "
                     [sortable]="view() === 'inbox' || view() === 'project'"
                     orderField="project_position"
                     [dropListId]="view() === 'inbox' ? 'tasks-inbox' : 'tasks-project'"
@@ -357,9 +393,7 @@
                     (scheduleRequested)="openSchedule($event)"
                     (toggleDone)="toggleTask($event)"
                     (remove)="confirmDeleteTask($event)"
-                    (contentSaved)="
-                        saveContent($event)
-                    "
+                    (contentSaved)="saveContent($event)"
                 />
             }
         </section>
@@ -395,9 +429,7 @@
                     (scheduleRequested)="openSchedule($event)"
                     (toggleDone)="toggleTask($event)"
                     (remove)="confirmDeleteTask($event)"
-                    (contentSaved)="
-                        saveContent($event)
-                    "
+                    (contentSaved)="saveContent($event)"
                 />
             }
         </div>

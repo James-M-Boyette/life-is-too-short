@@ -1,12 +1,10 @@
-import type {
-    Project,
-    ProjectNode,
-} from '@/features/projects/models/project.model';
+import type { Project, ProjectNode } from '@/features/projects/models/project.model';
 
 export function buildProjectTree(projects: Project[]): ProjectNode[] {
     const nodes = new Map<string, ProjectNode>();
 
-    for (const project of projects) { // Pass #1: Map all projects as nodes
+    for (const project of projects) {
+        // Pass #1: Map all projects as nodes
         nodes.set(project.id, {
             project,
             children: [],
@@ -15,7 +13,8 @@ export function buildProjectTree(projects: Project[]): ProjectNode[] {
 
     const roots: ProjectNode[] = [];
 
-    for (const project of projects) { // Pass #2: Build the tree by linking children to their parents
+    for (const project of projects) {
+        // Pass #2: Build the tree by linking children to their parents
         const node = nodes.get(project.id);
 
         if (!node) continue;

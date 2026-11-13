@@ -23,31 +23,31 @@
     // Primitive palette: Maritime & Coral (default)
     // Only palette primitives vary across the preview choices below.
     // -----------------------------------------------------------------
-    --palette-primary: #176C84;
-    --palette-primary-hover: #11596D;
-    --palette-primary-active: #0D495A;
-    --palette-accent: #E78365;
+    --palette-primary: #176c84;
+    --palette-primary-hover: #11596d;
+    --palette-primary-active: #0d495a;
+    --palette-accent: #e78365;
 
-    --palette-page: #F8F8F3;
-    --palette-sidebar: #EAF2F1;
-    --palette-panel: #F1F5F3;
-    --palette-card: #FFFFFF;
-    --palette-hover: #E0EBE9;
-    --palette-selected: #D0E6E9;
+    --palette-page: #f8f8f3;
+    --palette-sidebar: #eaf2f1;
+    --palette-panel: #f1f5f3;
+    --palette-card: #ffffff;
+    --palette-hover: #e0ebe9;
+    --palette-selected: #d0e6e9;
 
-    --palette-text: #26343A;
-    --palette-text-secondary: #52666B;
+    --palette-text: #26343a;
+    --palette-text-secondary: #52666b;
     --palette-text-muted: #617479;
-    --palette-border: #D8E3E0;
-    --palette-card-border: #C6DAD6;
+    --palette-border: #d8e3e0;
+    --palette-card-border: #c6dad6;
 
     // Primitive shades derived from the current brand primary.
     // PrimeNG consumes this scale; app components use semantic tokens.
-    --palette-primary-50: color-mix(in srgb, var(--palette-primary) 8%, #FFFFFF);
-    --palette-primary-100: color-mix(in srgb, var(--palette-primary) 16%, #FFFFFF);
-    --palette-primary-200: color-mix(in srgb, var(--palette-primary) 30%, #FFFFFF);
-    --palette-primary-300: color-mix(in srgb, var(--palette-primary) 48%, #FFFFFF);
-    --palette-primary-400: color-mix(in srgb, var(--palette-primary) 72%, #FFFFFF);
+    --palette-primary-50: color-mix(in srgb, var(--palette-primary) 8%, #ffffff);
+    --palette-primary-100: color-mix(in srgb, var(--palette-primary) 16%, #ffffff);
+    --palette-primary-200: color-mix(in srgb, var(--palette-primary) 30%, #ffffff);
+    --palette-primary-300: color-mix(in srgb, var(--palette-primary) 48%, #ffffff);
+    --palette-primary-400: color-mix(in srgb, var(--palette-primary) 72%, #ffffff);
     --palette-primary-500: var(--palette-primary);
     --palette-primary-600: var(--palette-primary-hover);
     --palette-primary-700: var(--palette-primary-active);
@@ -62,7 +62,7 @@
     --color-action-primary: var(--palette-primary);
     --color-action-primary-hover: var(--palette-primary-hover);
     --color-action-primary-active: var(--palette-primary-active);
-    --color-action-on-primary: #FFFFFF;
+    --color-action-on-primary: #ffffff;
     --color-accent-decorative: var(--palette-accent);
 
     --color-surface-page: var(--palette-page);
@@ -84,12 +84,12 @@
     // Status colors communicate meaning and do not change with a palette.
     // A later WCAG pass will validate these colors against every surface.
     --color-status-planned: #286957;
-    --color-status-due: #94611F;
-    --color-status-danger: #AD3029;
-    --color-status-danger-hover: #95251F;
-    --color-status-danger-soft: #FCE8E6;
-    --color-status-danger-border: #EBC0BC;
-    --color-status-completed: #49715B;
+    --color-status-due: #94611f;
+    --color-status-danger: #ad3029;
+    --color-status-danger-hover: #95251f;
+    --color-status-danger-soft: #fce8e6;
+    --color-status-danger-border: #ebc0bc;
+    --color-status-completed: #49715b;
 
     // Temporary compatibility names for components not yet migrated.
     // New component styles should use the --color-* semantic tokens.
@@ -109,70 +109,70 @@
     --palette-primary: #306851;
     --palette-primary-hover: #285740;
     --palette-primary-active: #204734;
-    --palette-accent: #D39B30;
-    --palette-page: #F8F7EE;
-    --palette-sidebar: #EBEEE2;
-    --palette-panel: #F0F2E8;
-    --palette-card: #FFFDF8;
-    --palette-hover: #DEE5D8;
-    --palette-selected: #D9E9D8;
-    --palette-text: #2B3430;
-    --palette-text-secondary: #58675D;
-    --palette-text-muted: #66756A;
-    --palette-border: #DCE3D4;
-    --palette-card-border: #CEDCC9;
+    --palette-accent: #d39b30;
+    --palette-page: #f8f7ee;
+    --palette-sidebar: #ebeee2;
+    --palette-panel: #f0f2e8;
+    --palette-card: #fffdf8;
+    --palette-hover: #dee5d8;
+    --palette-selected: #d9e9d8;
+    --palette-text: #2b3430;
+    --palette-text-secondary: #58675d;
+    --palette-text-muted: #66756a;
+    --palette-border: #dce3d4;
+    --palette-card-border: #cedcc9;
 }
 
 :root[data-palette='indigo'] {
-    --palette-primary: #49538C;
-    --palette-primary-hover: #3D457A;
+    --palette-primary: #49538c;
+    --palette-primary-hover: #3d457a;
     --palette-primary-active: #303864;
-    --palette-accent: #BF795A;
-    --palette-page: #F8F6F5;
-    --palette-sidebar: #ECEBF3;
-    --palette-panel: #F1F0F7;
-    --palette-card: #FFFFFF;
-    --palette-hover: #E0DFF0;
-    --palette-selected: #E0E0F2;
-    --palette-text: #292B40;
-    --palette-text-secondary: #60617A;
-    --palette-text-muted: #6E6F85;
-    --palette-border: #E0DBE8;
-    --palette-card-border: #D4D0E2;
+    --palette-accent: #bf795a;
+    --palette-page: #f8f6f5;
+    --palette-sidebar: #ecebf3;
+    --palette-panel: #f1f0f7;
+    --palette-card: #ffffff;
+    --palette-hover: #e0dff0;
+    --palette-selected: #e0e0f2;
+    --palette-text: #292b40;
+    --palette-text-secondary: #60617a;
+    --palette-text-muted: #6e6f85;
+    --palette-border: #e0dbe8;
+    --palette-card-border: #d4d0e2;
 }
 
 :root[data-palette='mediterranean'] {
-    --palette-primary: #176C84;
-    --palette-primary-hover: #125B70;
-    --palette-primary-active: #0D4C5D;
-    --palette-accent: #D47F47;
-    --palette-page: #FCF8EF;
-    --palette-sidebar: #E6F0EE;
-    --palette-panel: #F1F5ED;
-    --palette-card: #FFFEFA;
-    --palette-hover: #D8EAE6;
-    --palette-selected: #CFEBEA;
+    --palette-primary: #176c84;
+    --palette-primary-hover: #125b70;
+    --palette-primary-active: #0d4c5d;
+    --palette-accent: #d47f47;
+    --palette-page: #fcf8ef;
+    --palette-sidebar: #e6f0ee;
+    --palette-panel: #f1f5ed;
+    --palette-card: #fffefa;
+    --palette-hover: #d8eae6;
+    --palette-selected: #cfebea;
     --palette-text: #283943;
-    --palette-text-secondary: #526A73;
+    --palette-text-secondary: #526a73;
     --palette-text-muted: #647981;
-    --palette-border: #D4E2DB;
-    --palette-card-border: #C5DAD4;
+    --palette-border: #d4e2db;
+    --palette-card-border: #c5dad4;
 }
 
 :root[data-palette='ink'] {
-    --palette-primary: #233C4B;
-    --palette-primary-hover: #1B303D;
+    --palette-primary: #233c4b;
+    --palette-primary-hover: #1b303d;
     --palette-primary-active: #152632;
-    --palette-accent: #E7AE39;
-    --palette-page: #F9F8F2;
-    --palette-sidebar: #E8ECE9;
-    --palette-panel: #F0F2ED;
-    --palette-card: #FFFFFF;
-    --palette-hover: #DEE6E1;
-    --palette-selected: #D7E6E8;
-    --palette-text: #27343B;
-    --palette-text-secondary: #576B72;
-    --palette-text-muted: #65777E;
-    --palette-border: #D9E1DD;
-    --palette-card-border: #CADAD5;
+    --palette-accent: #e7ae39;
+    --palette-page: #f9f8f2;
+    --palette-sidebar: #e8ece9;
+    --palette-panel: #f0f2ed;
+    --palette-card: #ffffff;
+    --palette-hover: #dee6e1;
+    --palette-selected: #d7e6e8;
+    --palette-text: #27343b;
+    --palette-text-secondary: #576b72;
+    --palette-text-muted: #65777e;
+    --palette-border: #d9e1dd;
+    --palette-card-border: #cadad5;
 }
