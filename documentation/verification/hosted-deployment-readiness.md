@@ -6,6 +6,56 @@
 
 The assessment below originated as a **November 9, 2026 read-only planning assessment**, based on main `1e3d34d` after PR #78. Native Broadcast compatibility, operating limits, cached-client transition and physical-device acceptance remain gates; the original blanket NO-GO must not be read as saying the now-completed #70/#71 deployment is still pending. No implementation blocker was found by that planning assessment.
 
+## Hosted staging task and project baseline
+
+**PASS — November 11, 2026, operator-reported.** The operator ran the live regression harness against **Life Is Too Short - Staging** (`odpuloypdyjoggvqvnti`), using two ordinary synthetic Auth sessions and an anonymous client with the staging publishable key. Run label `staging-regression-c7af62f6-bb86-4c63-a72f-c2c44b57cdd4`. The reported final line was `PASS: staging functional, security and cleanup checks.`
+
+### Installation and catalog evidence
+
+The operator independently verified this exact seven-version ledger after applying the isolated, hash-verified package on hosted PostgreSQL 17.11:
+
+1. `20261008000000_baseline.sql`
+2. `20261008015654_add_delete_project_function.sql`
+3. `20261024000602_add_task_dates.sql`
+4. `20261029010526_add_task_ordering.sql`
+5. `20261109020000_enforce_project_hierarchy_integrity.sql`
+6. `20261109040000_restrict_application_privileges.sql`
+7. `20261109050000_remove_raw_task_publication.sql`
+
+The catalog review confirmed task and project RLS and their owner policies, the enabled hierarchy trigger, and ownership of its function by `project_hierarchy_checker`. API roles lacked private guard access and effective `SET` or inherited checker rights. Authenticated users had task DELETE and `delete_project(uuid)` EXECUTE, with direct project DELETE denied. The operator also reported completion of function-security and role-privilege checks. The effective privilege expectations and default-ACL rationale remain documented in the [least-privilege verification](../security/database-least-privilege-proposal.md). No raw task publication was present and migration #75 was absent.
+
+### Live Auth and Data API evidence
+
+| Scenario | Verified by the passing hosted harness |
+| --- | --- |
+| Owner CRUD and scheduling | Both accounts created and read their own projects and tasks, renamed and nested projects, edited task content, completed tasks, set planned and due dates, reordered by both position fields, and deleted owned tasks. |
+| Account isolation | Both directions tested. Foreign rows were invisible. RLS-filtered updates and task deletes returned zero affected rows, and owner readback verified the full rows were unchanged. Foreign-owner inserts and direct project DELETE were rejected. |
+| Hierarchy | Valid nesting persisted. Self-parenting and longer cycles were rejected. Cross-account parent and task-project assignments were rejected. |
+| Anonymous access | Task and project CRUD and the project deletion RPC were denied. |
+| Project deletion | Direct authenticated DELETE and the foreign-owner RPC were denied. The owner RPC promoted the child to root and moved the directly assigned task to Inbox, preserving its other fields apart from the expected timestamp update. |
+| Cleanup | The harness reported synthetic rows cleared or none created and emitted its final PASS only after cleanup checks. The operator subsequently confirmed that both synthetic Auth users were manually deleted. |
+
+Before the hosted run, local Windows Node.js 22.16.0 / Supabase JS 2.96.0 checks covered syntax, approval and key guards, and a mocked Auth rejection with secret-safe output. Those checks did not exercise hosted CRUD or RLS. The live staging result above came from the operator and was not rerun during documentation review.
+
+This pass covers the tested staging baseline and ordinary API roles. Concurrent reparenting remains supported by the independent disposable PostgreSQL evidence. Angular UI behavior, physical devices, production behavior, and hosted Broadcast installation, authorization, delivery and recovery were outside this run.
+
+### Staging #75 closeout: deferred
+
+**Installation and catalog verification passed. Live acceptance failed. Production readiness remains open.** The operator confirmed eight staging ledger entries, all four expected Realtime policies, and the enabled `notify_private_task_changes` trigger. The sender role had no task or message SELECT privileges, and API roles had no unintended helper access or sender membership. Task RLS remained enabled and replica identity remained DEFAULT.
+
+The first live owner join failed. Staging Realtime logs showed `MissingPartition` and a PostgreSQL partition-routing error near that attempt. The operator later confirmed that five native `realtime.messages` partitions had been created for November 10–14, 2026, covering the current UTC date at the time of inspection. In the subsequent owner-only diagnostic, an authenticated owner received `CHANNEL_ERROR / Unauthorized` on their own private topic while the WebSocket was open. No task writes were attempted during the final diagnostic. The earlier partition failure and later authorization denial are separate observations. The root cause of the later denial is unconfirmed.
+
+The corrected migration passed 34 authorization check groups on disposable PostgreSQL 17.11 with Realtime v2.140.10. Whether hosted Realtime uses an equivalent same-transaction authorization probe and caller context remains unresolved. An installed policy and an open socket do not establish successful authorization or delivery. Keep #75 installed on staging, leave production and Angular API-only, and defer further hosted testing. Feature development can resume independently.
+
+**Resume checklist**
+
+1. Obtain separate approval for staging diagnostics. Confirm the serving Realtime build or equivalent probe behavior and review the operator's sanitized denial and logs.
+2. Recheck current partition coverage, routing and ACLs. Run a bounded owner-only private join with no task writes. Stop if authorization still fails.
+3. After owner authorization succeeds, separately approve the synthetic canary. Verify committed owner delivery, minimal payloads, foreign and anonymous denial, forged-message resistance, partition routing, API-only recovery, and fixture cleanup.
+4. Record installation, live acceptance, and production readiness separately. A staging pass is a prerequisite for a fresh production review and separate approval.
+
+Production already has the seven baseline migrations. Do not replay them. Any future production #75 deployment requires the staging compatibility result, fresh production-specific read-only evidence and exact ledger/package comparison, verified recovery coverage and an isolated restore, a reviewed maintenance and rollback plan, and separate authorization. Keep API-only through the production canary. Frontend activation remains a later approval with device, cache, and operational acceptance gates.
+
 The [proposed read-only query/check appendix](hosted-deployment-preflight-queries.md) is **not executed and not authorization to connect**. Catalog inspection needs its own approval; installation and canary test writes need a later, separate approval.
 
 ## 1. Confirmed readiness and evidence boundary
