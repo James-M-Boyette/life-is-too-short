@@ -1,0 +1,11 @@
+**/node_modules/
+**/dist/
+**/coverage/
+**/.angular/
+**/.task-card-acceptance/
+**/tmp/
+documentation/
+supabase/
+pnpm-lock.yaml
+**/*.generated.*
+**/*.spec.ts

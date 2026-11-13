@@ -288,3 +288,11 @@ For substantive changes, consult the dated `documentation/project-context/Curren
 Prefer vertically formatted CSS/SCSS declarations (one property per line) when editing styles. Reuse semantic tokens. Respect the existing Angular compiled `anyComponentStyle` limits (4 kB warning/8 kB error); moving declarations into imported Sass partials alone does not reduce emitted CSS. Do not raise budgets merely to silence errors.
 
 Browser geometry, focus and pointer/touch interactions require browser checks; fixture checks do not replace physical iPhone/Safari acceptance. Keep verification reports honest about what ran. Documentation-only changes ordinarily require accuracy and link review, not new automated tests.
+
+# Application formatting
+
+Use the pinned Prettier version through `pnpm format` and `pnpm format:check`. These commands cover TypeScript, Angular HTML, SCSS and CSS under `src/`. For a test you are already editing, use the same options and keep formatting changes local to the affected code. Existing specs are excluded from bulk formatting.
+
+Use four spaces, single TypeScript quotes, and one CSS declaration per line. Keep imports grouped by purpose and preserve the order of side-effect imports. Group related dependencies, inputs, outputs and state where that helps readers follow the component. Avoid reordering field initializers with dependencies or effects. Use readable multiline methods and template bindings, and preserve meaningful template whitespace.
+
+Keep mechanical formatting separate from manual readability changes. Leave migrations, generated files, dependencies, build output, lockfiles and historical reports outside bulk formatting. Review formatter changes to inline strings, templates and CSS for semantic differences.
