@@ -1,13 +1,15 @@
-import { Component, computed, input, output, linkedSignal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { Component, computed, input, linkedSignal, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+
+import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SelectButtonModule } from 'primeng/selectbutton';
-import { ButtonModule } from 'primeng/button';
-import type { Task } from '@/features/tasks/models/tasks.model';
+
 import type { TaskDateField, TaskDateSelection } from '@/features/tasks/models/task-schedule.model';
-import { formatLocalDate, parseLocalDate } from '@/shared/utils/date.util';
+import type { Task } from '@/features/tasks/models/tasks.model';
 import { getQuickDates } from '@/features/tasks/utils/quick-dates.util';
+import { formatLocalDate, parseLocalDate } from '@/shared/utils/date.util';
 
 @Component({
     selector: 'app-task-scheduler',
@@ -23,11 +25,13 @@ export class TaskSchedulerComponent {
     readonly pending = input(false);
     readonly disabled = input(false);
     readonly error = input<string | null>(null);
+
     readonly selectDate = output<TaskDateSelection>();
     readonly retry = output<void>();
     readonly dismiss = output<Event>();
 
     readonly entryField = input<{ field: TaskDateField }>({ field: 'planned_date' });
+
     protected readonly field = linkedSignal(() => this.entryField().field);
     protected readonly fields = [
         { label: 'Planned', value: 'planned_date' },
@@ -42,7 +46,9 @@ export class TaskSchedulerComponent {
     protected readonly blocked = computed(() => this.pending() || this.disabled());
 
     protected choose(date: string | null): void {
-        if (!this.blocked()) this.selectDate.emit({ field: this.field(), date });
+        if (!this.blocked()) {
+            this.selectDate.emit({ field: this.field(), date });
+        }
     }
 
     protected chooseCalendarDate(date: Date): void {
