@@ -22,7 +22,10 @@ li.row {
     margin-left: 1rem;
 }
 .task-card-content, app-task-content-editor { width: 100%; min-width: 0; }
-.task-primary-section, .left-column, .task-actions, .meta-row, .meta, .task-date-tags { display: flex; align-items: center; }
+:is(.task-primary-section, .left-column, .task-actions, .meta-row, .meta, .task-date-tags) {
+    display: flex;
+    align-items: center;
+}
 .task-primary-section { justify-content: space-between; gap: var(--space-4); width: 100%; }
 .left-column { gap: var(--space-2); min-width: 0; flex: 1; }
 .title-btn {
@@ -38,8 +41,17 @@ li.row {
 .meta-row { flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3); min-width: 0; }
 .meta { min-width: 0; flex: auto; flex-wrap: wrap; gap: var(--space-4); }
 .task-date-tags { flex-wrap: wrap; gap: var(--space-2); }
-.more-actions-btn, .edit-task-btn, .task-drag-handle { display: inline-flex; align-items: center; justify-content: center; }
-.more-actions-btn, .edit-task-btn { width: 2.5rem; height: 2.5rem; padding: 0; border-radius: var(--radius-md); }
+:is(.more-actions-btn, .edit-task-btn, .task-drag-handle) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+:is(.more-actions-btn, .edit-task-btn) {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border-radius: var(--radius-md);
+}
 .more-actions-btn { align-items: start }
 button:not(.title-btn), a, p-treeselect { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
@@ -92,42 +104,78 @@ button:disabled { cursor: not-allowed; }
 }
 .project-chevron { opacity: 0; transition: opacity 120ms ease; font-size: .75rem; }
 .project-selector:is(:hover, :focus-within) .project-chevron { opacity: 1; }
-.project-clear, .date-control, .compact-schedule-control { border: 0; background: transparent; border-radius: var(--radius-sm); }
+:is(.project-clear, .date-control, .compact-schedule-control) {
+    border: 0;
+    background: transparent;
+    border-radius: var(--radius-sm);
+}
 .project-clear { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; padding: 0; color: var(--color-text-secondary); }
 .date-control { display: inline-flex; align-items: center; padding: 0; font: inherit; }
-.compact-date-label, .compact-schedule-control, .compact-project-link, .compact-edit-project { display: none; }
+:is(.compact-date-label, .compact-schedule-control, .compact-project-link, .compact-edit-project) {
+    display: none;
+}
 :is(.complete-toggle, .date-control, .compact-schedule-control):disabled { opacity: 0.55; }
 
 @container task-card (width < #{layout.$compact-width}) {
-    .expanded-date-tag { display: none; }
-    .date-control, .compact-schedule-control, .task-card-content .compact-project-link { min-height: 2.5rem; padding-inline: var(--space-1); color: var(--color-text-secondary); font-size: 0.8rem; }
-    .date-control.overdue { color: var(--color-status-danger); }
-    .compact-date-label, .compact-schedule-control, .task-card-content .compact-project-link { display: inline-flex; align-items: center; gap: var(--space-1); }
-    // Projected row controls retain this component's scope; editor-owned layout lives in its SCSS.
-    .row.is-editing {
-        app-task-content-editor {
-            :is(.schedule-task-btn, .project-selector) { display: none; }
-            .task-actions { gap: 0; }
-            .meta { width: 100%; gap: var(--space-2); font-size: 0.8rem; }
-            .compact-edit-project { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; max-width: 100%; color: var(--color-text-secondary); }
-            .compact-edit-project span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-            :is(.date-control, .compact-schedule-control):disabled { opacity: 1; }
-        }
+    :is(.expanded-date-tag, .edit-task-btn, .schedule-task-btn, .project-selector) {
+        display: none;
     }
+    :is(.date-control, .compact-schedule-control), .task-card-content .compact-project-link {
+        min-height: 2.5rem;
+        padding-inline: var(--space-1);
+        color: var(--color-text-secondary);
+        font-size: 0.8rem;
+    }
+    .date-control.overdue { color: var(--color-status-danger); }
+    :is(.compact-date-label, .compact-schedule-control, .compact-edit-project), .task-card-content .compact-project-link {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+    }
+    .task-actions { gap: 0; }
+    .compact-edit-project {
+        min-width: 0;
+        max-width: 100%;
+        color: var(--color-text-secondary);
+    }
+    :is(.compact-edit-project, .compact-project-link) span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    // Only the projected metadata differs between normal and editing cards.
+    app-task-content-editor .meta {
+        width: 100%;
+        gap: var(--space-2);
+        font-size: 0.8rem;
+    }
+    app-task-content-editor :is(.date-control, .compact-schedule-control):disabled { opacity: 1; }
+    .task-primary-section {
+        gap: var(--space-1);
+        align-items: flex-start;
+    }
+    .left-column { align-items: flex-start; }
+    .title-btn {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        text-overflow: clip;
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+    }
+    .task-card-content .complete-toggle {
+        width: 1.25rem;
+        height: 1.25rem;
+        margin-top: .2rem;
+    }
+    .description { margin-left: 0; }
+    .meta-row { margin-top: var(--space-2); }
     .task-card-content {
-        .task-primary-section { gap: var(--space-1); align-items: flex-start; }
-        .left-column { align-items: flex-start; }
-        .title-btn { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; line-height: 1.5; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
-        :is(.edit-task-btn, .schedule-task-btn) { display: none; }
-        .task-actions { gap: 0; }
-        .complete-toggle { width: 1.25rem; height: 1.25rem; margin-top: .2rem; }
-        .description { margin-left: 0; }
-        .meta-row { margin-top: var(--space-2); }
         .meta { flex-direction: column; align-items: stretch; gap: var(--space-1); width: 100%; }
-        .project-selector { display: none; }
         .project-selector.is-moving { display: block; }
         .compact-project-link { align-self: flex-start; max-width: 100%; min-width: 0; gap: var(--space-2); text-decoration: none; border-radius: var(--radius-sm); }
-        .compact-project-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+        .compact-project-link span { min-width: 0; }
         .compact-project-link.is-moving { display: none; }
         :is(.date-control, .compact-schedule-control):hover:not(:disabled), .compact-project-link:hover { background: var(--color-surface-hover); }
     }
