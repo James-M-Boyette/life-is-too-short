@@ -1,22 +1,22 @@
-import { Component, effect, inject, computed, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed, effect, inject, input, output } from '@angular/core';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
+import type { TreeNode } from 'primeng/api';
+import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
+import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
-
-import { ButtonModule } from 'primeng/button';
 import { TreeSelectModule } from 'primeng/treeselect';
+
 import type { ProjectNode } from '@/features/projects/models/project.model';
-import { TreeNode } from 'primeng/api';
-import { ReactiveFormsModule, Validators, NonNullableFormBuilder } from '@angular/forms';
-import { noWhitespaceValidator } from '@/shared/validators/no-whitespace-validator';
 import {
-    toProjectTreeNodes,
     findTreeNodeByKey,
+    toProjectTreeNodes,
 } from '@/features/projects/utils/project-tree-node.util';
-import { DatePickerModule } from 'primeng/datepicker';
-import { parseLocalDate, formatLocalDate } from '@/shared/utils/date.util';
+import { formatLocalDate, parseLocalDate } from '@/shared/utils/date.util';
+import { noWhitespaceValidator } from '@/shared/validators/no-whitespace-validator';
 
 export type CreateTaskPayload = {
     title: string;
@@ -32,7 +32,6 @@ export type CreateTaskPayload = {
         CardModule,
         InputTextModule,
         TextareaModule,
-        // SelectModule,
         TreeSelectModule,
         DatePickerModule,
         ButtonModule,
@@ -43,12 +42,15 @@ export type CreateTaskPayload = {
     styleUrls: ['./task-create.component.scss'],
 })
 export class TaskCreateComponent {
-    readonly projects = input<ProjectNode[]>([]);
+    private readonly fb = inject(NonNullableFormBuilder);
 
+    readonly projects = input<ProjectNode[]>([]);
     readonly defaultProjectId = input<string | null>(null);
     readonly defaultPlannedDate = input<string | null>(null);
+    readonly disabled = input(false);
 
-    private readonly fb = inject(NonNullableFormBuilder);
+    readonly create = output<CreateTaskPayload>();
+    readonly cancel = output<void>();
 
     protected readonly form = this.fb.group({
         title: ['', [Validators.required, noWhitespaceValidator]],
@@ -56,6 +58,9 @@ export class TaskCreateComponent {
         project: this.fb.control<TreeNode | null>(null),
         plannedDate: this.fb.control<Date | null>(null),
     });
+
+    private lastDefaultProjectId: string | null = null;
+    private defaultApplied = false;
 
     protected readonly projectOptions = computed<TreeNode[]>(() =>
         toProjectTreeNodes(this.projects()),
@@ -72,9 +77,6 @@ export class TaskCreateComponent {
 
         this.form.controls.plannedDate.setValue(parseLocalDate(plannedDate), { emitEvent: false });
     });
-
-    private lastDefaultProjectId: string | null = null;
-    private defaultApplied = false;
 
     private readonly syncDefaultProject = effect(() => {
         const projectId = this.defaultProjectId();
@@ -97,11 +99,6 @@ export class TaskCreateComponent {
             this.defaultApplied = true;
         }
     });
-
-    readonly disabled = input(false);
-
-    readonly create = output<CreateTaskPayload>();
-    readonly cancel = output<void>();
 
     protected onSubmit(): void {
         if (this.form.invalid || this.disabled()) {
