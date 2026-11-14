@@ -15,9 +15,6 @@
         min-height: 0;
 
         display: grid;
-        // grid-template-columns:
-        //     var(--app-sidebar-width)
-        //     minmax(0, 1fr);
 
         .desktop-navigation {
             position: relative;
@@ -43,7 +40,6 @@
             &:hover,
             &.is-resizing {
                 background: var(--color-action-primary);
-                // TODO: make this look nicer
                 width: 8px;
                 box-shadow: 2px 0px 5px var(--text-muted);
             }
@@ -63,38 +59,6 @@
             background: var(--color-surface-page);
         }
     }
-
-    .project-delete-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: var(--space-2);
-        margin-top: var(--space-4);
-    }
-
-    .project-delete-error {
-        color: var(--color-status-danger);
-    }
-}
-
-// Also applies after CDK relocates the same aside into PrimeNG's body-appended drawer.
-// The grid wrapper / drawer content owns scrolling; this surface can grow with its content.
-.app-sidebar {
-    min-width: 0;
-    min-height: 100%;
-    box-sizing: border-box;
-    background: var(--surface-sidebar);
-}
-:host .app-shell.is-mobile {
-    .app-main {
-        padding: var(--space-3);
-        padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
-        padding-left: max(var(--space-3), env(safe-area-inset-left));
-        padding-right: max(var(--space-3), env(safe-area-inset-right));
-    }
-    .sidebar-resize-handle,
-    .desktop-navigation {
-        display: none;
-    }
 }
 
 .navigation-control {
@@ -111,18 +75,22 @@
     color: var(--color-text-secondary);
     text-decoration: none;
     cursor: pointer;
+
+    &:hover {
+        background: var(--color-surface-hover);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--color-focus-ring);
+        outline-offset: -2px;
+    }
+
+    &.active {
+        background: var(--color-surface-selected);
+        color: var(--color-action-primary);
+    }
 }
-.navigation-control:hover {
-    background: var(--color-surface-hover);
-}
-.navigation-control:focus-visible {
-    outline: 2px solid var(--color-focus-ring);
-    outline-offset: -2px;
-}
-.navigation-control.active {
-    background: var(--color-surface-selected);
-    color: var(--color-action-primary);
-}
+
 .navigation-rail {
     display: flex;
     flex-direction: column;
@@ -133,12 +101,23 @@
     padding: var(--space-2);
     border-inline-end: 1px solid var(--color-border-subtle);
 }
+
 .collapse-navigation {
     position: absolute;
     inset-inline-end: var(--space-3);
     top: var(--space-3);
     z-index: 1;
 }
+
+// Also applies after CDK relocates the same aside into PrimeNG's body-appended drawer.
+// The grid wrapper / drawer content owns scrolling; this surface can grow with its content.
+.app-sidebar {
+    min-width: 0;
+    min-height: 100%;
+    box-sizing: border-box;
+    background: var(--surface-sidebar);
+}
+
 // Reserve a fixed target beside the account trigger without affecting the relocated mobile aside.
 .desktop-navigation > .app-sidebar > app-account-controls {
     padding-inline-end: calc(var(--space-3) + 2.75rem);
@@ -147,4 +126,30 @@
 .project-load-error {
     padding: var(--space-3);
     color: var(--color-status-danger);
+}
+
+:host .app-shell.is-mobile {
+    .app-main {
+        padding: var(--space-3);
+        padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+        padding-left: max(var(--space-3), env(safe-area-inset-left));
+        padding-right: max(var(--space-3), env(safe-area-inset-right));
+    }
+    .sidebar-resize-handle,
+    .desktop-navigation {
+        display: none;
+    }
+}
+
+:host {
+    .project-delete-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--space-2);
+        margin-top: var(--space-4);
+    }
+
+    .project-delete-error {
+        color: var(--color-status-danger);
+    }
 }
