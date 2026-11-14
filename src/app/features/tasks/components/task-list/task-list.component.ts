@@ -1,16 +1,14 @@
-import { Component, input, output, computed, viewChild, ElementRef } from '@angular/core';
+import { CdkDropList, type CdkDrag, type CdkDragDrop } from '@angular/cdk/drag-drop';
+import { Component, computed, type ElementRef, input, output, viewChild } from '@angular/core';
 
-import type { Task } from '@/features/tasks/models/tasks.model';
 import type { ProjectNode } from '@/features/projects/models/project.model';
-
 import { TaskRowComponent } from '@/features/tasks/components/task-row/task-row.component';
+import type { Task } from '@/features/tasks/models/tasks.model';
 
 // import { JsonPipe } from '@angular/common';
-import { CdkDropList, CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
-
 import type { TaskScheduleDrop } from '@/features/tasks/models/task-schedule-drop.model';
 import type { TaskReorder } from '@/features/tasks/models/task-reorder.model';
-import { TaskOrderField } from '@/features/tasks/utils/task-ordering.util';
+import type { TaskOrderField } from '@/features/tasks/utils/task-ordering.util';
 import type { TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
 import type {
     TaskListGroup,
@@ -33,6 +31,28 @@ export class TaskListComponent {
     readonly contentFeedback = input<Partial<Record<string, TaskContentFeedback>>>({});
     readonly groups = input<TaskListGroup[]>([]);
     readonly planningTransition = input<TaskGroupPlanningTransition | null>(null);
+    readonly projects = input<ProjectNode[]>([]);
+    readonly disabled = input(false);
+    readonly emptyMessage = input('No tasks.');
+    readonly draggable = input(false);
+    readonly dropListId = input('');
+    readonly connectedDropLists = input<string[]>([]);
+    readonly destinationDate = input<string | null>(null);
+    readonly acceptsDrops = input(true);
+    readonly sortable = input(false);
+    readonly orderField = input<TaskOrderField>('planned_position');
+
+    readonly toggleDone = output<Task>();
+    readonly remove = output<string>();
+    readonly scheduleRequested = output<TaskScheduleRequest>();
+    readonly taskDropped = output<TaskScheduleDrop>();
+    readonly taskReordered = output<TaskReorder>();
+    readonly contentSaved = output<TaskContentChange>();
+    readonly projectChange = output<{
+        task: Task;
+        projectId: string | null;
+    }>();
+
     private readonly planningInsertionTarget =
         viewChild<ElementRef<HTMLElement>>('planningInsertionTarget');
     protected readonly planningTarget = computed(() => {
@@ -60,27 +80,6 @@ export class TaskListComponent {
         }
         return result;
     });
-    readonly projects = input<ProjectNode[]>([]);
-    readonly disabled = input(false);
-    readonly emptyMessage = input('No tasks.');
-
-    readonly toggleDone = output<Task>();
-    readonly remove = output<string>();
-
-    readonly draggable = input(false);
-    readonly scheduleRequested = output<TaskScheduleRequest>();
-
-    readonly dropListId = input('');
-    readonly connectedDropLists = input<string[]>([]);
-
-    readonly destinationDate = input<string | null>(null);
-    readonly acceptsDrops = input(true);
-
-    readonly taskDropped = output<TaskScheduleDrop>();
-    readonly sortable = input(false);
-    readonly orderField = input<TaskOrderField>('planned_position');
-
-    readonly taskReordered = output<TaskReorder>();
 
     protected readonly canEnter = () => this.draggable() && this.acceptsDrops();
 
@@ -92,6 +91,7 @@ export class TaskListComponent {
         if (!this.draggable()) return false;
         // Entering from another column still changes scheduling, not just manual order.
         if (drag.dropContainer !== drop || !this.groups().length) return true;
+
         const group = this.groupByTask().get(drag.data.id);
         const target = this.displayTasks()[index];
         const planning = this.planningTarget();
@@ -173,13 +173,6 @@ export class TaskListComponent {
             plannedDate: this.destinationDate(),
         });
     }
-
-    readonly contentSaved = output<TaskContentChange>();
-
-    readonly projectChange = output<{
-        task: Task;
-        projectId: string | null;
-    }>();
 
     protected readonly debugTasks = computed(() =>
         this.tasks().map((task) => ({
