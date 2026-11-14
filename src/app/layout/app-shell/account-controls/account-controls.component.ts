@@ -26,24 +26,29 @@ import { accountIdentity, type AccountUser } from './account-identity';
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountControlsComponent {
+    protected readonly paletteService = inject(ThemePaletteService);
+    private readonly document = inject(DOCUMENT);
+
     readonly user = input<AccountUser | null>(null);
     readonly available = input(true);
     readonly mobile = input(false);
     readonly pending = input(false);
     readonly error = input<string | null>(null);
+
     readonly signOut = output<void>();
-    protected readonly identity = computed(() => accountIdentity(this.user()));
-    protected readonly paletteService = inject(ThemePaletteService);
-    protected readonly paletteOptions = PALETTE_OPTIONS;
-    protected readonly appearanceOpen = signal(false);
-    protected readonly menuOpen = signal(false);
-    protected readonly overlayParent = signal<HTMLElement | 'body'>('body');
-    private readonly document = inject(DOCUMENT);
+
     private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
     private readonly popover = viewChild<Popover>('accountPopover');
     private readonly appearanceButton =
         viewChild<ElementRef<HTMLButtonElement>>('appearanceButton');
+
+    protected readonly paletteOptions = PALETTE_OPTIONS;
+    protected readonly appearanceOpen = signal(false);
+    protected readonly menuOpen = signal(false);
+    protected readonly overlayParent = signal<HTMLElement | 'body'>('body');
     private restoreOnHide = true;
+
+    protected readonly identity = computed(() => accountIdentity(this.user()));
 
     constructor() {
         let previousMobile = this.mobile();
@@ -72,9 +77,11 @@ export class AccountControlsComponent {
         this.menuOpen.set(true);
         this.popover()?.show(event, this.trigger().nativeElement);
     }
+
     protected shown(): void {
         this.appearanceButton()?.nativeElement.focus();
     }
+
     protected hidden(): void {
         this.menuOpen.set(false);
         this.appearanceOpen.set(false);
@@ -85,18 +92,7 @@ export class AccountControlsComponent {
         )
             this.restoreFocus();
     }
-    dismiss(restoreFocus = true): void {
-        this.restoreOnHide = restoreFocus;
-        this.menuOpen.set(false);
-        this.appearanceOpen.set(false);
-        this.popover()?.hide();
-        if (restoreFocus) this.restoreFocus();
-    }
-    private restoreFocus(): void {
-        const button = this.trigger().nativeElement;
-        if (this.available() && button.isConnected && !button.closest('[hidden], [inert]'))
-            button.focus({ preventScroll: true });
-    }
+
     protected escape(event: Event): void {
         if (!this.menuOpen()) return;
         // Consume Escape here so the drawer does not dismiss the same interaction.
@@ -104,10 +100,25 @@ export class AccountControlsComponent {
         event.preventDefault();
         this.dismiss();
     }
+
     protected changePalette(value: PaletteId): void {
         this.paletteService.setPalette(value);
     }
     protected requestSignOut(): void {
         if (!this.pending()) this.signOut.emit();
+    }
+
+    dismiss(restoreFocus = true): void {
+        this.restoreOnHide = restoreFocus;
+        this.menuOpen.set(false);
+        this.appearanceOpen.set(false);
+        this.popover()?.hide();
+        if (restoreFocus) this.restoreFocus();
+    }
+
+    private restoreFocus(): void {
+        const button = this.trigger().nativeElement;
+        if (this.available() && button.isConnected && !button.closest('[hidden], [inert]'))
+            button.focus({ preventScroll: true });
     }
 }

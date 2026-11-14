@@ -19,6 +19,7 @@
     text-align: left;
     cursor: pointer;
 }
+
 .avatar {
     display: grid;
     place-items: center;
@@ -46,6 +47,7 @@
     font-size: 0.75rem;
     color: var(--color-text-secondary);
 }
+
 .account-panel {
     min-width: 0;
     max-height: min(
@@ -66,6 +68,7 @@
     font-size: 0.875rem;
     color: var(--color-text-secondary);
 }
+
 .appearance {
     border-top: 1px solid var(--color-border-subtle);
     margin-top: var(--space-2);
@@ -85,11 +88,6 @@
     font: inherit;
     text-align: left;
     cursor: pointer;
-}
-.logout {
-    margin-top: var(--space-2);
-    border-top: 1px solid var(--color-border-subtle);
-    border-radius: 0;
 }
 .account-trigger:hover,
 .menu-action:hover:not(:disabled),
@@ -126,18 +124,26 @@ legend {
     border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: 0.875rem;
-}
-.palette-option span {
-    min-width: 0;
-    overflow-wrap: anywhere;
-}
-.palette-option.selected {
-    background: var(--color-surface-selected);
-    color: var(--color-action-primary);
+
+    span {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    &.selected {
+        background: var(--color-surface-selected);
+        color: var(--color-action-primary);
+    }
 }
 input {
     accent-color: var(--color-action-primary);
 }
+.logout {
+    margin-top: var(--space-2);
+    border-top: 1px solid var(--color-border-subtle);
+    border-radius: 0;
+}
+
 .account-error {
     margin: var(--space-2);
     color: var(--color-status-danger);
