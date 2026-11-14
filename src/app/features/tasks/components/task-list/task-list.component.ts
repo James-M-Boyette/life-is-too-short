@@ -5,7 +5,6 @@ import type { ProjectNode } from '@/features/projects/models/project.model';
 import { TaskRowComponent } from '@/features/tasks/components/task-row/task-row.component';
 import type { Task } from '@/features/tasks/models/tasks.model';
 
-// import { JsonPipe } from '@angular/common';
 import type { TaskScheduleDrop } from '@/features/tasks/models/task-schedule-drop.model';
 import type { TaskReorder } from '@/features/tasks/models/task-reorder.model';
 import type { TaskOrderField } from '@/features/tasks/utils/task-ordering.util';
@@ -173,11 +172,4 @@ export class TaskListComponent {
             plannedDate: this.destinationDate(),
         });
     }
-
-    protected readonly debugTasks = computed(() =>
-        this.tasks().map((task) => ({
-            title: task.title,
-            is_done: task.is_done,
-        })),
-    );
 }
