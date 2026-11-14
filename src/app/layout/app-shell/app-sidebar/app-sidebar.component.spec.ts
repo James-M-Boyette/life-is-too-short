@@ -190,6 +190,20 @@ describe('AppSidebarComponent', () => {
         expect(link('child')).toBeTruthy();
     });
 
+    it('reopens a manually collapsed ancestor when navigating to a sibling with the same path', async () => {
+        const router = TestBed.inject(Router);
+        await router.navigateByUrl('/tasks/project/child');
+        await fixture.whenStable();
+        expect(link('child')).toBeTruthy();
+
+        toggle('parent');
+        expect(link('leaf')).toBeNull();
+
+        await router.navigateByUrl('/tasks/project/leaf');
+        await fixture.whenStable();
+        expect(link('leaf')).toBeTruthy();
+    });
+
     it('preserves expansion through project navigation and hierarchy refresh', async () => {
         toggle('parent');
         toggle('child');

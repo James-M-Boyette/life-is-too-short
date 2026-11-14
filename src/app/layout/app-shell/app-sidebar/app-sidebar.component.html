@@ -1,7 +1,3 @@
-<!-- TODO:
-    []
-    [] Calendar, Today, Projects, etc.
--->
 <nav class="sidebar-navigation">
     <section class="focus-navigation">
         <button type="button" (click)="createTask.emit()">
@@ -18,6 +14,7 @@
             tooltipPosition="bottom">
             All Tasks
         </a>
+
         <a
             (click)="onNavigationClick($event)"
             routerLink="/tasks/inbox"
@@ -40,7 +37,6 @@
     </section>
 
     <section class="project-navigation">
-        <!-- <h2>Projects</h2> -->
         <header class="project-navigation-header">
             <h2>Projects</h2>
 
@@ -75,6 +71,7 @@
                         ariaCurrentWhenActive="page">
                         <span>{{ node.label }}</span>
                     </a>
+
                     @if (node.children?.length) {
                         <button
                             type="button"
@@ -92,6 +89,7 @@
                                 aria-hidden="true"></i>
                         </button>
                     }
+
                     <button
                         type="button"
                         class="project-more"

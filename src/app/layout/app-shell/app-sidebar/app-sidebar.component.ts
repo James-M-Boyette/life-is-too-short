@@ -1,26 +1,26 @@
+import { DOCUMENT } from '@angular/common';
 import {
     Component,
-    signal,
     computed,
+    DestroyRef,
     effect,
+    inject,
     input,
     output,
-    inject,
+    signal,
     viewChild,
-    DestroyRef,
 } from '@angular/core';
-import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { TreeModule } from 'primeng/tree';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+
+import type { MenuItem, TreeNode } from 'primeng/api';
+import { Menu, MenuModule } from 'primeng/menu';
+import { TooltipModule } from 'primeng/tooltip';
+import { TreeModule } from 'primeng/tree';
 import { filter, map } from 'rxjs';
 
 import type { ProjectNode } from '@/features/projects/models/project.model';
 import { toProjectTreeNodes } from '@/features/projects/utils/project-tree-node.util';
-import { DOCUMENT } from '@angular/common';
-import { Menu, MenuModule } from 'primeng/menu';
-import type { MenuItem } from 'primeng/api';
-import type { TreeNode } from 'primeng/api';
-import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
     selector: 'app-sidebar',
@@ -30,9 +30,33 @@ import { TooltipModule } from 'primeng/tooltip';
     styleUrl: './app-sidebar.component.scss',
 })
 export class AppSidebarComponent {
-    readonly projects = input<ProjectNode[]>([]);
-
     private readonly router = inject(Router);
+    private readonly document = inject(DOCUMENT);
+
+    readonly projects = input<ProjectNode[]>([]);
+    readonly available = input(true);
+    readonly mobile = input(false);
+    readonly expandProjectRequest = input<{
+        projectId: string;
+    } | null>(null);
+
+    readonly navigated = output<void>();
+    readonly createTask = output<void>();
+    readonly createProject = output<void>();
+    readonly editProject = output<string>();
+    readonly deleteProject = output<string>();
+
+    private readonly menu = viewChild<Menu>('projectMenu');
+
+    protected readonly expandedProjectIds = signal<Set<string>>(new Set());
+    protected readonly selectedProjectId = signal<string | null>(null);
+    protected readonly overlayParent = signal<HTMLElement | 'body'>('body');
+    protected readonly menuOpen = signal(false);
+    private trigger: HTMLButtonElement | null = null;
+    private restoreOnHide = true;
+    private pendingMenu: { id: string; trigger: HTMLButtonElement } | null = null;
+    private menuElement: HTMLElement | null = null;
+
     private readonly navigationUrl = toSignal(
         this.router.events.pipe(
             filter((event): event is NavigationEnd => event instanceof NavigationEnd),
@@ -69,33 +93,16 @@ export class AppSidebarComponent {
         },
     );
 
-    protected readonly expandedProjectIds = signal<Set<string>>(new Set());
-
     protected readonly projectNodes = computed(() =>
         toProjectTreeNodes(this.projects(), this.expandedProjectIds()),
     );
 
-    readonly navigated = output<void>();
-    readonly createTask = output<void>();
-
-    readonly createProject = output<void>();
-
-    readonly editProject = output<string>();
-    readonly deleteProject = output<string>();
-    readonly available = input(true);
-    readonly mobile = input(false);
-    protected readonly selectedProjectId = signal<string | null>(null);
-    protected readonly overlayParent = signal<HTMLElement | 'body'>('body');
-    protected readonly menuOpen = signal(false);
-    private readonly menu = viewChild<Menu>('projectMenu');
-    private readonly document = inject(DOCUMENT);
-    private trigger: HTMLButtonElement | null = null;
-    private restoreOnHide = true;
-    private pendingMenu: { id: string; trigger: HTMLButtonElement } | null = null;
-    private menuElement: HTMLElement | null = null;
     private readonly stopMenuEscape = (event: KeyboardEvent) => {
         // Consume Escape before the surrounding modal drawer handles the same key.
-        if (event.key !== 'Escape') return;
+        if (event.key !== 'Escape') {
+            return;
+        }
+
         event.stopPropagation();
         event.preventDefault();
         this.dismissMenu();
@@ -122,76 +129,45 @@ export class AppSidebarComponent {
         },
     ];
 
-    private projectExists(id: string, nodes = this.projects()): boolean {
-        return nodes.some(
-            (node) => node.project.id === id || this.projectExists(id, node.children),
+    constructor() {
+        inject(DestroyRef).onDestroy(() =>
+            this.menuElement?.removeEventListener('keydown', this.stopMenuEscape, true),
         );
-    }
 
-    protected openProjectMenu(event: MouseEvent, id: string): void {
-        event.stopPropagation();
-        if (!this.available() || !this.projectExists(id)) return;
-        const trigger = event.currentTarget as HTMLButtonElement;
-        if (this.menuOpen()) {
-            this.pendingMenu = this.selectedProjectId() === id ? null : { id, trigger };
-            this.restoreOnHide = false;
-            this.menu()?.hide();
-            return;
-        }
-        this.showProjectMenu(id, trigger);
-    }
+        let previousMobile = this.mobile();
+        effect(() => {
+            const mobile = this.mobile();
+            const id = this.selectedProjectId();
 
-    private showProjectMenu(id: string, trigger: HTMLButtonElement): void {
-        if (!this.available() || !this.projectExists(id) || !trigger.isConnected) return;
-        this.trigger = trigger;
-        this.restoreOnHide = true;
-        this.selectedProjectId.set(id);
-        this.overlayParent.set(this.trigger.closest<HTMLElement>('.p-drawer') ?? 'body');
-        this.menuOpen.set(true);
-        this.menu()?.show({ currentTarget: trigger });
-    }
+            if (!this.available() || mobile !== previousMobile || (id && !this.projectExists(id))) {
+                this.dismissMenu(false);
+            }
 
-    protected menuShown(): void {
-        this.menuElement?.removeEventListener('keydown', this.stopMenuEscape, true);
-        this.menuElement = this.menu()?.container ?? null;
-        this.menuElement?.addEventListener('keydown', this.stopMenuEscape, true);
-    }
+            previousMobile = mobile;
+        });
+        effect(() => {
+            // A different project can share the same ancestor path.
+            this.activeProjectId();
+            const ancestors = this.activeAncestorPath();
+            if (!ancestors.length) {
+                return;
+            }
 
-    protected menuHidden(): void {
-        const focused = this.document.activeElement;
-        if (
-            this.restoreOnHide &&
-            (focused === this.document.body || this.menuElement?.contains(focused))
-        ) {
-            if (this.trigger?.isConnected && !this.trigger.closest('[hidden], [inert]'))
-                this.trigger.focus({ preventScroll: true });
-        }
-        this.menuElement?.removeEventListener('keydown', this.stopMenuEscape, true);
-        this.menuElement = null;
-        this.menuOpen.set(false);
-        this.selectedProjectId.set(null);
-        const pending = this.pendingMenu;
-        this.pendingMenu = null;
-        if (pending) this.showProjectMenu(pending.id, pending.trigger);
-    }
+            this.expandedProjectIds.update((ids) => new Set([...ids, ...ancestors]));
+        });
+        effect(() => {
+            const request = this.expandProjectRequest();
 
-    private dismissMenu(restore = true): void {
-        this.pendingMenu = null;
-        this.restoreOnHide = restore;
-        this.menu()?.hide();
-    }
+            if (!request) {
+                return;
+            }
 
-    private requestProjectAction(action: 'edit' | 'delete'): void {
-        const id = this.selectedProjectId();
-        this.dismissMenu(false);
-        if (!id || !this.available() || !this.projectExists(id)) return;
-        if (action === 'edit') this.editProject.emit(id);
-        else this.deleteProject.emit(id);
-    }
-
-    protected onProjectControlKeydown(event: KeyboardEvent): void {
-        // Let native links/buttons activate once; retain the tree's arrow and Tab handling.
-        if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+            this.expandedProjectIds.update((ids) => {
+                const next = new Set(ids);
+                next.add(request.projectId);
+                return next;
+            });
+        });
     }
 
     protected onNavigationClick(event: MouseEvent): void {
@@ -207,36 +183,12 @@ export class AppSidebarComponent {
         }
     }
 
-    protected collapseAll(): void {
-        this.expandedProjectIds.set(new Set());
-    }
-
     protected expandAll(): void {
         this.expandedProjectIds.set(this.collectExpandableProjectIds(this.projects()));
     }
 
-    private collectExpandableProjectIds(nodes: ProjectNode[]): Set<string> {
-        const ids = new Set<string>();
-
-        for (const node of nodes) {
-            if (node.children.length > 0) {
-                ids.add(node.project.id);
-
-                const childIds = this.collectExpandableProjectIds(node.children);
-
-                for (const id of childIds) {
-                    ids.add(id);
-                }
-            }
-        }
-
-        return ids;
-    }
-
-    protected toggleProjectChildren(node: TreeNode): void {
-        if (!node.key || !node.children?.length) return;
-        if (this.expandedProjectIds().has(node.key)) this.onNodeCollapse({ node });
-        else this.onNodeExpand({ node });
+    protected collapseAll(): void {
+        this.expandedProjectIds.set(new Set());
     }
 
     protected onNodeExpand(event: { node: TreeNode }): void {
@@ -269,38 +221,111 @@ export class AppSidebarComponent {
         });
     }
 
-    readonly expandProjectRequest = input<{
-        projectId: string;
-    } | null>(null);
+    protected onProjectControlKeydown(event: KeyboardEvent): void {
+        // Let native links/buttons activate once; retain the tree's arrow and Tab handling.
+        if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+    }
 
-    constructor() {
-        inject(DestroyRef).onDestroy(() =>
-            this.menuElement?.removeEventListener('keydown', this.stopMenuEscape, true),
+    protected toggleProjectChildren(node: TreeNode): void {
+        if (!node.key || !node.children?.length) {
+            return;
+        }
+
+        if (this.expandedProjectIds().has(node.key)) {
+            this.onNodeCollapse({ node });
+        } else {
+            this.onNodeExpand({ node });
+        }
+    }
+
+    protected openProjectMenu(event: MouseEvent, id: string): void {
+        event.stopPropagation();
+        if (!this.available() || !this.projectExists(id)) {
+            return;
+        }
+
+        const trigger = event.currentTarget as HTMLButtonElement;
+        if (this.menuOpen()) {
+            this.pendingMenu = this.selectedProjectId() === id ? null : { id, trigger };
+            this.restoreOnHide = false;
+            this.menu()?.hide();
+            return;
+        }
+        this.showProjectMenu(id, trigger);
+    }
+
+    protected menuShown(): void {
+        this.menuElement?.removeEventListener('keydown', this.stopMenuEscape, true);
+        this.menuElement = this.menu()?.container ?? null;
+        this.menuElement?.addEventListener('keydown', this.stopMenuEscape, true);
+    }
+
+    protected menuHidden(): void {
+        const focused = this.document.activeElement;
+        if (
+            this.restoreOnHide &&
+            (focused === this.document.body || this.menuElement?.contains(focused))
+        ) {
+            if (this.trigger?.isConnected && !this.trigger.closest('[hidden], [inert]'))
+                this.trigger.focus({ preventScroll: true });
+        }
+        this.menuElement?.removeEventListener('keydown', this.stopMenuEscape, true);
+        this.menuElement = null;
+        this.menuOpen.set(false);
+        this.selectedProjectId.set(null);
+        const pending = this.pendingMenu;
+        this.pendingMenu = null;
+        if (pending) this.showProjectMenu(pending.id, pending.trigger);
+    }
+
+    private showProjectMenu(id: string, trigger: HTMLButtonElement): void {
+        if (!this.available() || !this.projectExists(id) || !trigger.isConnected) {
+            return;
+        }
+
+        this.trigger = trigger;
+        this.restoreOnHide = true;
+        this.selectedProjectId.set(id);
+        this.overlayParent.set(this.trigger.closest<HTMLElement>('.p-drawer') ?? 'body');
+        this.menuOpen.set(true);
+        this.menu()?.show({ currentTarget: trigger });
+    }
+
+    private dismissMenu(restore = true): void {
+        this.pendingMenu = null;
+        this.restoreOnHide = restore;
+        this.menu()?.hide();
+    }
+
+    private requestProjectAction(action: 'edit' | 'delete'): void {
+        const id = this.selectedProjectId();
+        this.dismissMenu(false);
+        if (!id || !this.available() || !this.projectExists(id)) return;
+        if (action === 'edit') this.editProject.emit(id);
+        else this.deleteProject.emit(id);
+    }
+
+    private projectExists(id: string, nodes = this.projects()): boolean {
+        return nodes.some(
+            (node) => node.project.id === id || this.projectExists(id, node.children),
         );
-        let previousMobile = this.mobile();
-        effect(() => {
-            const mobile = this.mobile();
-            const id = this.selectedProjectId();
-            if (!this.available() || mobile !== previousMobile || (id && !this.projectExists(id)))
-                this.dismissMenu(false);
-            previousMobile = mobile;
-        });
-        effect(() => {
-            this.activeProjectId();
-            const ancestors = this.activeAncestorPath();
-            if (!ancestors.length) return;
-            this.expandedProjectIds.update((ids) => new Set([...ids, ...ancestors]));
-        });
-        effect(() => {
-            const request = this.expandProjectRequest();
+    }
 
-            if (!request) return;
+    private collectExpandableProjectIds(nodes: ProjectNode[]): Set<string> {
+        const ids = new Set<string>();
 
-            this.expandedProjectIds.update((ids) => {
-                const next = new Set(ids);
-                next.add(request.projectId);
-                return next;
-            });
-        });
+        for (const node of nodes) {
+            if (node.children.length > 0) {
+                ids.add(node.project.id);
+
+                const childIds = this.collectExpandableProjectIds(node.children);
+
+                for (const id of childIds) {
+                    ids.add(id);
+                }
+            }
+        }
+
+        return ids;
     }
 }
