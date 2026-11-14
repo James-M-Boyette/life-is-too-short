@@ -71,11 +71,11 @@ app-task-description .description-disclosure:hover {
 
 app-task-description .editable-description {
     cursor: text;
-}
 
-app-task-description .editable-description:hover {
-    background: var(--color-surface-hover);
-    border-radius: var(--radius-sm);
+    &:hover {
+        background: var(--color-surface-hover);
+        border-radius: var(--radius-sm);
+    }
 }
 
 app-task-description .compact-description-excerpt,

@@ -4,6 +4,7 @@
     (click)="requestEdit($event)"
     >{{ content().preview }}</p
 >
+
 <div class="description-details" [class.description-expanded]="expanded()">
     <div
         [class.editable-description]="editable()"
@@ -16,6 +17,7 @@
         }
     </div>
 </div>
+
 <button
     type="button"
     class="description-disclosure"

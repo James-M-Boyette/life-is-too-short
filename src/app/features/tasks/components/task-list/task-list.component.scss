@@ -5,6 +5,7 @@
     margin: 0;
     padding: 0;
     list-style: none;
+    min-height: 3rem;
 }
 
 .cdk-drag-animating {
@@ -13,10 +14,6 @@
 
 .list.cdk-drop-list-dragging:not(.cdk-drop-list-disabled) .cdk-drag:not(.cdk-drag-placeholder) {
     transition: transform 180ms ease;
-}
-
-.list {
-    min-height: 3rem;
 }
 
 .empty-message {

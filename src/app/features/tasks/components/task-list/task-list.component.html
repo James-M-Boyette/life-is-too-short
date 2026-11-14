@@ -1,5 +1,3 @@
-<!-- For debugging ... -->
-<!-- <pre>{{ debugTasks() | json }}</pre> -->
 <ul
     class="list"
     cdkDropList
@@ -41,6 +39,7 @@
                 </h3>
             </li>
         }
+
         <app-task-row
             [task]="task"
             [contentFeedback]="contentFeedback()[task.id] ?? null"
