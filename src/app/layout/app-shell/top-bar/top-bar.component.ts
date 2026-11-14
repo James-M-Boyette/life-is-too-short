@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+
 @Component({
     selector: 'app-top-bar',
     standalone: true,
@@ -9,6 +10,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 })
 export class TopBarComponent {
     readonly navigationOpen = input(false);
+
     readonly showNavigation = output<void>();
     readonly createTask = output<void>();
 }

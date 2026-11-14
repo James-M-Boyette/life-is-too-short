@@ -1,5 +1,6 @@
-import { Component, EventEmitter, Input, Output, isDevMode } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, EventEmitter, Input, isDevMode, Output } from '@angular/core';
+
 import { ButtonModule } from 'primeng/button';
 
 @Component({
@@ -10,8 +11,6 @@ import { ButtonModule } from 'primeng/button';
     styleUrls: ['./tasks-header.component.scss'],
 })
 export class TasksHeaderComponent {
-    // Temporary presentation policy only; this does not grant any privileged capabilities.
-    protected readonly showRealtimeDiagnostic = isDevMode();
     @Input() title = 'Tasks';
     @Input() realtimeOn = false;
     @Input() errorText: string | null = null;
@@ -19,8 +18,14 @@ export class TasksHeaderComponent {
 
     @Output() signOut = new EventEmitter<void>();
 
-    protected onSignOutClick() {
-        if (this.disabled) return;
+    // Temporary presentation policy only; this does not grant any privileged capabilities.
+    protected readonly showRealtimeDiagnostic = isDevMode();
+
+    protected onSignOutClick(): void {
+        if (this.disabled) {
+            return;
+        }
+
         this.signOut.emit();
     }
 }
