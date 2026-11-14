@@ -33,7 +33,8 @@
                 "files": "*.html",
                 "options": {
                     "parser": "angular",
-                    "htmlWhitespaceSensitivity": "strict"
+                    "htmlWhitespaceSensitivity": "strict",
+                    "bracketSameLine": true
                 }
             }
         ],

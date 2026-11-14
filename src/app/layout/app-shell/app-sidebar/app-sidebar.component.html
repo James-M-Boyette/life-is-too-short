@@ -15,8 +15,7 @@
             routerLinkActive="active"
             [routerLinkActiveOptions]="{ exact: true }"
             pTooltip="A comprehensive view across every project, including unassigned tasks"
-            tooltipPosition="bottom"
-        >
+            tooltipPosition="bottom">
             All Tasks
         </a>
         <a
@@ -24,8 +23,7 @@
             routerLink="/tasks/inbox"
             routerLinkActive="active"
             pTooltip="Start here: tasks that haven't been assigned a project or due date yet"
-            tooltipPosition="bottom"
-        >
+            tooltipPosition="bottom">
             Inbox
         </a>
 
@@ -36,8 +34,7 @@
         <a
             (click)="onNavigationClick($event)"
             routerLink="/tasks/upcoming"
-            routerLinkActive="active"
-        >
+            routerLinkActive="active">
             Upcoming
         </a>
     </section>
@@ -53,8 +50,7 @@
                 pTooltip="Create project"
                 tooltipPosition="bottom"
                 aria-label="Create a project"
-                (click)="createProject.emit()"
-            >
+                (click)="createProject.emit()">
                 <i class="pi pi-plus" aria-hidden="true"></i>
             </button>
         </header>
@@ -68,8 +64,7 @@
         <p-tree
             [value]="projectNodes()"
             (onNodeExpand)="onNodeExpand($event)"
-            (onNodeCollapse)="onNodeCollapse($event)"
-        >
+            (onNodeCollapse)="onNodeCollapse($event)">
             <ng-template pTemplate="default" let-node>
                 <div class="project-tree-item">
                     <a
@@ -77,8 +72,7 @@
                         (keydown)="onProjectControlKeydown($event)"
                         [routerLink]="['/tasks/project', node.key]"
                         routerLinkActive="active"
-                        ariaCurrentWhenActive="page"
-                    >
+                        ariaCurrentWhenActive="page">
                         <span>{{ node.label }}</span>
                     </a>
                     @if (node.children?.length) {
@@ -90,14 +84,12 @@
                             "
                             [attr.aria-expanded]="!!node.expanded"
                             (keydown)="onProjectControlKeydown($event)"
-                            (click)="$event.stopPropagation(); toggleProjectChildren(node)"
-                        >
+                            (click)="$event.stopPropagation(); toggleProjectChildren(node)">
                             <i
                                 [class]="
                                     node.expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'
                                 "
-                                aria-hidden="true"
-                            ></i>
+                                aria-hidden="true"></i>
                         </button>
                     }
                     <button
@@ -109,8 +101,7 @@
                         [pTooltip]="'More actions for ' + node.label"
                         [attr.aria-expanded]="menuOpen() && selectedProjectId() === node.key"
                         (keydown)="onProjectControlKeydown($event)"
-                        (click)="openProjectMenu($event, node.key)"
-                    >
+                        (click)="openProjectMenu($event, node.key)">
                         <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
                     </button>
                 </div>
@@ -127,5 +118,4 @@
     [appendTo]="overlayParent()"
     ariaLabel="Project actions"
     (onShow)="menuShown()"
-    (onHide)="menuHidden()"
-/>
+    (onHide)="menuHidden()" />

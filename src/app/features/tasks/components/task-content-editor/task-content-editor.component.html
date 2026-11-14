@@ -2,8 +2,7 @@
     class="task-content-form"
     [id]="'content-form-' + taskId()"
     (submit)="submit($event)"
-    (keydown.escape)="escape($event)"
->
+    (keydown.escape)="escape($event)">
     <div class="editor-title-row">
         <ng-content select="[taskLeading]" />
         <input
@@ -17,8 +16,7 @@
             [attr.aria-invalid]="attempted() && titleInvalid()"
             [attr.aria-describedby]="
                 attempted() && titleInvalid() ? 'title-error-' + taskId() : null
-            "
-        />
+            " />
         <ng-content select="[taskActions]" />
     </div>
     @if (attempted() && titleInvalid()) {
@@ -35,8 +33,7 @@
             tooltipPosition="bottom"
             aria-haspopup="dialog"
             [attr.aria-expanded]="!!help.overlayVisible"
-            (click)="help.toggle($event)"
-        >
+            (click)="help.toggle($event)">
             <i class="pi pi-question-circle" aria-hidden="true"></i>
         </button>
     </div>
@@ -48,8 +45,7 @@
         [value]="draftDescription()"
         (input)="draftDescription.set(inputValue($event))"
         (keydown.control.enter)="submit($event)"
-        [disabled]="disabled() || pending()"
-    ></textarea>
+        [disabled]="disabled() || pending()"></textarea>
     @if (pending()) {
         <p role="status">Saving task…</p>
     }
@@ -88,8 +84,7 @@
 <p-popover #help appendTo="body" ariaLabel="Markdown formatting">
     <div
         class="markdown-help"
-        (keydown.escape)="$event.preventDefault(); $event.stopPropagation(); closeHelp()"
-    >
+        (keydown.escape)="$event.preventDefault(); $event.stopPropagation(); closeHelp()">
         <header
             ><strong>Markdown formatting</strong>
             <button

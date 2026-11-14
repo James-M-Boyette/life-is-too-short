@@ -2,8 +2,7 @@
     class="scheduler"
     [attr.aria-label]="'Schedule task: ' + task().title"
     [attr.aria-busy]="pending()"
-    (keydown.escape)="dismiss.emit($event)"
->
+    (keydown.escape)="dismiss.emit($event)">
     <header>
         <h2 id="schedule-task-heading" tabindex="-1" autofocus>Schedule task</h2>
         <button
@@ -13,8 +12,7 @@
             [rounded]="true"
             icon="pi pi-times"
             aria-label="Close scheduling"
-            (click)="dismiss.emit($event)"
-        ></button>
+            (click)="dismiss.emit($event)"></button>
     </header>
 
     <p-selectbutton
@@ -25,8 +23,7 @@
         (ngModelChange)="field.set($event)"
         [allowEmpty]="false"
         aria-label="Date to edit"
-        [fluid]="true"
-    />
+        [fluid]="true" />
 
     <div class="quick-dates" aria-label="Quick dates">
         @for (option of quickDates(); track option.label) {
@@ -37,8 +34,7 @@
                 [attr.aria-label]="
                     option.label + (field() === 'planned_date' ? ' — planned date' : ' — due date')
                 "
-                (click)="choose(option.date)"
-            >
+                (click)="choose(option.date)">
                 <i [class]="'pi ' + option.icon" aria-hidden="true"></i>
                 <span>{{ option.label }}</span>
                 <span class="quick-date__detail">{{
@@ -51,8 +47,7 @@
                         !pending() && option.date === persistedTask()[field()]
                             ? 'visible'
                             : 'hidden'
-                    "
-                ></i>
+                    "></i>
             </button>
         }
     </div>
@@ -70,8 +65,9 @@
                 [defaultDate]="calendarStart()"
                 (onSelect)="chooseCalendarDate($event)"
                 [disabled]="blocked()"
-                [ariaLabel]="field() === 'planned_date' ? 'Choose planned date' : 'Choose due date'"
-            />
+                [ariaLabel]="
+                    field() === 'planned_date' ? 'Choose planned date' : 'Choose due date'
+                " />
         </div>
     </div>
 
@@ -87,8 +83,7 @@
                 [text]="true"
                 label="Retry"
                 [disabled]="blocked()"
-                (click)="retry.emit()"
-            ></button>
+                (click)="retry.emit()"></button>
         </div>
     }
 </section>

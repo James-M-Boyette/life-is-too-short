@@ -5,8 +5,7 @@
             name="task-title"
             placeholder="Add a task …"
             formControlName="title"
-            [disabled]="disabled()"
-        />
+            [disabled]="disabled()" />
 
         <textarea
             rows="2"
@@ -17,8 +16,7 @@
             aria-label="Task description (Markdown)"
             aria-describedby="create-description-help"
             formControlName="description"
-            [disabled]="disabled()"
-        ></textarea>
+            [disabled]="disabled()"></textarea>
         <small id="create-description-help">Use Markdown for lists, bold, italic, and links.</small>
     </div>
 
@@ -30,8 +28,7 @@
             formControlName="project"
             [showClear]="true"
             [disabled]="disabled()"
-            appendTo="body"
-        />
+            appendTo="body" />
 
         <p-datepicker
             formControlName="plannedDate"
@@ -42,8 +39,7 @@
             appendTo="body"
             dateFormat="M d, yy"
             placeholder="Planned date"
-            [showButtonBar]="true"
-        />
+            [showButtonBar]="true" />
 
         <div class="action-buttons-container">
             <button pButton type="button" (click)="onCancelCreateTask()" [disabled]="disabled()">

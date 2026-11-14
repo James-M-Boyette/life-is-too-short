@@ -5,8 +5,7 @@
     cdkDrag
     [cdkDragStartDelay]="dragStartDelay"
     [cdkDragData]="task()"
-    [cdkDragDisabled]="!draggable() || disabled() || editing() || movingProject()"
->
+    [cdkDragDisabled]="!draggable() || disabled() || editing() || movingProject()">
     <ng-template #leading>
         @if (draggable()) {
             <span class="task-drag-handle" aria-hidden="true"><i class="pi pi-bars"></i></span>
@@ -18,8 +17,7 @@
             (click)="toggleDone.emit(task())"
             [disabled]="disabled() || editing()"
             [attr.aria-label]="task().is_done ? 'Mark task not done' : 'Mark task done'"
-            [attr.aria-pressed]="task().is_done"
-        >
+            [attr.aria-pressed]="task().is_done">
             <span class="sr-only">
                 {{ task().is_done ? 'Completed' : 'Not completed' }}
             </span>
@@ -51,8 +49,7 @@
             aria-haspopup="dialog"
             [disabled]="disabled() || editing()"
             [attr.data-schedule-task-id]="task().id"
-            (click)="openSchedule($event)"
-        >
+            (click)="openSchedule($event)">
             <i class="pi pi-calendar-clock" aria-hidden="true"></i>
         </button>
 
@@ -70,8 +67,7 @@
             [attr.aria-expanded]="!!actionsMenu.visible"
             [disabled]="disabled()"
             (click)="openActions($event)"
-            (keydown.arrowdown)="openActionsWithKeyboard($event)"
-        >
+            (keydown.arrowdown)="openActionsWithKeyboard($event)">
             <i class="pi pi-ellipsis-h" aria-hidden="true"></i>
         </button>
         <p-menu
@@ -80,8 +76,7 @@
             [model]="menuItems()"
             [popup]="true"
             appendTo="body"
-            [ariaLabel]="'Actions for ' + task().title"
-        />
+            [ariaLabel]="'Actions for ' + task().title" />
     </ng-template>
     <ng-template #metadata>
         <div class="meta">
@@ -96,8 +91,7 @@
                     [ngModel]="selectedProjectNode()"
                     (ngModelChange)="onProjectChange($event)"
                     placeholder="No Project"
-                    [showClear]="true"
-                >
+                    [showClear]="true">
                     <ng-template #dropdownicon
                         ><i class="pi pi-chevron-down project-chevron" aria-hidden="true"></i
                     ></ng-template>
@@ -108,8 +102,7 @@
                             aria-label="Move task to Inbox"
                             pTooltip="Move to Inbox"
                             tooltipPosition="bottom"
-                            [disabled]="disabled() || editing()"
-                        >
+                            [disabled]="disabled() || editing()">
                             <i class="pi pi-times" aria-hidden="true"></i>
                         </button>
                     </ng-template>
@@ -120,8 +113,7 @@
                 <span class="compact-edit-project">
                     <i
                         [class]="task().project_id ? 'pi pi-folder' : 'pi pi-inbox'"
-                        aria-hidden="true"
-                    ></i>
+                        aria-hidden="true"></i>
                     <span>{{ projectName() }}</span>
                 </span>
             }
@@ -141,15 +133,13 @@
                         tooltipPosition="bottom"
                         aria-haspopup="dialog"
                         [attr.data-schedule-task-id]="task().id"
-                        (click)="openSchedule($event, 'planned_date')"
-                    >
+                        (click)="openSchedule($event, 'planned_date')">
                         <p-tag
                             class="expanded-date-tag"
                             aria-hidden="true"
                             severity="secondary"
                             [value]="'Planned: ' + (date | date: 'MMM d')"
-                            icon="pi pi-calendar"
-                        />
+                            icon="pi pi-calendar" />
                         <span class="compact-date-label" aria-hidden="true"
                             ><i class="pi pi-calendar"></i> {{ date | date: 'MMM d' }}</span
                         >
@@ -173,15 +163,13 @@
                         tooltipPosition="bottom"
                         aria-haspopup="dialog"
                         [attr.data-schedule-task-id]="task().id"
-                        (click)="openSchedule($event, 'due_date')"
-                    >
+                        (click)="openSchedule($event, 'due_date')">
                         <p-tag
                             class="expanded-date-tag"
                             aria-hidden="true"
                             [severity]="isDueOverdue() ? 'danger' : 'secondary'"
                             [value]="'Due: ' + (date | date: 'MMM d')"
-                            icon="pi pi-flag"
-                        />
+                            icon="pi pi-flag" />
                         <span class="compact-date-label" aria-hidden="true"
                             ><i class="pi pi-flag"></i> Due {{ date | date: 'MMM d' }}</span
                         >
@@ -210,12 +198,10 @@
                 "
                 [attr.aria-label]="'Go to ' + projectName()"
                 [pTooltip]="projectName()"
-                tooltipPosition="bottom"
-            >
+                tooltipPosition="bottom">
                 <i
                     [class]="task().project_id ? 'pi pi-folder' : 'pi pi-inbox'"
-                    aria-hidden="true"
-                ></i
+                    aria-hidden="true"></i
                 ><span>{{ projectName() }}</span>
             </a>
         </div>
@@ -229,8 +215,7 @@
             [pending]="!!contentFeedback()?.pending"
             [error]="contentError()"
             (saved)="saveContent($event)"
-            (cancelled)="cancelEdit()"
-        >
+            (cancelled)="cancelEdit()">
             <ng-container taskLeading [ngTemplateOutlet]="leading" />
             <div taskActions class="task-actions"
                 ><ng-container [ngTemplateOutlet]="actions"
@@ -241,8 +226,7 @@
         <div
             class="task-card-content"
             (mousedown)="protectCardInteraction($event)"
-            (touchstart)="protectCardInteraction($event)"
-        >
+            (touchstart)="protectCardInteraction($event)">
             <section class="task-primary-section">
                 <div class="left-column">
                     <ng-container [ngTemplateOutlet]="leading" />
@@ -266,8 +250,7 @@
                             [source]="description"
                             [taskId]="task().id"
                             [editable]="!disabled()"
-                            (editRequested)="startEdit('description')"
-                        />
+                            (editRequested)="startEdit('description')" />
                     </div>
                 }
                 <div class="meta-row"><ng-container [ngTemplateOutlet]="metadata" /></div>

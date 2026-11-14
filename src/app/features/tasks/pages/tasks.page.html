@@ -6,8 +6,7 @@
         [realtimeOn]="tasksStore.realtimeConnected()"
         [errorText]="error() ?? tasksStore.error() ?? tasksStore.syncError()"
         [disabled]="tasksStore.mutating()"
-        (signOut)="signOut()"
-    >
+        (signOut)="signOut()">
         @if (viewedProject(); as project) {
             <button
                 page-actions
@@ -32,8 +31,7 @@
             label="Refresh task list"
             [text]="true"
             [disabled]="tasksStore.loading() || tasksStore.mutating()"
-            (onClick)="refreshTaskList()"
-        />
+            (onClick)="refreshTaskList()" />
     }
     <p-menu
         #projectPageMenu
@@ -42,8 +40,7 @@
         [popup]="true"
         appendTo="body"
         ariaLabel="Project actions"
-        (onHide)="projectMenuHidden()"
-    />
+        (onHide)="projectMenuHidden()" />
 
     @if (scheduleError(); as message) {
         <div class="schedule-save-error" role="alert">
@@ -53,8 +50,7 @@
                     label="Retry scheduling"
                     [text]="true"
                     [disabled]="scheduleSaving() || tasksStore.mutating() || bulkScheduleBusy()"
-                    (onClick)="retrySchedule()"
-                />
+                    (onClick)="retrySchedule()" />
             }
         </div>
     }
@@ -89,8 +85,7 @@
                     class="today-toolbar__mode"
                     [class.today-toolbar__mode--active]="!isTodayPlanning()"
                     [attr.aria-pressed]="!isTodayPlanning()"
-                    (click)="setTodayLayout('focus')"
-                >
+                    (click)="setTodayLayout('focus')">
                     <i class="pi pi-list-check" aria-hidden="true"></i>
                     Focus
                 </button>
@@ -100,8 +95,7 @@
                     class="today-toolbar__mode"
                     [class.today-toolbar__mode--active]="isTodayPlanning()"
                     [attr.aria-pressed]="isTodayPlanning()"
-                    (click)="setTodayLayout('planning')"
-                >
+                    (click)="setTodayLayout('planning')">
                     <i class="pi pi-th-large" aria-hidden="true"></i>
                     Plan
                 </button>
@@ -112,8 +106,7 @@
             class="today-board"
             [class.today-board--focus]="!isTodayPlanning()"
             [class.today-board--planning]="isTodayPlanning()"
-            aria-label="Today's task board"
-        >
+            aria-label="Today's task board">
             <section class="today-board__column" aria-labelledby="today-heading">
                 <div class="today-board__column-header">
                     <h2 id="today-heading">Today ({{ todayTasks().length }})</h2>
@@ -129,8 +122,7 @@
                                 bulkScheduleBusy() ||
                                 clearableTodayTasks().length === 0
                             "
-                            (onClick)="clearTodaySchedule()"
-                        />
+                            (onClick)="clearTodaySchedule()" />
                     }
                 </div>
                 @if (isTodayPlanning() && clearTodayError(); as message) {
@@ -146,8 +138,7 @@
                             projectId: null,
                             plannedDate: calendarClock.today(),
                         })
-                    "
-                >
+                    ">
                     <i class="pi pi-plus" pButtonIcon aria-hidden="true"></i>
                     <span pButtonLabel>Add Task</span>
                 </button>
@@ -177,8 +168,7 @@
                     (scheduleRequested)="openSchedule($event)"
                     (toggleDone)="toggleTask($event)"
                     (remove)="confirmDeleteTask($event)"
-                    (contentSaved)="saveContent($event)"
-                />
+                    (contentSaved)="saveContent($event)" />
             </section>
 
             @if (!isTodayPlanning()) {
@@ -196,8 +186,7 @@
                         pButton
                         type="button"
                         class="today-board__plan-button"
-                        (click)="setTodayLayout('planning')"
-                    >
+                        (click)="setTodayLayout('planning')">
                         <!-- <i class="pi pi-calendar-plus" pButtonIcon></i> -->
                         <span pButtonLabel>Plan my day</span>
                     </button>
@@ -221,8 +210,7 @@
                                 bulkScheduleBusy() ||
                                 unscheduledTasks().length === 0
                             "
-                            (onClick)="rescheduleUnscheduledToToday()"
-                        />
+                            (onClick)="rescheduleUnscheduledToToday()" />
                     </div>
                     @if (unscheduledRescheduleError(); as message) {
                         <p role="alert">{{ message }}</p>
@@ -250,8 +238,7 @@
                         (scheduleRequested)="openSchedule($event)"
                         (toggleDone)="toggleTask($event)"
                         (remove)="confirmDeleteTask($event)"
-                        (contentSaved)="saveContent($event)"
-                    />
+                        (contentSaved)="saveContent($event)" />
                 </section>
 
                 <section class="today-board__column" aria-labelledby="overdue-heading">
@@ -268,8 +255,7 @@
                                 bulkScheduleBusy() ||
                                 overdueTasks().length === 0
                             "
-                            (onClick)="rescheduleOverdueToToday()"
-                        />
+                            (onClick)="rescheduleOverdueToToday()" />
                     </div>
                     @if (overdueRescheduleError(); as message) {
                         <p role="alert">{{ message }}</p>
@@ -290,8 +276,7 @@
                         (scheduleRequested)="openSchedule($event)"
                         (toggleDone)="toggleTask($event)"
                         (remove)="confirmDeleteTask($event)"
-                        (contentSaved)="saveContent($event)"
-                    />
+                        (contentSaved)="saveContent($event)" />
                 </section>
             }
         </section>
@@ -300,8 +285,7 @@
             @for (day of upcomingDays(); track day.date; let i = $index) {
                 <section
                     class="upcoming-board__column"
-                    [attr.aria-labelledby]="'upcoming-' + day.date"
-                >
+                    [attr.aria-labelledby]="'upcoming-' + day.date">
                     <h2 [id]="'upcoming-' + day.date">
                         @if (day.label === 'Today' || day.label === 'Tomorrow') {
                             {{ day.label }} —
@@ -320,8 +304,7 @@
                                 projectId: null,
                                 plannedDate: day.date,
                             })
-                        "
-                    >
+                        ">
                         <i class="pi pi-plus" pButtonIcon aria-hidden="true"></i>
                         <span pButtonLabel>Add Task</span>
                     </button>
@@ -345,8 +328,7 @@
                         (scheduleRequested)="openSchedule($event)"
                         (toggleDone)="toggleTask($event)"
                         (remove)="confirmDeleteTask($event)"
-                        (contentSaved)="saveContent($event)"
-                    />
+                        (contentSaved)="saveContent($event)" />
                 </section>
             }
         </section>
@@ -368,8 +350,7 @@
                                 projectId: view() === 'project' ? (projectId() ?? null) : null,
                                 plannedDate: null,
                             })
-                        "
-                    >
+                        ">
                         <i class="pi pi-plus" pButtonIcon aria-hidden="true"></i>
                         <span pButtonLabel>Add Task</span>
                     </button>
@@ -393,8 +374,7 @@
                     (scheduleRequested)="openSchedule($event)"
                     (toggleDone)="toggleTask($event)"
                     (remove)="confirmDeleteTask($event)"
-                    (contentSaved)="saveContent($event)"
-                />
+                    (contentSaved)="saveContent($event)" />
             }
         </section>
     }
@@ -406,12 +386,10 @@
                 class="completed-toggle"
                 [attr.aria-expanded]="showCompleted()"
                 aria-controls="completed-task-list"
-                (click)="showCompleted.set(!showCompleted())"
-            >
+                (click)="showCompleted.set(!showCompleted())">
                 <i
                     [class]="showCompleted() ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
-                    aria-hidden="true"
-                ></i>
+                    aria-hidden="true"></i>
 
                 Completed ({{ completedTasks().length }})
             </button>
@@ -429,8 +407,7 @@
                     (scheduleRequested)="openSchedule($event)"
                     (toggleDone)="toggleTask($event)"
                     (remove)="confirmDeleteTask($event)"
-                    (contentSaved)="saveContent($event)"
-                />
+                    (contentSaved)="saveContent($event)" />
             }
         </div>
     </section>
@@ -448,7 +425,6 @@
             [pending]="scheduleSaving()"
             [disabled]="tasksStore.mutating() || bulkScheduleBusy()"
             (selectDate)="saveSchedule($event)"
-            (dismiss)="closeSchedule($event)"
-        />
+            (dismiss)="closeSchedule($event)" />
     }
 </p-popover>
