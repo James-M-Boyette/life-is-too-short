@@ -1,5 +1,4 @@
 <div class="app-shell" [class.is-mobile]="mobile()" [attr.inert]="navigationOpen() ? '' : null">
-    <!-- App Header -->
     @if (mobile()) {
         <app-top-bar
             [navigationOpen]="navigationOpen()"
@@ -8,7 +7,6 @@
     }
 
     <div class="app-body" [style.grid-template-columns]="shellColumns()">
-        <!-- App Sidebar -->
         <div class="desktop-navigation" [hidden]="mobile()">
             @if (!mobile() && desktopCollapsed()) {
                 <nav class="navigation-rail" aria-label="Quick navigation">
@@ -49,6 +47,7 @@
                     ><i class="pi pi-angle-double-left" aria-hidden="true"></i
                 ></button>
             }
+
             <aside
                 #sidebarContent
                 id="desktop-sidebar-content"
@@ -62,6 +61,7 @@
                     [pending]="signingOut()"
                     [error]="signOutError()"
                     (signOut)="signOut()" />
+
                 @if (projectsStore.loadError()) {
                     <div class="project-load-error" role="alert">
                         <p>Could not load projects. Check your connection and try again.</p>
@@ -73,6 +73,7 @@
                             (onClick)="retryProjects()" />
                     </div>
                 }
+
                 <app-sidebar
                     [projects]="projectsStore.projectTree()"
                     [expandProjectRequest]="expandProjectRequest()"
@@ -85,7 +86,6 @@
                     (createProject)="openCreateProjectDialog()" /> </aside
         ></div>
 
-        <!-- Vertical Border Handle (for re-sizing) -->
         <div
             class="sidebar-resize-handle"
             [hidden]="mobile() || desktopCollapsed()"
@@ -104,7 +104,6 @@
             (keydown)="onSidebarResizeKeydown($event)"
             (dblclick)="resetSidebarWidth()"></div>
 
-        <!-- App Main Content -->
         <main class="app-main">
             <router-outlet />
         </main>
