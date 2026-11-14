@@ -25,12 +25,11 @@ export class TaskSchedulerComponent {
     readonly pending = input(false);
     readonly disabled = input(false);
     readonly error = input<string | null>(null);
+    readonly entryField = input<{ field: TaskDateField }>({ field: 'planned_date' });
 
     readonly selectDate = output<TaskDateSelection>();
     readonly retry = output<void>();
     readonly dismiss = output<Event>();
-
-    readonly entryField = input<{ field: TaskDateField }>({ field: 'planned_date' });
 
     protected readonly field = linkedSignal(() => this.entryField().field);
     protected readonly fields = [

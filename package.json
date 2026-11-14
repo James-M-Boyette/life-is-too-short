@@ -33,11 +33,13 @@
                 "files": "*.html",
                 "options": {
                     "parser": "angular",
-                    "htmlWhitespaceSensitivity": "strict"
+                    "htmlWhitespaceSensitivity": "strict",
+                    "bracketSameLine": true
                 }
             }
         ],
-        "tabWidth": 4
+        "tabWidth": 4,
+        "endOfLine": "auto"
     },
     "private": true,
     "packageManager": "pnpm@9.15.9",

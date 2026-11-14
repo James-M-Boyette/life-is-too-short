@@ -9,8 +9,7 @@
     [title]="identity().name || identity().email || 'Account'"
     (click)="toggle($event)"
     (keydown.escape)="escape($event)"
-    (keydown.arrowdown)="$event.preventDefault(); !menuOpen() && toggle($event)"
->
+    (keydown.arrowdown)="$event.preventDefault(); !menuOpen() && toggle($event)">
     <span class="avatar" aria-hidden="true">
         @if (identity().initials) {
             {{ identity().initials }}
@@ -21,14 +20,14 @@
     <span class="trigger-label">{{ identity().label }}</span>
     <i class="pi pi-chevron-down chevron" aria-hidden="true"></i>
 </button>
+
 <p-popover
     #accountPopover
     ariaLabel="Account menu"
     [appendTo]="overlayParent()"
     [style]="{ width: 'min(19rem, calc(100vw - 2rem))' }"
     (onShow)="shown()"
-    (onHide)="hidden()"
->
+    (onHide)="hidden()">
     <div id="account-menu-panel" class="account-panel" pFocusTrap (keydown.escape)="escape($event)">
         <section class="identity" aria-label="Account identity">
             @if (identity().name) {
@@ -41,6 +40,7 @@
                 <strong>Account</strong>
             }
         </section>
+
         <section class="appearance">
             <button
                 #appearanceButton
@@ -48,15 +48,13 @@
                 class="menu-action"
                 [attr.aria-expanded]="appearanceOpen()"
                 aria-controls="account-palette-options"
-                (click)="appearanceOpen.set(!appearanceOpen())"
-            >
+                (click)="appearanceOpen.set(!appearanceOpen())">
                 <i class="pi pi-palette" aria-hidden="true"></i><span>Appearance</span>
                 <i
                     class="pi chevron"
                     [class.pi-chevron-down]="!appearanceOpen()"
                     [class.pi-chevron-up]="appearanceOpen()"
-                    aria-hidden="true"
-                ></i>
+                    aria-hidden="true"></i>
             </button>
             @if (appearanceOpen()) {
                 <fieldset id="account-palette-options">
@@ -64,28 +62,26 @@
                     @for (option of paletteOptions; track option.id) {
                         <label
                             class="palette-option"
-                            [class.selected]="paletteService.palette() === option.id"
-                        >
+                            [class.selected]="paletteService.palette() === option.id">
                             <input
                                 type="radio"
                                 name="account-palette"
                                 [value]="option.id"
                                 [checked]="paletteService.palette() === option.id"
-                                (change)="changePalette(option.id)"
-                            />
+                                (change)="changePalette(option.id)" />
                             <span>{{ option.label }}</span>
                         </label>
                     }
                 </fieldset>
             }
         </section>
+
         <button
             type="button"
             class="menu-action logout"
             [disabled]="pending()"
             [attr.aria-busy]="pending()"
-            (click)="requestSignOut()"
-        >
+            (click)="requestSignOut()">
             <i class="pi pi-sign-out" aria-hidden="true"></i
             ><span>{{ pending() ? 'Logging out…' : 'Log out' }}</span>
         </button>

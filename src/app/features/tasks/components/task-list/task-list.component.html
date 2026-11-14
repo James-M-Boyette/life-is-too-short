@@ -10,8 +10,7 @@
     [cdkDropListSortingDisabled]="!draggable() || !sortable()"
     [cdkDropListEnterPredicate]="canEnter"
     [cdkDropListSortPredicate]="canSort"
-    (cdkDropListDropped)="onDrop($event)"
->
+    (cdkDropListDropped)="onDrop($event)">
     @for (task of displayTasks(); track task.id) {
         @if (groupHeaders().get(task.id); as group) {
             @if (planningTarget(); as planning) {
@@ -52,8 +51,7 @@
             (toggleDone)="toggleDone.emit($event)"
             (remove)="remove.emit($event)"
             (contentSaved)="contentSaved.emit($event)"
-            (projectChange)="projectChange.emit($event)"
-        />
+            (projectChange)="projectChange.emit($event)" />
     } @empty {
         <li class="empty-message">{{ emptyMessage() }}</li>
     }

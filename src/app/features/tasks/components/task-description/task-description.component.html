@@ -8,8 +8,7 @@
     <div
         [class.editable-description]="editable()"
         (click)="requestEdit($event)"
-        [id]="'task-description-view-' + taskId()"
-    >
+        [id]="'task-description-view-' + taskId()">
         @if (content().compact && !expanded()) {
             <p class="description-excerpt">{{ content().preview }}</p>
         } @else {
@@ -26,12 +25,10 @@
     [attr.aria-label]="expanded() ? 'Collapse description' : 'Expand full description'"
     [pTooltip]="expanded() ? 'Collapse description' : 'Expand full description'"
     tooltipPosition="bottom"
-    (click)="toggle()"
->
+    (click)="toggle()">
     <i
         class="pi"
         [class.pi-chevron-up]="expanded()"
         [class.pi-chevron-down]="!expanded()"
-        aria-hidden="true"
-    ></i>
+        aria-hidden="true"></i>
 </button>

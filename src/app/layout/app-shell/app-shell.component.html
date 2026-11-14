@@ -4,8 +4,7 @@
         <app-top-bar
             [navigationOpen]="navigationOpen()"
             (showNavigation)="openNavigation()"
-            (createTask)="openTaskDialog()"
-        />
+            (createTask)="openTaskDialog()" />
     }
 
     <div class="app-body" [style.grid-template-columns]="shellColumns()">
@@ -32,8 +31,7 @@
                             ariaCurrentWhenActive="page"
                             [attr.aria-label]="destination.label"
                             [pTooltip]="destination.label"
-                            tooltipPosition="right"
-                        >
+                            tooltipPosition="right">
                             <i [class]="destination.icon" aria-hidden="true"></i>
                         </a>
                     }
@@ -56,16 +54,14 @@
                 id="desktop-sidebar-content"
                 class="app-sidebar"
                 [hidden]="desktopHidden()"
-                [attr.inert]="desktopHidden() ? '' : null"
-            >
+                [attr.inert]="desktopHidden() ? '' : null">
                 <app-account-controls
                     [user]="auth.user()"
                     [available]="mobile() ? navigationOpen() : !desktopCollapsed()"
                     [mobile]="mobile()"
                     [pending]="signingOut()"
                     [error]="signOutError()"
-                    (signOut)="signOut()"
-                />
+                    (signOut)="signOut()" />
                 @if (projectsStore.loadError()) {
                     <div class="project-load-error" role="alert">
                         <p>Could not load projects. Check your connection and try again.</p>
@@ -74,8 +70,7 @@
                             [text]="true"
                             [loading]="projectsStore.loading()"
                             [disabled]="projectsStore.loading()"
-                            (onClick)="retryProjects()"
-                        />
+                            (onClick)="retryProjects()" />
                     </div>
                 }
                 <app-sidebar
@@ -87,8 +82,7 @@
                     (deleteProject)="openDeleteProjectDialog($event)"
                     (navigated)="closeNavigation()"
                     (createTask)="openTaskDialog()"
-                    (createProject)="openCreateProjectDialog()"
-                /> </aside
+                    (createProject)="openCreateProjectDialog()" /> </aside
         ></div>
 
         <!-- Vertical Border Handle (for re-sizing) -->
@@ -108,8 +102,7 @@
             (pointerup)="stopSidebarResize($event)"
             (pointercancel)="stopSidebarResize($event)"
             (keydown)="onSidebarResizeKeydown($event)"
-            (dblclick)="resetSidebarWidth()"
-        ></div>
+            (dblclick)="resetSidebarWidth()"></div>
 
         <!-- App Main Content -->
         <main class="app-main">
@@ -138,8 +131,7 @@
             id: 'mobile-navigation',
         },
     }"
-    (onShow)="navigationShown()"
->
+    (onShow)="navigationShown()">
     <ng-template #content
         ><ng-template [cdkPortalOutlet]="mobile() ? sidebarPortal() : null"
     /></ng-template>
@@ -156,8 +148,7 @@
     [draggable]="false"
     [resizable]="false"
     [style]="{ width: '36rem', maxWidth: '95vw' }"
-    appendTo="body"
->
+    appendTo="body">
     @if (taskCreateContext(); as context) {
         <app-task-create
             [projects]="projectsStore.projectTree()"
@@ -165,8 +156,7 @@
             [defaultPlannedDate]="context.plannedDate"
             [disabled]="creatingTask()"
             (create)="createTask($event)"
-            (cancel)="closeTaskDialog()"
-        />
+            (cancel)="closeTaskDialog()" />
 
         @if (taskCreateError(); as error) {
             <p class="task-create-error" role="alert">
@@ -186,16 +176,14 @@
     [dismissableMask]="false"
     [draggable]="false"
     [resizable]="false"
-    [style]="{ width: '28rem', maxWidth: '90vw' }"
->
+    [style]="{ width: '28rem', maxWidth: '90vw' }">
     @if (createProjectDialogVisible()) {
         <app-project-editor
             [projects]="projectsStore.projectTree()"
             [project]="editingProject()"
             [disabled]="creatingProject()"
             (save)="onSaveProject($event)"
-            (cancel)="closeCreateProjectDialog()"
-        />
+            (cancel)="closeCreateProjectDialog()" />
 
         @if (createProjectError()) {
             <p class="project-create-error" role="alert">
@@ -215,8 +203,7 @@
     [dismissableMask]="false"
     [draggable]="false"
     [resizable]="false"
-    [style]="{ width: '30rem', maxWidth: '90vw' }"
->
+    [style]="{ width: '30rem', maxWidth: '90vw' }">
     @if (projectToDelete(); as project) {
         <p>
             Are you sure you want to delete
@@ -252,16 +239,14 @@
                 severity="secondary"
                 [outlined]="true"
                 [disabled]="deletingProject()"
-                (onClick)="closeDeleteProjectDialog()"
-            />
+                (onClick)="closeDeleteProjectDialog()" />
 
             <p-button
                 label="Delete project"
                 severity="danger"
                 [loading]="deletingProject()"
                 [disabled]="deletingProject()"
-                (onClick)="confirmDeleteProject()"
-            />
+                (onClick)="confirmDeleteProject()" />
         </div>
     }
 </p-dialog>
