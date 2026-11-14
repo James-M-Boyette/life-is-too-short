@@ -27,113 +27,30 @@ li.row {
     }
     margin-left: 1rem;
 }
+
 .task-card-content,
 app-task-content-editor {
     width: 100%;
     min-width: 0;
 }
+
 :is(.task-primary-section, .left-column, .task-actions, .meta-row, .meta, .task-date-tags) {
     display: flex;
     align-items: center;
 }
+
 .task-primary-section {
     justify-content: space-between;
     gap: var(--space-4);
     width: 100%;
 }
+
 .left-column {
     gap: var(--space-2);
     min-width: 0;
     flex: 1;
 }
-.title-btn {
-    min-width: 0;
-    flex: 1;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--color-text-primary);
-    font: inherit;
-    font-weight: 500;
-    text-align: left;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    cursor: text;
-    &.done {
-        color: var(--color-text-muted);
-        text-decoration: line-through;
-    }
-    &:hover:not(:disabled) {
-        background: var(--color-surface-hover);
-        border-radius: var(--radius-sm);
-    }
-}
-.task-secondary-section {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-}
-.description {
-    margin: var(--space-2) 0 0 1.9rem;
-    min-width: 0;
-    cursor: text;
-}
-.task-actions {
-    gap: var(--space-2);
-    flex: none;
-}
-.meta-row {
-    flex-wrap: wrap;
-    gap: var(--space-3);
-    margin-top: var(--space-3);
-    min-width: 0;
-}
-.meta {
-    min-width: 0;
-    flex: auto;
-    flex-wrap: wrap;
-    gap: var(--space-4);
-}
-.task-date-tags {
-    flex-wrap: wrap;
-    gap: var(--space-2);
-}
-:is(.more-actions-btn, .edit-task-btn, .task-drag-handle) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-:is(.more-actions-btn, .edit-task-btn) {
-    width: 2.5rem;
-    height: 2.5rem;
-    padding: 0;
-    border-radius: var(--radius-md);
-}
-.more-actions-btn {
-    align-items: start;
-}
-button:not(.title-btn),
-a,
-p-treeselect {
-    cursor: pointer;
-}
-button:disabled {
-    cursor: not-allowed;
-}
-// Equal-specificity :is() groups avoid repeating full scoped selectors.
-:is(
-    .title-btn,
-    .edit-task-btn,
-    .more-actions-btn,
-    .date-control,
-    .compact-schedule-control,
-    .compact-project-link,
-    .project-clear
-):focus-visible {
-    outline: 2px solid var(--color-focus-ring);
-    outline-offset: 2px;
-}
+
 .task-drag-handle {
     // Keep the icon inside the existing 16px main/column clearance, outside the card border.
     position: absolute;
@@ -150,19 +67,23 @@ button:disabled {
     visibility: hidden; // Also removes hidden handles from pointer hit-testing.
     transition: opacity 120ms ease;
 }
+
 .row.is-draggable:is(:hover, :focus-within) .task-drag-handle {
     opacity: 1;
     visibility: visible;
 }
+
 .row:not(.is-draggable) .task-drag-handle,
 .cdk-drag-preview .task-drag-handle {
     display: none;
 }
+
 @media (prefers-reduced-motion: reduce) {
     .task-drag-handle {
         transition: none;
     }
 }
+
 .complete-toggle {
     width: 1.35rem;
     height: 1.35rem;
@@ -200,6 +121,7 @@ button:disabled {
         border-color: var(--color-action-primary);
     }
 }
+
 .sr-only {
     position: absolute;
     width: 1px;
@@ -211,6 +133,102 @@ button:disabled {
     white-space: nowrap;
     border: 0;
 }
+
+.title-btn {
+    min-width: 0;
+    flex: 1;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-primary);
+    font: inherit;
+    font-weight: 500;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: text;
+    &.done {
+        color: var(--color-text-muted);
+        text-decoration: line-through;
+    }
+    &:hover:not(:disabled) {
+        background: var(--color-surface-hover);
+        border-radius: var(--radius-sm);
+    }
+}
+
+.task-actions {
+    gap: var(--space-2);
+    flex: none;
+}
+
+.task-secondary-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.description {
+    margin: var(--space-2) 0 0 1.9rem;
+    min-width: 0;
+    cursor: text;
+}
+
+:is(.more-actions-btn, .edit-task-btn, .task-drag-handle) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+:is(.more-actions-btn, .edit-task-btn) {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border-radius: var(--radius-md);
+}
+
+.more-actions-btn {
+    align-items: start;
+}
+
+button:not(.title-btn),
+a,
+p-treeselect {
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: not-allowed;
+}
+// Equal-specificity :is() groups avoid repeating full scoped selectors.
+:is(
+    .title-btn,
+    .edit-task-btn,
+    .more-actions-btn,
+    .date-control,
+    .compact-schedule-control,
+    .compact-project-link,
+    .project-clear
+):focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+}
+
+.meta-row {
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+    min-width: 0;
+}
+
+.meta {
+    min-width: 0;
+    flex: auto;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+}
+
 .project-selector {
     min-width: 0;
     max-width: 100%;
@@ -231,19 +249,23 @@ button:disabled {
         max-width: 100%;
     }
 }
+
 .project-chevron {
     opacity: 0;
     transition: opacity 120ms ease;
     font-size: 0.75rem;
+
+    .project-selector:is(:hover, :focus-within) & {
+        opacity: 1;
+    }
 }
-.project-selector:is(:hover, :focus-within) .project-chevron {
-    opacity: 1;
-}
+
 :is(.project-clear, .date-control, .compact-schedule-control) {
     border: 0;
     background: transparent;
     border-radius: var(--radius-sm);
 }
+
 .project-clear {
     display: grid;
     place-items: center;
@@ -252,15 +274,23 @@ button:disabled {
     padding: 0;
     color: var(--color-text-secondary);
 }
+
+.task-date-tags {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
 .date-control {
     display: inline-flex;
     align-items: center;
     padding: 0;
     font: inherit;
 }
+
 :is(.compact-date-label, .compact-schedule-control, .compact-project-link, .compact-edit-project) {
     display: none;
 }
+
 :is(.complete-toggle, .date-control, .compact-schedule-control):disabled {
     opacity: 0.55;
 }
@@ -364,6 +394,7 @@ button:disabled {
         }
     }
 }
+
 li.row.cdk-drag-preview {
     box-sizing: border-box;
     list-style: none;
@@ -371,6 +402,7 @@ li.row.cdk-drag-preview {
     cursor: grabbing;
     box-shadow: 0 12px 28px color-mix(in srgb, var(--color-text-primary) 22%, transparent);
 }
+
 li.row.cdk-drag-placeholder {
     opacity: 1;
     background: var(--color-surface-selected);
@@ -379,6 +411,7 @@ li.row.cdk-drag-placeholder {
     box-shadow: none;
     pointer-events: none;
 }
+
 li.row.cdk-drag-placeholder > .task-card-content {
     visibility: hidden;
 }
