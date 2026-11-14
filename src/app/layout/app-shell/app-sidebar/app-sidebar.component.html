@@ -18,6 +18,7 @@
             tooltipPosition="bottom">
             All Tasks
         </a>
+
         <a
             (click)="onNavigationClick($event)"
             routerLink="/tasks/inbox"
@@ -75,6 +76,7 @@
                         ariaCurrentWhenActive="page">
                         <span>{{ node.label }}</span>
                     </a>
+
                     @if (node.children?.length) {
                         <button
                             type="button"
@@ -92,6 +94,7 @@
                                 aria-hidden="true"></i>
                         </button>
                     }
+
                     <button
                         type="button"
                         class="project-more"
