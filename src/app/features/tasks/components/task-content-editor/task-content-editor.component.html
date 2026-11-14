@@ -19,9 +19,11 @@
             " />
         <ng-content select="[taskActions]" />
     </div>
+
     @if (attempted() && titleInvalid()) {
         <p role="alert" [id]="'title-error-' + taskId()">A task title is required.</p>
     }
+
     <div class="description-heading">
         <label [for]="'description-source-' + taskId()">Description</label>
         <button
@@ -46,6 +48,7 @@
         (input)="draftDescription.set(inputValue($event))"
         (keydown.control.enter)="submit($event)"
         [disabled]="disabled() || pending()"></textarea>
+
     @if (pending()) {
         <p role="status">Saving task…</p>
     }
@@ -53,6 +56,7 @@
         <p role="alert">{{ message }} Your drafts are still here; choose Save to retry.</p>
     }
 </form>
+
 <div class="meta-row" (keydown.escape)="escape($event)">
     <ng-content select="[taskMetadata]" />
     <div class="edit-actions">
@@ -81,6 +85,7 @@
         ></button>
     </div>
 </div>
+
 <p-popover #help appendTo="body" ariaLabel="Markdown formatting">
     <div
         class="markdown-help"

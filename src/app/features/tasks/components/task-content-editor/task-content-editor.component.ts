@@ -1,17 +1,19 @@
 import {
     Component,
-    ElementRef,
+    type ElementRef,
     afterNextRender,
     computed,
     input,
     output,
     signal,
     viewChild,
-    OnInit,
+    type OnInit,
 } from '@angular/core';
-import { PopoverModule, Popover } from 'primeng/popover';
-import { TooltipModule } from 'primeng/tooltip';
+
 import { ButtonModule } from 'primeng/button';
+import { Popover, PopoverModule } from 'primeng/popover';
+import { TooltipModule } from 'primeng/tooltip';
+
 import type { TaskContent } from '../../models/task-content.model';
 
 @Component({
@@ -28,21 +30,28 @@ export class TaskContentEditorComponent implements OnInit {
     readonly disabled = input(false);
     readonly pending = input(false);
     readonly error = input<string | null>(null);
+
     readonly saved = output<TaskContent>();
     readonly cancelled = output<void>();
-    protected readonly draftTitle = signal('');
-    protected readonly draftDescription = signal('');
-    protected readonly titleInvalid = computed(() => !this.draftTitle().trim());
-    protected readonly attempted = signal(false);
+
     private readonly titleInput = viewChild<ElementRef<HTMLInputElement>>('titleInput');
     private readonly textarea = viewChild<ElementRef<HTMLTextAreaElement>>('textarea');
     private readonly helpButton = viewChild<ElementRef<HTMLButtonElement>>('helpButton');
     protected readonly help = viewChild<Popover>('help');
 
+    protected readonly draftTitle = signal('');
+    protected readonly draftDescription = signal('');
+    protected readonly attempted = signal(false);
+
+    protected readonly titleInvalid = computed(() => !this.draftTitle().trim());
+
     constructor() {
         afterNextRender(() => {
-            if (this.initialFocus() === 'description') this.textarea()?.nativeElement.focus();
-            else this.titleInput()?.nativeElement.focus();
+            if (this.initialFocus() === 'description') {
+                this.textarea()?.nativeElement.focus();
+            } else {
+                this.titleInput()?.nativeElement.focus();
+            }
         });
     }
 
@@ -58,12 +67,16 @@ export class TaskContentEditorComponent implements OnInit {
 
     protected submit(event: Event): void {
         event.preventDefault();
-        if (this.disabled() || this.pending()) return;
+        if (this.disabled() || this.pending()) {
+            return;
+        }
+
         this.attempted.set(true);
         if (this.titleInvalid()) {
             this.titleInput()?.nativeElement.focus();
             return;
         }
+
         const source = this.draftDescription();
         this.saved.emit({
             title: this.draftTitle().trim(),
@@ -77,8 +90,11 @@ export class TaskContentEditorComponent implements OnInit {
 
     protected escape(event: Event): void {
         event.stopPropagation();
-        if (this.help()?.overlayVisible) this.closeHelp();
-        else this.cancel();
+        if (this.help()?.overlayVisible) {
+            this.closeHelp();
+        } else {
+            this.cancel();
+        }
     }
 
     protected closeHelp(): void {

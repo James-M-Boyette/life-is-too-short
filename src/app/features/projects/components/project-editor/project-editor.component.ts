@@ -1,9 +1,9 @@
 import { Component, computed, effect, inject, input, output, untracked } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
-import { TreeSelectModule } from 'primeng/treeselect';
-import { ButtonModule } from 'primeng/button';
 import type { TreeNode } from 'primeng/api';
+import { ButtonModule } from 'primeng/button';
+import { TreeSelectModule } from 'primeng/treeselect';
 
 import type { Project, ProjectNode } from '@/features/projects/models/project.model';
 import {
@@ -25,21 +25,25 @@ export type CreateProjectPayload = {
     styleUrl: './project-editor.component.scss',
 })
 export class ProjectEditorComponent {
+    private readonly fb = inject(NonNullableFormBuilder);
+
     readonly projects = input<ProjectNode[]>([]);
     readonly project = input<Project | null>(null);
-    protected readonly isEditing = computed(() => this.project() !== null);
     readonly disabled = input(false);
 
-    // readonly create = output<CreateProjectPayload>();
     readonly save = output<CreateProjectPayload>();
     readonly cancel = output<void>();
-
-    private readonly fb = inject(NonNullableFormBuilder);
 
     protected readonly form = this.fb.group({
         name: ['', [Validators.required, noWhitespaceValidator]],
         parentProject: this.fb.control<TreeNode | null>(null),
     });
+
+    // A new component instance is a fresh dialog session; identity changes can
+    // also initialize a reused editor. Same-project snapshots never reset drafts.
+    private editingId: string | null | undefined;
+
+    protected readonly isEditing = computed(() => this.project() !== null);
 
     protected readonly projectOptions = computed(() => {
         const editingId = this.project()?.id;
@@ -55,10 +59,6 @@ export class ProjectEditorComponent {
         return toProjectTreeNodes(excludeBranch(this.projects()));
     });
 
-    // A new component instance is a fresh dialog session; identity changes can
-    // also initialize a reused editor. Same-project snapshots never reset drafts.
-    private editingId: string | null | undefined;
-
     constructor() {
         const parentControl = this.form.controls.parentProject;
         parentControl.addValidators((control) => {
@@ -72,8 +72,12 @@ export class ProjectEditorComponent {
         effect(() => {
             const project = this.project();
             const id = project?.id ?? null;
-            if (id === this.editingId) return;
+            if (id === this.editingId) {
+                return;
+            }
+
             this.editingId = id;
+
             // Initial values are a session snapshot, not an options dependency.
             untracked(() => {
                 const parentId = project?.parent_project_id;
