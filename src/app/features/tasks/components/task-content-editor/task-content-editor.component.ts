@@ -1,4 +1,14 @@
-import { Component, ElementRef, afterNextRender, computed, input, output, signal, viewChild, OnInit } from '@angular/core';
+import {
+    Component,
+    ElementRef,
+    afterNextRender,
+    computed,
+    input,
+    output,
+    signal,
+    viewChild,
+    OnInit,
+} from '@angular/core';
 import { PopoverModule, Popover } from 'primeng/popover';
 import { TooltipModule } from 'primeng/tooltip';
 import { ButtonModule } from 'primeng/button';
@@ -55,7 +65,10 @@ export class TaskContentEditorComponent implements OnInit {
             return;
         }
         const source = this.draftDescription();
-        this.saved.emit({ title: this.draftTitle().trim(), description: source.trim() ? source : null });
+        this.saved.emit({
+            title: this.draftTitle().trim(),
+            description: source.trim() ? source : null,
+        });
     }
 
     protected cancel(): void {

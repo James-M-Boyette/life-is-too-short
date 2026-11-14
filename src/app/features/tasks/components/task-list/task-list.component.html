@@ -11,23 +11,34 @@
     [cdkDropListEnterPredicate]="canEnter"
     [cdkDropListSortPredicate]="canSort"
     (cdkDropListDropped)="onDrop($event)"
-    >
+>
     @for (task of displayTasks(); track task.id) {
         @if (groupHeaders().get(task.id); as group) {
             @if (planningTarget(); as planning) {
                 @if (group.id === planning.source.id) {
                     <li #planningInsertionTarget class="list__planning-target" role="presentation">
                         @if (!planning.target.tasks.length) {
-                            <h3>{{ planning.target.label }} <span class="list__group-count">0</span></h3>
+                            <h3
+                                >{{ planning.target.label }}
+                                <span class="list__group-count">0</span></h3
+                            >
                         }
-                        <span>Drop an unplanned task here to plan for today{{ planning.target.tasks.length ? ' at the end' : '' }}</span>
+                        <span
+                            >Drop an unplanned task here to plan for today{{
+                                planning.target.tasks.length ? ' at the end' : ''
+                            }}</span
+                        >
                     </li>
                 }
             }
             <li class="list__group-heading" role="presentation">
                 <h3>
                     {{ group.label }}
-                    <span class="list__group-count" [attr.aria-label]="group.tasks.length + ' tasks'">{{ group.tasks.length }}</span>
+                    <span
+                        class="list__group-count"
+                        [attr.aria-label]="group.tasks.length + ' tasks'"
+                        >{{ group.tasks.length }}</span
+                    >
                 </h3>
             </li>
         }

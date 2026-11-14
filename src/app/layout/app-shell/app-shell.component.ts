@@ -1,13 +1,33 @@
-import { ProjectDialogService, type ProjectDialogRequest } from '@/features/projects/services/project-dialog.service';
+import {
+    ProjectDialogService,
+    type ProjectDialogRequest,
+} from '@/features/projects/services/project-dialog.service';
 import { MOBILE_LAYOUT_QUERY } from '@/shared/utils/mobile-layout';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { CdkPortalOutlet, DomPortal } from '@angular/cdk/portal';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DrawerModule, Drawer } from 'primeng/drawer';
 import { AccountControlsComponent } from './account-controls/account-controls.component';
-import { Component, computed, effect, inject, signal, afterNextRender, ElementRef, Injector, viewChild } from '@angular/core';
+import {
+    Component,
+    computed,
+    effect,
+    inject,
+    signal,
+    afterNextRender,
+    ElementRef,
+    Injector,
+    viewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterOutlet, RouterLink, RouterLinkActive, NavigationEnd, NavigationStart } from '@angular/router';
+import {
+    Router,
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    NavigationEnd,
+    NavigationStart,
+} from '@angular/router';
 
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
@@ -35,8 +55,14 @@ import { CalendarClockService } from '@/shared/services/calendar-clock.service';
     standalone: true,
     selector: 'app-shell',
     imports: [
-        CommonModule, DrawerModule, CdkPortalOutlet, AccountControlsComponent,
-        RouterOutlet, RouterLink, RouterLinkActive, TooltipModule,
+        CommonModule,
+        DrawerModule,
+        CdkPortalOutlet,
+        AccountControlsComponent,
+        RouterOutlet,
+        RouterLink,
+        RouterLinkActive,
+        TooltipModule,
         ButtonModule,
         TopBarComponent,
         AppSidebarComponent,
@@ -57,8 +83,12 @@ export class AppShellComponent {
     private dialogGeneration = 0;
 
     private ownsDialogSession(owner: string | null, generation: number): boolean {
-        return owner !== null && owner === this.auth.userId() &&
-            owner === this.dialogOwner && generation === this.dialogGeneration;
+        return (
+            owner !== null &&
+            owner === this.auth.userId() &&
+            owner === this.dialogOwner &&
+            generation === this.dialogGeneration
+        );
     }
 
     private synchronizeDialogSession(): void {
@@ -82,10 +112,22 @@ export class AppShellComponent {
         const owner = this.dialogOwner;
         const generation = this.dialogGeneration;
         this.pageProjectDialog.set(null);
-        if (context?.trigger.isConnected && context.userId === this.auth.userId() && !context.trigger.closest('[hidden], [inert]')) {
-            afterNextRender(() => {
-                if (this.ownsDialogSession(owner, generation) && context.trigger.isConnected && !context.trigger.closest('[hidden], [inert]')) context.trigger.focus({ preventScroll: true });
-            }, { injector: this.injector });
+        if (
+            context?.trigger.isConnected &&
+            context.userId === this.auth.userId() &&
+            !context.trigger.closest('[hidden], [inert]')
+        ) {
+            afterNextRender(
+                () => {
+                    if (
+                        this.ownsDialogSession(owner, generation) &&
+                        context.trigger.isConnected &&
+                        !context.trigger.closest('[hidden], [inert]')
+                    )
+                        context.trigger.focus({ preventScroll: true });
+                },
+                { injector: this.injector },
+            );
         } else this.restoreMobileActionFocus();
     }
 
@@ -110,8 +152,13 @@ export class AppShellComponent {
     protected readonly navigationOpen = signal(false);
     protected readonly desktopCollapsed = signal(false);
     protected readonly desktopHidden = computed(() => !this.mobile() && this.desktopCollapsed());
-    protected readonly shellColumns = computed(() => this.mobile() ? 'minmax(0, 1fr)'
-        : this.desktopCollapsed() ? '4rem minmax(0, 1fr)' : this.sidebarWidth() + 'px 6px minmax(0, 1fr)');
+    protected readonly shellColumns = computed(() =>
+        this.mobile()
+            ? 'minmax(0, 1fr)'
+            : this.desktopCollapsed()
+              ? '4rem minmax(0, 1fr)'
+              : this.sidebarWidth() + 'px 6px minmax(0, 1fr)',
+    );
     protected readonly railDestinations = [
         { label: 'Inbox', route: '/tasks/inbox', icon: 'pi pi-inbox' },
         { label: 'Today', route: '/tasks/today', icon: 'pi pi-calendar' },
@@ -123,34 +170,59 @@ export class AppShellComponent {
         this.accountMenu()?.dismiss(false);
         this.isResizingSidebar.set(false);
         this.desktopCollapsed.set(collapsed);
-        afterNextRender(() => {
-            if (!this.mobile()) this.element.nativeElement.querySelector<HTMLElement>(collapsed ? '.expand-navigation' : '.collapse-navigation')?.focus();
-        }, { injector: this.injector });
+        afterNextRender(
+            () => {
+                if (!this.mobile())
+                    this.element.nativeElement
+                        .querySelector<HTMLElement>(
+                            collapsed ? '.expand-navigation' : '.collapse-navigation',
+                        )
+                        ?.focus();
+            },
+            { injector: this.injector },
+        );
     }
-    protected readonly drawerStyle = { background: 'var(--surface-sidebar)', width: 'min(80vw, 20rem)', height: '100dvh', maxHeight: '100dvh', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' };
+    protected readonly drawerStyle = {
+        background: 'var(--surface-sidebar)',
+        width: 'min(80vw, 20rem)',
+        height: '100dvh',
+        maxHeight: '100dvh',
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+    };
 
-    protected openNavigation(): void { if (this.mobile()) this.navigationOpen.set(true); }
+    protected openNavigation(): void {
+        if (this.mobile()) this.navigationOpen.set(true);
+    }
     protected closeNavigation(): void {
         if (!this.navigationOpen()) return;
         this.accountMenu()?.dismiss(false);
         this.navigationOpen.set(false);
         const owner = this.dialogOwner;
         const generation = this.dialogGeneration;
-        afterNextRender(() => {
-            if (this.ownsDialogSession(owner, generation)) this.restoreNavigationFocus();
-        }, { injector: this.injector });
+        afterNextRender(
+            () => {
+                if (this.ownsDialogSession(owner, generation)) this.restoreNavigationFocus();
+            },
+            { injector: this.injector },
+        );
     }
     protected navigationShown(): void {
-        this.navigationDrawer()?.container?.querySelector<HTMLElement>('[aria-label="Close navigation"]')?.focus();
+        this.navigationDrawer()
+            ?.container?.querySelector<HTMLElement>('[aria-label="Close navigation"]')
+            ?.focus();
     }
     private restoreNavigationFocus(): void {
         // Do not steal focus from a task/project dialog opened from the drawer.
-        if (this.taskDialogVisible() || this.createProjectDialogVisible() || this.projectToDelete()) return;
+        if (this.taskDialogVisible() || this.createProjectDialogVisible() || this.projectToDelete())
+            return;
         const target = this.mobile()
-            ? this.element.nativeElement.querySelector<HTMLElement>('[aria-label="Show navigation"]')
+            ? this.element.nativeElement.querySelector<HTMLElement>(
+                  '[aria-label="Show navigation"]',
+              )
             : this.desktopCollapsed()
-                ? this.element.nativeElement.querySelector<HTMLElement>('.expand-navigation')
-                : this.sidebarElement().nativeElement.querySelector<HTMLElement>('a.active, a');
+              ? this.element.nativeElement.querySelector<HTMLElement>('.expand-navigation')
+              : this.sidebarElement().nativeElement.querySelector<HTMLElement>('a.active, a');
         target?.focus();
     }
 
@@ -158,16 +230,24 @@ export class AppShellComponent {
         if (!this.mobile()) return;
         const owner = this.dialogOwner;
         const generation = this.dialogGeneration;
-        afterNextRender(() => {
-            if (this.ownsDialogSession(owner, generation) && this.mobile()) this.element.nativeElement.querySelector<HTMLElement>(`[aria-label="${label}"]`)?.focus();
-        }, { injector: this.injector });
+        afterNextRender(
+            () => {
+                if (this.ownsDialogSession(owner, generation) && this.mobile())
+                    this.element.nativeElement
+                        .querySelector<HTMLElement>(`[aria-label="${label}"]`)
+                        ?.focus();
+            },
+            { injector: this.injector },
+        );
     }
 
     protected readonly signingOut = signal(false);
-    private readonly signOutFailure = signal<{ owner: string | undefined; message: string } | null>(null);
+    private readonly signOutFailure = signal<{ owner: string | undefined; message: string } | null>(
+        null,
+    );
     protected readonly signOutError = computed(() => {
         const failure = this.signOutFailure();
-        return failure?.owner === this.auth.user()?.id ? failure?.message ?? null : null;
+        return failure?.owner === this.auth.user()?.id ? (failure?.message ?? null) : null;
     });
 
     protected readonly projectsStore = inject(ProjectsStore);
@@ -202,7 +282,10 @@ export class AppShellComponent {
         if (path.startsWith('/tasks/project/')) {
             const projectId = path.split('/')[3];
 
-            if (projectId && this.projectsStore.getProject(projectId)?.user_id === this.auth.userId()) {
+            if (
+                projectId &&
+                this.projectsStore.getProject(projectId)?.user_id === this.auth.userId()
+            ) {
                 return {
                     projectId,
                     plannedDate: null,
@@ -246,7 +329,9 @@ export class AppShellComponent {
         const owner = this.dialogOwner;
         const generation = this.dialogGeneration;
         const context = this.taskCreateDialog.context();
-        const ownsInteraction = () => this.ownsDialogSession(owner, generation) && context === this.taskCreateDialog.context();
+        const ownsInteraction = () =>
+            this.ownsDialogSession(owner, generation) &&
+            context === this.taskCreateDialog.context();
         if (!context || this.creatingTask() || !ownsInteraction()) return;
 
         this.creatingTask.set(true);
@@ -301,10 +386,19 @@ export class AppShellComponent {
 
     constructor() {
         effect(() => this.synchronizeDialogSession());
-        this.projectDialogs.requests.pipe(takeUntilDestroyed()).subscribe(request => {
+        this.projectDialogs.requests.pipe(takeUntilDestroyed()).subscribe((request) => {
             const project = this.projectsStore.getProject(request.projectId);
-            if (!project || project.user_id !== request.userId || this.auth.userId() !== request.userId || this.router.url !== request.sourceUrl ||
-                this.createProjectDialogVisible() || this.projectToDelete() || this.creatingProject() || this.deletingProject()) return;
+            if (
+                !project ||
+                project.user_id !== request.userId ||
+                this.auth.userId() !== request.userId ||
+                this.router.url !== request.sourceUrl ||
+                this.createProjectDialogVisible() ||
+                this.projectToDelete() ||
+                this.creatingProject() ||
+                this.deletingProject()
+            )
+                return;
             if (request.action === 'edit') this.openEditProjectDialog(request.projectId);
             else this.openDeleteProjectDialog(request.projectId);
             this.pageProjectDialog.set(request);
@@ -312,28 +406,42 @@ export class AppShellComponent {
         effect(() => {
             const userId = this.auth.userId();
             const context = this.pageProjectDialog();
-            if (context && (context.userId !== userId || (!this.deletingProject() && !this.projectsStore.getProject(context.projectId)))) this.dismissPageProjectDialog();
+            if (
+                context &&
+                (context.userId !== userId ||
+                    (!this.deletingProject() && !this.projectsStore.getProject(context.projectId)))
+            )
+                this.dismissPageProjectDialog();
         });
         afterNextRender(() => this.sidebarPortal.set(new DomPortal(this.sidebarElement())));
-        this.breakpoints.observe(MOBILE_LAYOUT_QUERY).pipe(takeUntilDestroyed()).subscribe(result => {
-            const changed = this.mobile() !== result.matches;
-            const drawerWasOpen = this.navigationOpen();
-            const focused = this.element.nativeElement.ownerDocument.activeElement;
-            const navigationHadFocus = !!focused?.closest('.desktop-navigation, .app-sidebar, #account-menu-panel, app-top-bar');
-            this.mobile.set(result.matches);
-            this.closeNavigation();
-            this.isResizingSidebar.set(false);
-            if (changed && navigationHadFocus && !drawerWasOpen) {
-                afterNextRender(() => this.restoreNavigationFocus(), { injector: this.injector });
-            }
-        });
-        this.router.events.pipe(takeUntilDestroyed()).subscribe(event => {
-            if (event instanceof NavigationStart && this.pageProjectDialog()) this.dismissPageProjectDialog();
+        this.breakpoints
+            .observe(MOBILE_LAYOUT_QUERY)
+            .pipe(takeUntilDestroyed())
+            .subscribe((result) => {
+                const changed = this.mobile() !== result.matches;
+                const drawerWasOpen = this.navigationOpen();
+                const focused = this.element.nativeElement.ownerDocument.activeElement;
+                const navigationHadFocus = !!focused?.closest(
+                    '.desktop-navigation, .app-sidebar, #account-menu-panel, app-top-bar',
+                );
+                this.mobile.set(result.matches);
+                this.closeNavigation();
+                this.isResizingSidebar.set(false);
+                if (changed && navigationHadFocus && !drawerWasOpen) {
+                    afterNextRender(() => this.restoreNavigationFocus(), {
+                        injector: this.injector,
+                    });
+                }
+            });
+        this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
+            if (event instanceof NavigationStart && this.pageProjectDialog())
+                this.dismissPageProjectDialog();
             if (event instanceof NavigationEnd) this.closeNavigation();
         });
         // Keep shell protected even if someone deep-links into /tasks
         effect(() => {
-            if (!this.auth.initializing() && !this.auth.isAuthed()) void this.router.navigateByUrl('/login');
+            if (!this.auth.initializing() && !this.auth.isAuthed())
+                void this.router.navigateByUrl('/login');
         });
     }
 
@@ -375,9 +483,16 @@ export class AppShellComponent {
         const owner = this.dialogOwner;
         const generation = this.dialogGeneration;
         const context = this.pageProjectDialog();
-        const ownsInteraction = () => this.ownsDialogSession(owner, generation) && context === this.pageProjectDialog();
+        const ownsInteraction = () =>
+            this.ownsDialogSession(owner, generation) && context === this.pageProjectDialog();
         if (!this.createProjectDialogVisible() || !ownsInteraction()) return;
-        if (context && (context.userId !== owner || context.sourceUrl !== this.router.url || !this.projectsStore.getProject(context.projectId))) return;
+        if (
+            context &&
+            (context.userId !== owner ||
+                context.sourceUrl !== this.router.url ||
+                !this.projectsStore.getProject(context.projectId))
+        )
+            return;
         this.creatingProject.set(true);
         this.createProjectError.set(null);
 
@@ -447,7 +562,13 @@ export class AppShellComponent {
         const ownsSession = () => this.ownsDialogSession(owner, generation);
         const ownsInteraction = () => ownsSession() && context === this.pageProjectDialog();
         if (!ownsInteraction() || project.user_id !== owner) return;
-        if (context && (context.userId !== owner || context.sourceUrl !== this.router.url || !this.projectsStore.getProject(context.projectId))) return;
+        if (
+            context &&
+            (context.userId !== owner ||
+                context.sourceUrl !== this.router.url ||
+                !this.projectsStore.getProject(context.projectId))
+        )
+            return;
         this.deletingProject.set(true);
         this.deleteProjectError.set(null);
 
@@ -500,7 +621,8 @@ export class AppShellComponent {
             this.closeNavigation();
             await this.router.navigateByUrl('/login');
         } catch {
-            if (this.auth.user()?.id === owner) this.signOutFailure.set({ owner, message: 'Could not log out. Please try again.' });
+            if (this.auth.user()?.id === owner)
+                this.signOutFailure.set({ owner, message: 'Could not log out. Please try again.' });
         } finally {
             this.signingOut.set(false);
         }

@@ -1,6 +1,15 @@
-<p class="compact-description-excerpt" [class.description-expanded]="expanded()" (click)="requestEdit($event)">{{ content().preview }}</p>
+<p
+    class="compact-description-excerpt"
+    [class.description-expanded]="expanded()"
+    (click)="requestEdit($event)"
+    >{{ content().preview }}</p
+>
 <div class="description-details" [class.description-expanded]="expanded()">
-    <div [class.editable-description]="editable()" (click)="requestEdit($event)" [id]="'task-description-view-' + taskId()">
+    <div
+        [class.editable-description]="editable()"
+        (click)="requestEdit($event)"
+        [id]="'task-description-view-' + taskId()"
+    >
         @if (content().compact && !expanded()) {
             <p class="description-excerpt">{{ content().preview }}</p>
         } @else {
@@ -8,10 +17,21 @@
         }
     </div>
 </div>
-<button type="button" class="description-disclosure" [class.short-description]="!content().compact"
-    [attr.aria-expanded]="expanded()" [attr.aria-controls]="'task-description-view-' + taskId()"
+<button
+    type="button"
+    class="description-disclosure"
+    [class.short-description]="!content().compact"
+    [attr.aria-expanded]="expanded()"
+    [attr.aria-controls]="'task-description-view-' + taskId()"
     [attr.aria-label]="expanded() ? 'Collapse description' : 'Expand full description'"
-    [pTooltip]="expanded() ? 'Collapse description' : 'Expand full description'" tooltipPosition="bottom"
-    (click)="toggle()">
-    <i class="pi" [class.pi-chevron-up]="expanded()" [class.pi-chevron-down]="!expanded()" aria-hidden="true"></i>
+    [pTooltip]="expanded() ? 'Collapse description' : 'Expand full description'"
+    tooltipPosition="bottom"
+    (click)="toggle()"
+>
+    <i
+        class="pi"
+        [class.pi-chevron-up]="expanded()"
+        [class.pi-chevron-down]="!expanded()"
+        aria-hidden="true"
+    ></i>
 </button>

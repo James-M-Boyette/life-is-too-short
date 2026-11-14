@@ -1,4 +1,14 @@
-import { Component, signal, computed, effect, input, output, inject, viewChild, DestroyRef } from '@angular/core';
+import {
+    Component,
+    signal,
+    computed,
+    effect,
+    input,
+    output,
+    inject,
+    viewChild,
+    DestroyRef,
+} from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { TreeModule } from 'primeng/tree';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -26,31 +36,38 @@ export class AppSidebarComponent {
     private readonly navigationUrl = toSignal(
         this.router.events.pipe(
             filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-            map(event => event.urlAfterRedirects),
+            map((event) => event.urlAfterRedirects),
         ),
         { initialValue: this.router.url },
     );
     private readonly activeProjectId = computed(() => {
-        const segments = this.router.parseUrl(this.navigationUrl()).root.children['primary']?.segments;
-        return segments?.length === 3 && segments[0].path === 'tasks' && segments[1].path === 'project'
+        const segments = this.router.parseUrl(this.navigationUrl()).root.children['primary']
+            ?.segments;
+        return segments?.length === 3 &&
+            segments[0].path === 'tasks' &&
+            segments[1].path === 'project'
             ? segments[2].path
             : null;
     });
     // Stable paths avoid reopening a manually collapsed branch on unrelated data updates.
-    private readonly activeAncestorPath = computed(() => {
-        const find = (nodes: ProjectNode[]): string[] | null => {
-            for (const node of nodes) {
-                if (node.project.id === this.activeProjectId()) return [];
-                const descendants = find(node.children);
-                if (descendants) return [node.project.id, ...descendants];
-            }
-            return null;
-        };
-        return find(this.projects()) ?? [];
-    }, {
-        equal: (previous, next) => previous.length === next.length &&
-            previous.every((id, index) => id === next[index]),
-    });
+    private readonly activeAncestorPath = computed(
+        () => {
+            const find = (nodes: ProjectNode[]): string[] | null => {
+                for (const node of nodes) {
+                    if (node.project.id === this.activeProjectId()) return [];
+                    const descendants = find(node.children);
+                    if (descendants) return [node.project.id, ...descendants];
+                }
+                return null;
+            };
+            return find(this.projects()) ?? [];
+        },
+        {
+            equal: (previous, next) =>
+                previous.length === next.length &&
+                previous.every((id, index) => id === next[index]),
+        },
+    );
 
     protected readonly expandedProjectIds = signal<Set<string>>(new Set());
 
@@ -82,21 +99,33 @@ export class AppSidebarComponent {
         event.stopPropagation();
         event.preventDefault();
         this.dismissMenu();
-        if (this.trigger?.isConnected && this.available()) this.trigger.focus({ preventScroll: true });
+        if (this.trigger?.isConnected && this.available())
+            this.trigger.focus({ preventScroll: true });
     };
     protected readonly menuItems: MenuItem[] = [
-        { label: 'Edit project', icon: 'pi pi-pencil', command: () => this.requestProjectAction('edit') },
-        { label: 'Delete project', icon: 'pi pi-trash', command: () => this.requestProjectAction('delete'), style: {
-            '--p-menu-item-color': 'var(--color-status-danger)',
-            '--p-menu-item-icon-color': 'var(--color-status-danger)',
-            '--p-menu-item-focus-color': 'var(--color-status-danger-hover)',
-            '--p-menu-item-icon-focus-color': 'var(--color-status-danger-hover)',
-            '--p-menu-item-focus-background': 'var(--color-status-danger-soft)',
-        } },
+        {
+            label: 'Edit project',
+            icon: 'pi pi-pencil',
+            command: () => this.requestProjectAction('edit'),
+        },
+        {
+            label: 'Delete project',
+            icon: 'pi pi-trash',
+            command: () => this.requestProjectAction('delete'),
+            style: {
+                '--p-menu-item-color': 'var(--color-status-danger)',
+                '--p-menu-item-icon-color': 'var(--color-status-danger)',
+                '--p-menu-item-focus-color': 'var(--color-status-danger-hover)',
+                '--p-menu-item-icon-focus-color': 'var(--color-status-danger-hover)',
+                '--p-menu-item-focus-background': 'var(--color-status-danger-soft)',
+            },
+        },
     ];
 
     private projectExists(id: string, nodes = this.projects()): boolean {
-        return nodes.some(node => node.project.id === id || this.projectExists(id, node.children));
+        return nodes.some(
+            (node) => node.project.id === id || this.projectExists(id, node.children),
+        );
     }
 
     protected openProjectMenu(event: MouseEvent, id: string): void {
@@ -130,8 +159,12 @@ export class AppSidebarComponent {
 
     protected menuHidden(): void {
         const focused = this.document.activeElement;
-        if (this.restoreOnHide && (focused === this.document.body || this.menuElement?.contains(focused))) {
-            if (this.trigger?.isConnected && !this.trigger.closest('[hidden], [inert]')) this.trigger.focus({ preventScroll: true });
+        if (
+            this.restoreOnHide &&
+            (focused === this.document.body || this.menuElement?.contains(focused))
+        ) {
+            if (this.trigger?.isConnected && !this.trigger.closest('[hidden], [inert]'))
+                this.trigger.focus({ preventScroll: true });
         }
         this.menuElement?.removeEventListener('keydown', this.stopMenuEscape, true);
         this.menuElement = null;
@@ -163,7 +196,13 @@ export class AppSidebarComponent {
 
     protected onNavigationClick(event: MouseEvent): void {
         event.stopPropagation();
-        if (event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+        if (
+            event.button === 0 &&
+            !event.ctrlKey &&
+            !event.metaKey &&
+            !event.shiftKey &&
+            !event.altKey
+        ) {
             this.navigated.emit();
         }
     }
@@ -235,19 +274,22 @@ export class AppSidebarComponent {
     } | null>(null);
 
     constructor() {
-        inject(DestroyRef).onDestroy(() => this.menuElement?.removeEventListener('keydown', this.stopMenuEscape, true));
+        inject(DestroyRef).onDestroy(() =>
+            this.menuElement?.removeEventListener('keydown', this.stopMenuEscape, true),
+        );
         let previousMobile = this.mobile();
         effect(() => {
             const mobile = this.mobile();
             const id = this.selectedProjectId();
-            if (!this.available() || mobile !== previousMobile || (id && !this.projectExists(id))) this.dismissMenu(false);
+            if (!this.available() || mobile !== previousMobile || (id && !this.projectExists(id)))
+                this.dismissMenu(false);
             previousMobile = mobile;
         });
         effect(() => {
             this.activeProjectId();
             const ancestors = this.activeAncestorPath();
             if (!ancestors.length) return;
-            this.expandedProjectIds.update(ids => new Set([...ids, ...ancestors]));
+            this.expandedProjectIds.update((ids) => new Set([...ids, ...ancestors]));
         });
         effect(() => {
             const request = this.expandProjectRequest();

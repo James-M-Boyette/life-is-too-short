@@ -10,10 +10,16 @@ import { CdkDropList, CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 
 import type { TaskScheduleDrop } from '@/features/tasks/models/task-schedule-drop.model';
 import type { TaskReorder } from '@/features/tasks/models/task-reorder.model';
-import { TaskOrderField } from '@/features/tasks/utils/task-ordering.util'
+import { TaskOrderField } from '@/features/tasks/utils/task-ordering.util';
 import type { TaskScheduleRequest } from '@/features/tasks/models/task-schedule.model';
-import type { TaskListGroup, TaskGroupPlanningTransition } from '@/features/tasks/models/task-list-group.model';
-import type { TaskContentChange, TaskContentFeedback } from '@/features/tasks/models/task-content.model';
+import type {
+    TaskListGroup,
+    TaskGroupPlanningTransition,
+} from '@/features/tasks/models/task-list-group.model';
+import type {
+    TaskContentChange,
+    TaskContentFeedback,
+} from '@/features/tasks/models/task-content.model';
 
 @Component({
     selector: 'app-task-list',
@@ -27,17 +33,18 @@ export class TaskListComponent {
     readonly contentFeedback = input<Partial<Record<string, TaskContentFeedback>>>({});
     readonly groups = input<TaskListGroup[]>([]);
     readonly planningTransition = input<TaskGroupPlanningTransition | null>(null);
-    private readonly planningInsertionTarget = viewChild<ElementRef<HTMLElement>>('planningInsertionTarget');
+    private readonly planningInsertionTarget =
+        viewChild<ElementRef<HTMLElement>>('planningInsertionTarget');
     protected readonly planningTarget = computed(() => {
         if (!this.draggable()) return null;
         const transition = this.planningTransition();
         if (!transition) return null;
-        const source = this.groups().find(group => group.id === transition.sourceGroupId);
-        const target = this.groups().find(group => group.id === transition.targetGroupId);
+        const source = this.groups().find((group) => group.id === transition.sourceGroupId);
+        const target = this.groups().find((group) => group.id === transition.targetGroupId);
         return source?.tasks.length && target ? { source, target, transition } : null;
     });
     protected readonly displayTasks = computed(() =>
-        this.groups().length ? this.groups().flatMap(group => group.tasks) : this.tasks(),
+        this.groups().length ? this.groups().flatMap((group) => group.tasks) : this.tasks(),
     );
     protected readonly groupByTask = computed(() => {
         const result = new Map<string, TaskListGroup>();
@@ -77,14 +84,24 @@ export class TaskListComponent {
 
     protected readonly canEnter = () => this.draggable() && this.acceptsDrops();
 
-    protected readonly canSort = (index: number, drag: CdkDrag<Task>, drop: CdkDropList<Task[]>): boolean => {
+    protected readonly canSort = (
+        index: number,
+        drag: CdkDrag<Task>,
+        drop: CdkDropList<Task[]>,
+    ): boolean => {
         if (!this.draggable()) return false;
         // Entering from another column still changes scheduling, not just manual order.
         if (drag.dropContainer !== drop || !this.groups().length) return true;
         const group = this.groupByTask().get(drag.data.id);
         const target = this.displayTasks()[index];
         const planning = this.planningTarget();
-        if (planning && group === planning.source && index >= 0 && index < planning.target.tasks.length) return true;
+        if (
+            planning &&
+            group === planning.source &&
+            index >= 0 &&
+            index < planning.target.tasks.length
+        )
+            return true;
         return !!group && !!target && this.groupByTask().get(target.id) === group;
     };
 
@@ -99,8 +116,14 @@ export class TaskListComponent {
             if (planning && this.groupByTask().get(task.id) === planning.source) {
                 const rect = this.planningInsertionTarget()?.nativeElement.getBoundingClientRect();
                 const point = event.dropPoint;
-                const atEnd = !!rect && rect.height > 0 && !!point &&
-                    point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+                const atEnd =
+                    !!rect &&
+                    rect.height > 0 &&
+                    !!point &&
+                    point.x >= rect.left &&
+                    point.x <= rect.right &&
+                    point.y >= rect.top &&
+                    point.y <= rect.bottom;
                 const index = atEnd ? planning.target.tasks.length : event.currentIndex;
                 if (atEnd || (index >= 0 && index < planning.target.tasks.length)) {
                     this.taskDropped.emit({
@@ -126,9 +149,9 @@ export class TaskListComponent {
                 const target = tasks[currentIndex];
                 if (!group || !target || this.groupByTask().get(target.id) !== group) return;
                 // Neighbors in another visual section must not affect this section's positions.
-                tasks = tasks.filter(item => this.groupByTask().get(item.id) === group);
-                previousIndex = tasks.findIndex(item => item.id === task.id);
-                currentIndex = tasks.findIndex(item => item.id === target.id);
+                tasks = tasks.filter((item) => this.groupByTask().get(item.id) === group);
+                previousIndex = tasks.findIndex((item) => item.id === task.id);
+                currentIndex = tasks.findIndex((item) => item.id === target.id);
                 if (previousIndex < 0 || currentIndex < 0 || previousIndex === currentIndex) return;
             }
 
@@ -157,7 +180,6 @@ export class TaskListComponent {
         task: Task;
         projectId: string | null;
     }>();
-
 
     protected readonly debugTasks = computed(() =>
         this.tasks().map((task) => ({

@@ -5,25 +5,19 @@ import { providePrimeNG } from 'primeng/config';
 // import Lara from '@primeuix/themes/lara';
 // import Nora from '@primeuix/themes/nora';
 import MyPreset from 'src/assets/primeng-style-preset';
-import {
-    provideRouter,
-    withComponentInputBinding,
-} from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
     providers: [
         provideBrowserGlobalErrorListeners(),
-        provideRouter(
-            routes,
-            withComponentInputBinding(),
-        ),
+        provideRouter(routes, withComponentInputBinding()),
         providePrimeNG({
             theme: {
                 preset: MyPreset,
                 options: { darkModeSelector: '.app-dark' },
-            }
-        })
-    ]
+            },
+        }),
+    ],
 };

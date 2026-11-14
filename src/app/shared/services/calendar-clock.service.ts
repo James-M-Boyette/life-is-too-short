@@ -36,19 +36,11 @@ export class CalendarClockService implements OnDestroy {
 
         const now = new Date();
 
-        const nextMidnight = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            now.getDate() + 1,
-        );
+        const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
 
-        const millisecondsUntilMidnight =
-            nextMidnight.getTime() - now.getTime();
+        const millisecondsUntilMidnight = nextMidnight.getTime() - now.getTime();
 
-        this.midnightTimer = setTimeout(
-            this.refreshToday,
-            millisecondsUntilMidnight + 100,
-        );
+        this.midnightTimer = setTimeout(this.refreshToday, millisecondsUntilMidnight + 100);
     }
 
     ngOnDestroy(): void {

@@ -71,9 +71,10 @@ export class TasksStore {
 
         const isCurrentSession = () => generationAtStart === this.sessionGeneration;
 
-        const previous = this.taskMutationQueues.get(taskId)
-            ?? this.pendingCreations.get(taskId)
-            ?? Promise.resolve();
+        const previous =
+            this.taskMutationQueues.get(taskId) ??
+            this.pendingCreations.get(taskId) ??
+            Promise.resolve();
 
         const operation = previous
             .catch(() => undefined)
@@ -233,27 +234,53 @@ export class TasksStore {
     private startInvalidationSync(userId: string): () => void {
         const generation = this.sessionGeneration;
         let disposed = false;
-        const current = () => !disposed && generation === this.sessionGeneration && this.auth.userId() === userId;
+        const current = () =>
+            !disposed && generation === this.sessionGeneration && this.auth.userId() === userId;
         const view = this.document.defaultView;
-        const available = () => view?.navigator.onLine !== false && this.document.visibilityState !== 'hidden';
-        let dirty = 0, completed = 0, running = false, protectedGeneration = 0;
+        const available = () =>
+            view?.navigator.onLine !== false && this.document.visibilityState !== 'hidden';
+        let dirty = 0,
+            completed = 0,
+            running = false,
+            protectedGeneration = 0;
         let firstDirtyAt: number | null = null;
-        let attempts = 0, retryAt = 0;
+        let attempts = 0,
+            retryAt = 0;
         let timer: ReturnType<typeof setTimeout> | undefined;
-        const clearTimer = () => { clearTimeout(timer); timer = undefined; };
+        const clearTimer = () => {
+            clearTimeout(timer);
+            timer = undefined;
+        };
         const schedule = (immediate = false) => {
-            if (!current() || running || !available() || this.loading() || dirty === completed || attempts > 3) return;
+            if (
+                !current() ||
+                running ||
+                !available() ||
+                this.loading() ||
+                dirty === completed ||
+                attempts > 3
+            )
+                return;
             if (dirty <= protectedGeneration && this.pendingTaskIds.size > 0) return;
             clearTimer();
             const now = Date.now();
             firstDirtyAt ??= now;
             const delay = immediate ? 0 : Math.max(0, Math.min(150, firstDirtyAt + 1000 - now));
-            timer = setTimeout(() => { timer = undefined; void run(); }, Math.max(delay, retryAt - now));
+            timer = setTimeout(
+                () => {
+                    timer = undefined;
+                    void run();
+                },
+                Math.max(delay, retryAt - now),
+            );
         };
         const invalidate = (immediate = false, resetRetries = false) => {
             if (!current()) return;
             dirty++;
-            if (resetRetries) { attempts = 0; retryAt = 0; }
+            if (resetRetries) {
+                attempts = 0;
+                retryAt = 0;
+            }
             schedule(immediate);
         };
         const run = async () => {
@@ -267,10 +294,15 @@ export class TasksStore {
             const snapshot = this.refreshSnapshot(true, controller.signal);
             const request = this.latestRefreshRequest;
             try {
-                const result = await this.withSnapshotDeadline(snapshot, controller, 'Task synchronization timed out');
+                const result = await this.withSnapshotDeadline(
+                    snapshot,
+                    controller,
+                    'Task synchronization timed out',
+                );
                 if (!current()) return;
                 if (result.applied) {
-                    attempts = 0; retryAt = 0;
+                    attempts = 0;
+                    retryAt = 0;
                     protectedGeneration = result.protected ? target : 0;
                     if (!result.protected) completed = target;
                 }
@@ -278,7 +310,9 @@ export class TasksStore {
                 if (!current()) return;
                 if (request !== this.latestRefreshRequest) return;
                 if (controller.signal.aborted && request === this.latestRefreshRequest) {
-                    this.syncError.set(`${error instanceof Error ? error.message : 'Task synchronization cancelled'}. Refresh the task list to retry.`);
+                    this.syncError.set(
+                        `${error instanceof Error ? error.message : 'Task synchronization cancelled'}. Refresh the task list to retry.`,
+                    );
                 }
                 attempts++;
                 retryAt = Date.now() + ([1000, 5000, 15000][attempts - 1] ?? 15000);
@@ -290,7 +324,10 @@ export class TasksStore {
         };
         const wake = () => schedule();
         this.wakeSync = wake;
-        const resume = () => { if (available()) invalidate(true, true); else clearTimer(); };
+        const resume = () => {
+            if (available()) invalidate(true, true);
+            else clearTimer();
+        };
         view?.addEventListener('online', resume);
         view?.addEventListener('offline', resume);
         view?.addEventListener('pageshow', resume);
@@ -298,34 +335,45 @@ export class TasksStore {
         // The SDK alone owns channel reconnect/rejoin. Every successful join
         // triggers a read, including joins following a missed-event window.
         if (this.syncConfig.mode === 'broadcast') {
-            this.channel = this.supabase.channel(`task-invalidation:${userId}`, { config: { private: true } })
-            .on('broadcast', { event: 'tasks_changed_v1' }, message => {
-                if (!current() || message?.['payload']?.v !== 1) return;
-                this.lastInvalidationAt.set(Date.now());
-                invalidate();
-            }).subscribe(status => {
-                if (!current()) return;
-                this.realtimeConnected.set(status === 'SUBSCRIBED');
-                if (status === 'SUBSCRIBED') {
-                    this.syncConnectionFailed = false;
-                    invalidate(true, true);
-                }
-                else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-                    this.syncConnectionFailed = true;
-                    this.syncError.set('Live task connection unavailable. Refresh the task list to catch up.');
-                }
-            });
+            this.channel = this.supabase
+                .channel(`task-invalidation:${userId}`, { config: { private: true } })
+                .on('broadcast', { event: 'tasks_changed_v1' }, (message) => {
+                    if (!current() || message?.['payload']?.v !== 1) return;
+                    this.lastInvalidationAt.set(Date.now());
+                    invalidate();
+                })
+                .subscribe((status) => {
+                    if (!current()) return;
+                    this.realtimeConnected.set(status === 'SUBSCRIBED');
+                    if (status === 'SUBSCRIBED') {
+                        this.syncConnectionFailed = false;
+                        invalidate(true, true);
+                    } else if (
+                        status === 'CHANNEL_ERROR' ||
+                        status === 'TIMED_OUT' ||
+                        status === 'CLOSED'
+                    ) {
+                        this.syncConnectionFailed = true;
+                        this.syncError.set(
+                            'Live task connection unavailable. Refresh the task list to catch up.',
+                        );
+                    }
+                });
         }
         // Best-effort notifications can be lost even while the socket is joined.
         // This modest safety read is paused when hidden/offline; it is not a
         // second websocket reconnect loop or a claim of durable replay.
-        const safety = this.syncConfig.safetyRefreshMs > 0
-            ? setInterval(() => { if (available()) invalidate(false, true); }, this.syncConfig.safetyRefreshMs)
-            : undefined;
+        const safety =
+            this.syncConfig.safetyRefreshMs > 0
+                ? setInterval(() => {
+                      if (available()) invalidate(false, true);
+                  }, this.syncConfig.safetyRefreshMs)
+                : undefined;
         return () => {
             disposed = true;
             this.backgroundAbort?.abort(new Error('Task synchronization session ended'));
-            clearTimer(); clearInterval(safety);
+            clearTimer();
+            clearInterval(safety);
             view?.removeEventListener('online', resume);
             view?.removeEventListener('offline', resume);
             view?.removeEventListener('pageshow', resume);
@@ -369,10 +417,9 @@ export class TasksStore {
             return;
         }
 
-        this.tasks.update(tasks => this.sortDesc([
-            row,
-            ...tasks.filter(task => task.id !== row.id),
-        ]));
+        this.tasks.update((tasks) =>
+            this.sortDesc([row, ...tasks.filter((task) => task.id !== row.id)]),
+        );
     }
 
     private removeFromRealtime(id: string): void {
@@ -383,7 +430,7 @@ export class TasksStore {
 
     private sortDesc(list: Task[]) {
         // Defensive normalization for refresh, creation, and Realtime entry points.
-        return [...new Map(list.map(task => [task.id, task])).values()].sort(
+        return [...new Map(list.map((task) => [task.id, task])).values()].sort(
             (a, b) => b.created_at.localeCompare(a.created_at) || a.id.localeCompare(b.id),
         );
     }
@@ -400,8 +447,12 @@ export class TasksStore {
             await this.withSnapshotDeadline(snapshot, controller, timeoutMessage);
         } catch (error: unknown) {
             // A timed-out transport may never run refreshSnapshot's finally block.
-            if (controller.signal.aborted && request === this.latestRefreshRequest &&
-                generation === this.sessionGeneration && userId === this.auth.userId()) {
+            if (
+                controller.signal.aborted &&
+                request === this.latestRefreshRequest &&
+                generation === this.sessionGeneration &&
+                userId === this.auth.userId()
+            ) {
                 this.error.set(timeoutMessage);
                 this.loading.set(false);
                 this.wakeSync?.();
@@ -410,7 +461,11 @@ export class TasksStore {
         }
     }
 
-    private async withSnapshotDeadline<T>(snapshot: Promise<T>, controller: AbortController, message: string): Promise<T> {
+    private async withSnapshotDeadline<T>(
+        snapshot: Promise<T>,
+        controller: AbortController,
+        message: string,
+    ): Promise<T> {
         // Bound the complete snapshot even if the transport ignores cancellation.
         const { signal } = controller;
         const deadline = setTimeout(() => controller.abort(new Error(message)), 30_000);
@@ -428,7 +483,10 @@ export class TasksStore {
         }
     }
 
-    private async refreshSnapshot(background: boolean, signal: AbortSignal): Promise<{ applied: boolean; protected: boolean }> {
+    private async refreshSnapshot(
+        background: boolean,
+        signal: AbortSignal,
+    ): Promise<{ applied: boolean; protected: boolean }> {
         const generationAtStart = this.sessionGeneration;
         const userIdAtStart = this.auth.userId();
         const requestId = ++this.latestRefreshRequest;
@@ -437,7 +495,8 @@ export class TasksStore {
         const ownsRefresh = () =>
             generationAtStart === this.sessionGeneration &&
             userIdAtStart === this.auth.userId() &&
-            requestId === this.latestRefreshRequest && !signal.aborted;
+            requestId === this.latestRefreshRequest &&
+            !signal.aborted;
 
         // Snapshot the revisions when this particular query starts.
         const revisionsAtStart = new Map(this.taskRevisions);
@@ -454,7 +513,9 @@ export class TasksStore {
             // pagination can skip rows when an earlier row is deleted mid-fetch.
             // Keep presentation ordering in sortDesc(), separate from retrieval.
             while (ownsRefresh()) {
-                let query = this.supabase.from('tasks').select('*')
+                let query = this.supabase
+                    .from('tasks')
+                    .select('*')
                     .order('id', { ascending: true });
                 if (cursor !== undefined) query = query.gt('id', cursor);
                 const { data, error } = await query.abortSignal(signal).limit(500);
@@ -465,9 +526,12 @@ export class TasksStore {
                 // lower than our requested limit. Only an empty page ends fetch.
                 if (data.length === 0) break;
                 for (const task of data as Task[]) {
-                    if (typeof task?.id !== 'string' || !task.id ||
+                    if (
+                        typeof task?.id !== 'string' ||
+                        !task.id ||
                         (cursor !== undefined && task.id <= cursor) ||
-                        (userIdAtStart !== null && task.user_id !== userIdAtStart)) {
+                        (userIdAtStart !== null && task.user_id !== userIdAtStart)
+                    ) {
                         throw new Error('Incomplete task snapshot: invalid ownership or ID order');
                     }
                     cursor = task.id;
@@ -524,21 +588,33 @@ export class TasksStore {
 
                 return this.sortDesc([...merged.values()]);
             });
-            this.syncError.set(this.syncConnectionFailed
-                ? 'Live task connection unavailable. Refresh the task list to catch up.' : null);
+            this.syncError.set(
+                this.syncConnectionFailed
+                    ? 'Live task connection unavailable. Refresh the task list to catch up.'
+                    : null,
+            );
             if (!protectedTasks) this.lastSyncedAt.set(Date.now());
             return { applied: true, protected: protectedTasks };
         } catch (error: unknown) {
             if (ownsRefresh()) {
                 const message = error instanceof Error ? error.message : 'Failed to load tasks';
-                if (background) this.syncError.set(`Task synchronization failed: ${message}. Refresh the task list to retry.`);
+                if (background)
+                    this.syncError.set(
+                        `Task synchronization failed: ${message}. Refresh the task list to retry.`,
+                    );
                 else this.error.set(message);
             }
             // Supersession suppresses store writes, not rejection to the caller.
             throw error;
         } finally {
             if (!background && ownsRefresh()) this.loading.set(false);
-            if (!background && !signal.aborted && generationAtStart === this.sessionGeneration && userIdAtStart === this.auth.userId()) this.wakeSync?.();
+            if (
+                !background &&
+                !signal.aborted &&
+                generationAtStart === this.sessionGeneration &&
+                userIdAtStart === this.auth.userId()
+            )
+                this.wakeSync?.();
         }
     }
 
@@ -580,7 +656,9 @@ export class TasksStore {
 
         const taskId = crypto.randomUUID();
         let finishCreation!: () => void;
-        const creationSettled = new Promise<void>(resolve => { finishCreation = resolve; });
+        const creationSettled = new Promise<void>((resolve) => {
+            finishCreation = resolve;
+        });
         this.pendingCreations.set(taskId, creationSettled);
 
         const optimistic: Task = {
@@ -611,7 +689,7 @@ export class TasksStore {
         this.pendingTaskIds.add(taskId);
         this.markTaskChanged(taskId);
 
-        this.tasks.update((prev) => [optimistic, ...prev.filter(task => task.id !== taskId)]);
+        this.tasks.update((prev) => [optimistic, ...prev.filter((task) => task.id !== taskId)]);
 
         try {
             const { data, error } = await this.supabase
@@ -641,10 +719,9 @@ export class TasksStore {
             if (saved.id !== taskId || saved.user_id !== userId) {
                 throw new Error('Created task identity does not match the request');
             }
-            this.tasks.update(prev => this.sortDesc([
-                saved,
-                ...prev.filter(task => task.id !== taskId),
-            ]));
+            this.tasks.update((prev) =>
+                this.sortDesc([saved, ...prev.filter((task) => task.id !== taskId)]),
+            );
         } catch (e: unknown) {
             if (isCurrentSession()) {
                 // Remove the failed optimistic task.
@@ -684,25 +761,42 @@ export class TasksStore {
         const description = source.trim() ? source : null;
 
         await this.runMutation(task.id, async (isCurrentSession) => {
-            const currentTask = this.tasks().find(current => current.id === task.id);
+            const currentTask = this.tasks().find((current) => current.id === task.id);
             if (!currentTask) throw new Error('Task no longer exists');
             if (currentTask.user_id !== task.user_id) throw new Error('Task ownership changed');
             if (currentTask.title === title && currentTask.description === description) return;
             const previous = { title: currentTask.title, description: currentTask.description };
             const next = { title, description };
-            this.tasks.update(tasks => tasks.map(current => current.id === task.id ? { ...current, ...next } : current));
+            this.tasks.update((tasks) =>
+                tasks.map((current) =>
+                    current.id === task.id ? { ...current, ...next } : current,
+                ),
+            );
             try {
-                const { data, error } = await this.supabase.from('tasks')
-                    .update(next).eq('id', currentTask.id).eq('user_id', currentTask.user_id)
-                    .select('title, description').single();
+                const { data, error } = await this.supabase
+                    .from('tasks')
+                    .update(next)
+                    .eq('id', currentTask.id)
+                    .eq('user_id', currentTask.user_id)
+                    .select('title, description')
+                    .single();
                 if (error) throw error;
                 if (!isCurrentSession()) return;
                 // Merge only content fields; unrelated local state may have changed during the request.
-                this.tasks.update(tasks => tasks.map(current => current.id === task.id
-                    ? { ...current, title: data.title, description: data.description } : current));
+                this.tasks.update((tasks) =>
+                    tasks.map((current) =>
+                        current.id === task.id
+                            ? { ...current, title: data.title, description: data.description }
+                            : current,
+                    ),
+                );
             } catch (error) {
                 if (isCurrentSession()) {
-                    this.tasks.update(tasks => tasks.map(current => current.id === task.id ? { ...current, ...previous } : current));
+                    this.tasks.update((tasks) =>
+                        tasks.map((current) =>
+                            current.id === task.id ? { ...current, ...previous } : current,
+                        ),
+                    );
                 }
                 throw error;
             }
@@ -977,7 +1071,11 @@ export class TasksStore {
         });
     }
 
-    async updatePlannedDate(task: Task, plannedDate: string | null, placement?: TaskPlanningPlacement): Promise<void> {
+    async updatePlannedDate(
+        task: Task,
+        plannedDate: string | null,
+        placement?: TaskPlanningPlacement,
+    ): Promise<void> {
         await this.runMutation(task.id, async (isCurrentSession) => {
             const currentTask = this.tasks().find((current) => current.id === task.id);
 
@@ -1003,16 +1101,16 @@ export class TasksStore {
             const position = placement
                 ? this.plannedInsertionPosition(currentTask, plannedDate, placement)
                 : destinationContext === currentContext && previousPosition !== null
-                    ? previousPosition
-                    : getNextTaskPosition(
-                          this.tasks().filter(
-                              (current) =>
-                                  current.id !== currentTask.id &&
-                                  current.user_id === currentTask.user_id &&
-                                  getTaskPlanningContext(current) === destinationContext,
-                          ),
-                          'planned_position',
-                      );
+                  ? previousPosition
+                  : getNextTaskPosition(
+                        this.tasks().filter(
+                            (current) =>
+                                current.id !== currentTask.id &&
+                                current.user_id === currentTask.user_id &&
+                                getTaskPlanningContext(current) === destinationContext,
+                        ),
+                        'planned_position',
+                    );
 
             if (!Number.isFinite(position)) throw new Error('Task positions require rebalancing');
             if (currentTask.planned_date === plannedDate && previousPosition === position) return;
@@ -1074,22 +1172,42 @@ export class TasksStore {
         });
     }
 
-    private plannedInsertionPosition(task: Task, plannedDate: string | null, placement: TaskPlanningPlacement): number {
+    private plannedInsertionPosition(
+        task: Task,
+        plannedDate: string | null,
+        placement: TaskPlanningPlacement,
+    ): number {
         if (!plannedDate) throw new Error('An insertion requires a planned date');
-        const candidates = this.tasks().filter(current => current.id !== task.id &&
-            current.user_id === task.user_id && !current.is_done && current.planned_date === plannedDate);
+        const candidates = this.tasks().filter(
+            (current) =>
+                current.id !== task.id &&
+                current.user_id === task.user_id &&
+                !current.is_done &&
+                current.planned_date === plannedDate,
+        );
         const positionOf = (id: string | null): number | null => {
             if (id === null) return null;
-            const neighbor = candidates.find(current => current.id === id);
-            if (!neighbor || neighbor.planned_position === null || !Number.isFinite(neighbor.planned_position)) {
+            const neighbor = candidates.find((current) => current.id === id);
+            if (
+                !neighbor ||
+                neighbor.planned_position === null ||
+                !Number.isFinite(neighbor.planned_position)
+            ) {
                 throw new Error('The destination order has changed. Please try the drop again.');
             }
             return neighbor.planned_position;
         };
-        if (placement.previousTaskId === null && placement.nextTaskId === null && candidates.length) {
+        if (
+            placement.previousTaskId === null &&
+            placement.nextTaskId === null &&
+            candidates.length
+        ) {
             throw new Error('The destination list is no longer empty. Please try the drop again.');
         }
-        return calculateTaskPosition(positionOf(placement.previousTaskId), positionOf(placement.nextTaskId));
+        return calculateTaskPosition(
+            positionOf(placement.previousTaskId),
+            positionOf(placement.nextTaskId),
+        );
     }
 
     async updateDueDate(task: Task, dueDate: string | null): Promise<void> {
@@ -1261,7 +1379,8 @@ export class TasksStore {
 
         if (error) throw error;
 
-        if (generationAtStart !== this.sessionGeneration || userIdAtStart !== this.auth.userId()) return;
+        if (generationAtStart !== this.sessionGeneration || userIdAtStart !== this.auth.userId())
+            return;
 
         // If another local mutation started, don't overwrite it.
         if (this.pendingTaskIds.has(taskId)) {

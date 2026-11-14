@@ -65,13 +65,28 @@
 // The existing creation workflow must fit inside the shell's narrow modal.
 @media (width < 768px) {
     :host form.create-new-task-form {
-        .task-content { min-width: 0; }
-        .task-content textarea { box-sizing: border-box; min-width: 0; }
+        .task-content {
+            min-width: 0;
+        }
+        .task-content textarea {
+            box-sizing: border-box;
+            min-width: 0;
+        }
         footer.task-actions {
             flex-wrap: wrap;
-            > p-treeselect, > p-datepicker { max-width: 100%; min-width: 0; }
-            div.action-buttons-container button { min-height: 2.75rem; }
-            div.action-buttons-container { margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+            > p-treeselect,
+            > p-datepicker {
+                max-width: 100%;
+                min-width: 0;
+            }
+            div.action-buttons-container button {
+                min-height: 2.75rem;
+            }
+            div.action-buttons-container {
+                margin-left: auto;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+            }
         }
     }
 }

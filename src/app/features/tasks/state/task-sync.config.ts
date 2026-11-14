@@ -10,5 +10,10 @@ export type TaskSyncConfig = {
 // Rollout is a deliberate build configuration change, never join-status detection.
 export const TASK_SYNC_CONFIG = new InjectionToken<TaskSyncConfig>('TASK_SYNC_CONFIG', {
     providedIn: 'root',
-    factory: () => ({ mode: (environment as { taskSyncMode?: TaskSyncConfig['mode'] }).taskSyncMode ?? 'postgres-changes', safetyRefreshMs: 120_000 }),
+    factory: () => ({
+        mode:
+            (environment as { taskSyncMode?: TaskSyncConfig['mode'] }).taskSyncMode ??
+            'postgres-changes',
+        safetyRefreshMs: 120_000,
+    }),
 });

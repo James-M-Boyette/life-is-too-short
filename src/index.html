@@ -6,7 +6,8 @@
         <base href="/" />
         <script>
             const fragmentParams = new URLSearchParams(window.location.hash.slice(1));
-            const redirect = fragmentParams.get('redirect') ??
+            const redirect =
+                fragmentParams.get('redirect') ??
                 new URLSearchParams(window.location.search).get('redirect');
 
             if (redirect !== null) {
@@ -14,17 +15,17 @@
 
                 const restoredUrl = new URL(
                     redirect.replace(/^\/+/, ''),
-                    window.location.origin + basePath
+                    window.location.origin + basePath,
                 );
 
-                if (restoredUrl.origin === window.location.origin &&
-                    restoredUrl.pathname.startsWith(basePath)) {
+                if (
+                    restoredUrl.origin === window.location.origin &&
+                    restoredUrl.pathname.startsWith(basePath)
+                ) {
                     window.history.replaceState(
                         null,
                         '',
-                        restoredUrl.pathname +
-                        restoredUrl.search +
-                        restoredUrl.hash
+                        restoredUrl.pathname + restoredUrl.search + restoredUrl.hash,
                     );
                 }
             }

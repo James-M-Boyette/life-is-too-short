@@ -2,22 +2,18 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
     {
         path: 'login',
-        loadComponent: () =>
-            import('@/features/auth/pages/login.page')
-            .then((m) => m.LoginPage),
+        loadComponent: () => import('@/features/auth/pages/login.page').then((m) => m.LoginPage),
     },
     {
         path: 'auth/callback',
         loadComponent: () =>
-            import('@/features/auth/pages/auth-callback.page')
-            .then((m) => m.AuthCallbackPage),
+            import('@/features/auth/pages/auth-callback.page').then((m) => m.AuthCallbackPage),
     },
 
     {
         path: '',
         loadComponent: () =>
-            import('@/layout/app-shell/app-shell.component')
-            .then((m) => m.AppShellComponent),
+            import('@/layout/app-shell/app-shell.component').then((m) => m.AppShellComponent),
         children: [
             {
                 path: 'tasks',
@@ -25,8 +21,7 @@ export const routes: Routes = [
                     view: 'all',
                 },
                 loadComponent: () =>
-                    import('@/features/tasks/pages/tasks.page')
-                        .then((m) => m.TasksPage),
+                    import('@/features/tasks/pages/tasks.page').then((m) => m.TasksPage),
             },
             {
                 path: 'tasks/inbox',
@@ -34,8 +29,7 @@ export const routes: Routes = [
                     view: 'inbox',
                 },
                 loadComponent: () =>
-                    import('@/features/tasks/pages/tasks.page')
-                        .then((m) => m.TasksPage),
+                    import('@/features/tasks/pages/tasks.page').then((m) => m.TasksPage),
             },
             {
                 path: 'tasks/today',
@@ -43,8 +37,7 @@ export const routes: Routes = [
                     view: 'today',
                 },
                 loadComponent: () =>
-                    import('@/features/tasks/pages/tasks.page')
-                        .then((m) => m.TasksPage),
+                    import('@/features/tasks/pages/tasks.page').then((m) => m.TasksPage),
             },
             {
                 path: 'tasks/upcoming',
@@ -52,8 +45,7 @@ export const routes: Routes = [
                     view: 'upcoming',
                 },
                 loadComponent: () =>
-                    import('@/features/tasks/pages/tasks.page')
-                        .then((m) => m.TasksPage),
+                    import('@/features/tasks/pages/tasks.page').then((m) => m.TasksPage),
             },
             {
                 path: 'tasks/project/:projectId',
@@ -61,8 +53,7 @@ export const routes: Routes = [
                     view: 'project',
                 },
                 loadComponent: () =>
-                    import('@/features/tasks/pages/tasks.page')
-                        .then((m) => m.TasksPage),
+                    import('@/features/tasks/pages/tasks.page').then((m) => m.TasksPage),
             },
             {
                 path: '',

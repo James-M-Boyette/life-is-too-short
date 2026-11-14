@@ -7,7 +7,6 @@
     list-style: none;
 }
 
-
 .cdk-drag-animating {
     transition: transform 180ms ease;
 }
@@ -77,4 +76,7 @@
     background: var(--color-surface-hover);
 }
 
-.list.cdk-drop-list-dragging:not(.cdk-drop-list-disabled) { --task-drag-cursor: grabbing; cursor: grabbing; }
+.list.cdk-drop-list-dragging:not(.cdk-drop-list-disabled) {
+    --task-drag-cursor: grabbing;
+    cursor: grabbing;
+}

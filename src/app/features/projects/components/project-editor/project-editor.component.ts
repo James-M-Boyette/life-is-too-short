@@ -1,16 +1,15 @@
 import { Component, computed, effect, inject, input, output, untracked } from '@angular/core';
-import {
-    NonNullableFormBuilder,
-    ReactiveFormsModule,
-    Validators,
-} from '@angular/forms';
+import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { TreeSelectModule } from 'primeng/treeselect';
 import { ButtonModule } from 'primeng/button';
 import type { TreeNode } from 'primeng/api';
 
 import type { Project, ProjectNode } from '@/features/projects/models/project.model';
-import { findTreeNodeByKey, toProjectTreeNodes } from '@/features/projects/utils/project-tree-node.util';
+import {
+    findTreeNodeByKey,
+    toProjectTreeNodes,
+} from '@/features/projects/utils/project-tree-node.util';
 import { noWhitespaceValidator } from '@/shared/validators/no-whitespace-validator';
 
 export type CreateProjectPayload = {
@@ -42,14 +41,13 @@ export class ProjectEditorComponent {
         parentProject: this.fb.control<TreeNode | null>(null),
     });
 
-
     protected readonly projectOptions = computed(() => {
         const editingId = this.project()?.id;
 
         const excludeBranch = (nodes: ProjectNode[]): ProjectNode[] =>
             nodes
-                .filter(node => node.project.id !== editingId)
-                .map(node => ({
+                .filter((node) => node.project.id !== editingId)
+                .map((node) => ({
                     ...node,
                     children: excludeBranch(node.children),
                 }));
@@ -63,9 +61,10 @@ export class ProjectEditorComponent {
 
     constructor() {
         const parentControl = this.form.controls.parentProject;
-        parentControl.addValidators(control => {
+        parentControl.addValidators((control) => {
             const selected = control.value as TreeNode | null;
-            return selected && (!selected.key || !findTreeNodeByKey(this.projectOptions(), selected.key))
+            return selected &&
+                (!selected.key || !findTreeNodeByKey(this.projectOptions(), selected.key))
                 ? { unavailableParent: true }
                 : null;
         });
@@ -81,8 +80,10 @@ export class ProjectEditorComponent {
                 this.form.reset({
                     name: project?.name ?? '',
                     parentProject: parentId
-                        ? findTreeNodeByKey(this.projectOptions(), parentId)
-                            ?? { key: parentId, label: 'Unavailable project' }
+                        ? (findTreeNodeByKey(this.projectOptions(), parentId) ?? {
+                              key: parentId,
+                              label: 'Unavailable project',
+                          })
                         : null,
                 });
             });
